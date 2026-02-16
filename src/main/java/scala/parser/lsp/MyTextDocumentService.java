@@ -4,7 +4,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import static java.util.concurrent.CompletableFuture.completedFuture;
 
 import org.eclipse.lsp4j.CompletionItem;
 import org.eclipse.lsp4j.CompletionList;
@@ -17,12 +16,17 @@ import org.eclipse.lsp4j.DidOpenTextDocumentParams;
 import org.eclipse.lsp4j.DidSaveTextDocumentParams;
 import org.eclipse.lsp4j.Hover;
 import org.eclipse.lsp4j.HoverParams;
+import org.eclipse.lsp4j.MarkupContent;
 import org.eclipse.lsp4j.Position;
 import org.eclipse.lsp4j.PublishDiagnosticsParams;
 import org.eclipse.lsp4j.Range;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.eclipse.lsp4j.services.LanguageClient;
 import org.eclipse.lsp4j.services.TextDocumentService;
+
+import scala.parser.core.ast.ASTNode;
+import scala.parser.core.ast.AstFinder;
+import scala.parser.core.hover.HoverProvider;
 
 public class MyTextDocumentService implements TextDocumentService {
 
@@ -37,45 +41,87 @@ public class MyTextDocumentService implements TextDocumentService {
 
     @Override
     public void didOpen(DidOpenTextDocumentParams params) {
-        var uri = params.getTextDocument().getUri();
-        var text = params.getTextDocument().getText();
+        String uri = params.getTextDocument().getUri();
+        String text = params.getTextDocument().getText();
         documents.put(uri, text);
-        var diag = new Diagnostic();
-        diag.setMessage("Test: Server running");
-        diag.setSeverity(DiagnosticSeverity.Warning);
-        diag.setRange(new Range(new Position(0, 0), new Position(0, 1)));
-        client.publishDiagnostics(new PublishDiagnosticsParams(uri, List.of(diag)));
-    }
 
-    @Override
-    public CompletableFuture<Either<List<CompletionItem>, CompletionList>> completion(CompletionParams params) {
-        var item = new CompletionItem("test");
-        var completionList = new CompletionList(List.of(item));
-        return CompletableFuture.completedFuture(Either.forRight(completionList));
-    }
+        var result = compiler.analyze(text);
 
-    @Override
-    public CompletableFuture<Hover> hover(HoverParams params) {
-        var hover = new Hover(List.of(Either.forLeft("Hover works")));
-        return completedFuture(hover);
-    }
+        var diagnostics = result.errors.stream().map(err -> {
+            Diagnostic diag = new Diagnostic();
+            diag.setMessage(err.message);
+            diag.setSeverity(DiagnosticSeverity.Error);
+            diag.setRange(new Range(
+                    new Position(err.line, err.column),
+                    new Position(err.line, err.column + 1)
+            ));
+            return diag;
+        }).toList();
 
-    @Override
-    public void didChange(DidChangeTextDocumentParams params) {
-        var uri = params.getTextDocument().getUri();
-        var text = params.getContentChanges().get(0).getText();
-        documents.put(uri, text);
-        var diagnostics = compiler.analyze(text);
         client.publishDiagnostics(new PublishDiagnosticsParams(uri, diagnostics));
     }
 
     @Override
+    public void didChange(DidChangeTextDocumentParams params) {
+        String uri = params.getTextDocument().getUri();
+        String text = params.getContentChanges().get(0).getText();
+        documents.put(uri, text);
+
+        var result = compiler.analyze(text);
+
+        var diagnostics = result.errors.stream().map(err -> {
+            Diagnostic diag = new Diagnostic();
+            diag.setMessage(err.message);
+            diag.setSeverity(DiagnosticSeverity.Error);
+            diag.setRange(new Range(
+                    new Position(err.line, err.column),
+                    new Position(err.line, err.column + 1)
+            ));
+            return diag;
+        }).toList();
+
+        client.publishDiagnostics(new PublishDiagnosticsParams(uri, diagnostics));
+    }
+
+    @Override
+    public CompletableFuture<Either<List<CompletionItem>, CompletionList>> completion(CompletionParams params) {
+        CompletionItem item = new CompletionItem("test");
+        CompletionList list = new CompletionList(List.of(item));
+        return CompletableFuture.completedFuture(Either.forRight(list));
+    }
+
+    @Override
+    public CompletableFuture<Hover> hover(HoverParams params) {
+        return CompletableFuture.supplyAsync(() -> {
+            String uri = params.getTextDocument().getUri();
+            String doc = documents.get(uri);
+            if (doc == null) return null;
+
+            int line = params.getPosition().getLine();
+            int column = params.getPosition().getCharacter();
+
+            var result = compiler.analyze(doc);
+            ASTNode ast = result.ast;
+            if (ast == null) return null;
+
+            ASTNode node = AstFinder.findNodeAt(ast, line, column);
+            String text = HoverProvider.getHoverText(node);
+            if (text == null) return null;
+
+            MarkupContent content = new MarkupContent("plaintext", text);
+            return new Hover(content);
+        });
+    }
+
+    @Override
     public void didClose(DidCloseTextDocumentParams params) {
-        throw new UnsupportedOperationException("Not supported yet.");
+        String uri = params.getTextDocument().getUri();
+        documents.remove(uri);
+        client.publishDiagnostics(new PublishDiagnosticsParams(uri, List.of()));
     }
 
     @Override
     public void didSave(DidSaveTextDocumentParams params) {
-        throw new UnsupportedOperationException("Not supported yet.");
+        // optional
     }
 }

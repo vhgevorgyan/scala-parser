@@ -2,11 +2,19 @@ package scala.parser.lsp;
 
 import java.util.List;
 
-import org.eclipse.lsp4j.Diagnostic;
+import scala.parser.core.ParserResult;
+import scala.parser.core.lexer.Token;
+import scala.parser.core.lexer.Tokenizer;
+import scala.parser.core.parser.Parser;
 
 public class CompilerPipeline {
 
-    public List<Diagnostic> analyze(String text) {
-        return List.of();
+    public ParserResult analyze(String text) {
+        Tokenizer tokenizer = new Tokenizer(text);
+        List<Token> tokens = tokenizer.tokenize();
+        Parser parser = new Parser(tokens);
+        ParserResult result = parser.parse();
+
+        return result;
     }
 }

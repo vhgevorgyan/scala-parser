@@ -1,0 +1,16 @@
+package scala.parser.core.lexer;
+
+public enum TokenType {
+    // Keywords
+    LET,
+    // Identifiers & literals
+    IDENT,
+    NUMBER,
+    // Operators
+    PLUS, MINUS, STAR, SLASH,
+    EQUAL,
+    // Parentheses
+    LPAREN, RPAREN,
+    // End of file
+    EOF
+}

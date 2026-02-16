@@ -18,8 +18,7 @@ import org.eclipse.lsp4j.services.WorkspaceService;
 public class MyLanguageServer implements LanguageServer, LanguageClientAware {
 
     private final MyTextDocumentService textService = new MyTextDocumentService();
-
-    @SuppressWarnings("unused")
+    private final MyWorkspaceService workspaceService = new MyWorkspaceService();
     private LanguageClient client;
 
     @Override
@@ -50,11 +49,11 @@ public class MyLanguageServer implements LanguageServer, LanguageClientAware {
 
     @Override
     public TextDocumentService getTextDocumentService() {
-        return new MyTextDocumentService();
+        return textService;
     }
 
     @Override
     public WorkspaceService getWorkspaceService() {
-        return new MyWorkspaceService();
+        return workspaceService;
     }
 }
