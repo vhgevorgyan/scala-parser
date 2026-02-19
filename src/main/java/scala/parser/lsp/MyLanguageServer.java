@@ -1,5 +1,6 @@
 package scala.parser.lsp;
 
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import org.eclipse.lsp4j.CompletionOptions;
@@ -7,6 +8,8 @@ import org.eclipse.lsp4j.InitializeParams;
 import org.eclipse.lsp4j.InitializeResult;
 import org.eclipse.lsp4j.MessageParams;
 import org.eclipse.lsp4j.MessageType;
+import org.eclipse.lsp4j.SemanticTokensLegend;
+import org.eclipse.lsp4j.SemanticTokensWithRegistrationOptions;
 import org.eclipse.lsp4j.ServerCapabilities;
 import org.eclipse.lsp4j.TextDocumentSyncKind;
 import org.eclipse.lsp4j.services.LanguageClient;
@@ -34,6 +37,19 @@ public class MyLanguageServer implements LanguageServer, LanguageClientAware {
         capabilities.setTextDocumentSync(TextDocumentSyncKind.Full);
         capabilities.setHoverProvider(true);
         capabilities.setCompletionProvider(new CompletionOptions());
+
+        // Semantic Tokens
+        var legend = new SemanticTokensLegend(
+                List.of("variable", "number", "operator", "keyword"),
+                List.of()
+        );
+
+        var semanticOptions = new SemanticTokensWithRegistrationOptions();
+        semanticOptions.setLegend(legend);
+        semanticOptions.setFull(true);
+
+        capabilities.setSemanticTokensProvider(semanticOptions);
+
         return CompletableFuture.completedFuture(new InitializeResult(capabilities));
     }
 

@@ -1,5 +1,6 @@
 package scala.parser.lsp;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -20,6 +21,8 @@ import org.eclipse.lsp4j.MarkupContent;
 import org.eclipse.lsp4j.Position;
 import org.eclipse.lsp4j.PublishDiagnosticsParams;
 import org.eclipse.lsp4j.Range;
+import org.eclipse.lsp4j.SemanticTokens;
+import org.eclipse.lsp4j.SemanticTokensParams;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.eclipse.lsp4j.services.LanguageClient;
 import org.eclipse.lsp4j.services.TextDocumentService;
@@ -27,6 +30,7 @@ import org.eclipse.lsp4j.services.TextDocumentService;
 import scala.parser.core.ast.ASTNode;
 import scala.parser.core.ast.AstFinder;
 import scala.parser.core.hover.HoverProvider;
+import scala.parser.core.semantic.SemanticTokenProvider;
 
 public class MyTextDocumentService implements TextDocumentService {
 
@@ -95,22 +99,82 @@ public class MyTextDocumentService implements TextDocumentService {
         return CompletableFuture.supplyAsync(() -> {
             String uri = params.getTextDocument().getUri();
             String doc = documents.get(uri);
-            if (doc == null) return null;
+            if (doc == null) {
+                return null;
+            }
 
             int line = params.getPosition().getLine();
             int column = params.getPosition().getCharacter();
 
             var result = compiler.analyze(doc);
             ASTNode ast = result.ast;
-            if (ast == null) return null;
+            if (ast == null) {
+                return null;
+            }
 
             ASTNode node = AstFinder.findNodeAt(ast, line, column);
             String text = HoverProvider.getHoverText(node);
-            if (text == null) return null;
+            if (text == null) {
+                return null;
+            }
 
             MarkupContent content = new MarkupContent("plaintext", text);
             return new Hover(content);
         });
+    }
+
+    @Override
+    public CompletableFuture<SemanticTokens> semanticTokensFull(SemanticTokensParams params) {
+        return CompletableFuture.supplyAsync(() -> {
+            String uri = params.getTextDocument().getUri();
+            String doc = documents.get(uri);
+            if (doc == null) {
+                return new SemanticTokens(List.of());
+            }
+
+            var result = compiler.analyze(doc);
+            var ast = result.ast;
+            if (ast == null) {
+                return new SemanticTokens(List.of());
+            }
+
+            var tokens = SemanticTokenProvider.collect(ast);
+
+            List<Integer> data = new ArrayList<>();
+            int lastLine = 0;
+            int lastColumn = 0;
+
+            for (var t : tokens) {
+                int deltaLine = t.line - lastLine;
+                int deltaStart = deltaLine == 0 ? t.column - lastColumn : t.column;
+
+                data.add(deltaLine);
+                data.add(deltaStart);
+                data.add(t.length);
+                data.add(tokenTypeIndex(t.type));
+                data.add(0); // modifiers
+
+                lastLine = t.line;
+                lastColumn = t.column;
+            }
+
+            return new SemanticTokens(data);
+        });
+    }
+
+    private int tokenTypeIndex(String type) {
+        return switch (type) {
+            case "variable" ->
+                0;
+            case "number" ->
+                1;
+            case "operator" ->
+                2;
+            case "keyword" ->
+                3;
+            default ->
+                0;
+        };
     }
 
     @Override
