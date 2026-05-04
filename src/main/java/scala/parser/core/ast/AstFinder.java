@@ -9,9 +9,9 @@ public class AstFinder {
     private static ASTNode findRecursive(ASTNode node, int line, int column) {
         if (node == null) return null;
 
-        // Prüfen, ob Position passt
+        // Position check
         if (node.line == line && node.column <= column) {
-            // Wir versuchen, tiefere Knoten zu finden
+            // Check, if there are deep nodes
             if (node instanceof ProgramNode program) {
                 for (ASTNode stmt : program.statements) {
                     ASTNode found = findRecursive(stmt, line, column);

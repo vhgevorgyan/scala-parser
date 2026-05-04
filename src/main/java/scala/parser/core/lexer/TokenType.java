@@ -10,7 +10,13 @@ public enum TokenType {
     PLUS, MINUS, STAR, SLASH,
     EQUAL,
     // Parentheses
-    LPAREN, RPAREN,
-    // End of file
-    EOF
+    LPAREN,
+    RPAREN, // End of file
+    EOF,
+    BACKSLASH, // \ 
+    ARROW, // -> 
+    TRUE, FALSE,
+    IF, THEN, ELSE,
+    EQ, NEQ, LT, GT, LE, GE,
+
 }

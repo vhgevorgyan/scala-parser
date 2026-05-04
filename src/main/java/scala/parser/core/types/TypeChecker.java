@@ -6,8 +6,10 @@ import java.util.Map;
 
 import scala.parser.core.ParserError;
 import scala.parser.core.ast.ASTNode;
+import scala.parser.core.ast.ApplicationNode;
 import scala.parser.core.ast.BinaryExprNode;
 import scala.parser.core.ast.IdentifierNode;
+import scala.parser.core.ast.LambdaNode;
 import scala.parser.core.ast.LetStatementNode;
 import scala.parser.core.ast.LiteralNode;
 import scala.parser.core.ast.ProgramNode;
@@ -65,6 +67,27 @@ public class TypeChecker {
             }
 
             return Type.NUMBER;
+        }
+
+        if (node instanceof LambdaNode lam) {
+            symbols.put(lam.param, Type.UNKNOWN);
+            infer(lam.body);
+            return Type.FUNCTION;
+        }
+
+        if (node instanceof ApplicationNode app) {
+            Type fun = infer(app.function);
+            infer(app.argument);
+
+            if (fun != Type.FUNCTION) {
+                errors.add(new ParserError(
+                        "Trying to call a non-function",
+                        app.line,
+                        app.column
+                ));
+            }
+
+            return Type.UNKNOWN;
         }
 
         return Type.UNKNOWN;

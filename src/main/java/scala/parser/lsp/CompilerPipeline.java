@@ -7,17 +7,27 @@ import scala.parser.core.lexer.Token;
 import scala.parser.core.lexer.Tokenizer;
 import scala.parser.core.parser.Parser;
 import scala.parser.core.types.TypeChecker;
+import scala.parser.core.interpreter.EvaluationResult;
+import scala.parser.core.interpreter.Evaluator;
+import scala.parser.core.interpreter.Value;
 
 public class CompilerPipeline {
 
-    public ParserResult analyze(String text) {
+    public EvaluationResult analyze(String text) {
         Tokenizer tokenizer = new Tokenizer(text);
         List<Token> tokens = tokenizer.tokenize();
         Parser parser = new Parser(tokens);
         ParserResult result = parser.parse();
-        var typeChecker = new TypeChecker(result.errors);
+
+        TypeChecker typeChecker = new TypeChecker(result.errors);
         typeChecker.check(result.ast);
 
-        return result;
+        Value value = null;
+        if (result.errors.isEmpty()) {
+            Evaluator evaluator = new Evaluator();
+            value = evaluator.evalProgram(result.ast);
+        }
+
+        return new EvaluationResult(result, value);
     }
 }

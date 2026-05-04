@@ -6,9 +6,13 @@ import java.util.List;
 import scala.parser.core.ParserError;
 import scala.parser.core.ParserResult;
 import scala.parser.core.ast.ASTNode;
+import scala.parser.core.ast.ApplicationNode;
 import scala.parser.core.ast.BinaryExprNode;
+import scala.parser.core.ast.BoolNode;
 import scala.parser.core.ast.ExpressionNode;
 import scala.parser.core.ast.IdentifierNode;
+import scala.parser.core.ast.IfNode;
+import scala.parser.core.ast.LambdaNode;
 import scala.parser.core.ast.LetStatementNode;
 import scala.parser.core.ast.LiteralNode;
 import scala.parser.core.ast.ProgramNode;
@@ -36,6 +40,9 @@ public class Parser {
         return new ParserResult(program, errors);
     }
 
+    // ---------------------------------------------------------
+    // Basic helpers
+    // ---------------------------------------------------------
     private boolean isAtEnd() {
         return peek().type == TokenType.EOF;
     }
@@ -75,6 +82,9 @@ public class Parser {
         errors.add(new ParserError(message, token.line, token.column));
     }
 
+    // ---------------------------------------------------------
+    // Statements
+    // ---------------------------------------------------------
     private ASTNode parseStatement() {
         if (match(TokenType.LET)) {
             return parseLetStatement();
@@ -96,12 +106,41 @@ public class Parser {
         );
     }
 
+    // ---------------------------------------------------------
+    // Expressions (Lambda-Kalkül + Arithmetik)
+    // ---------------------------------------------------------
     private ExpressionNode parseExpression() {
-        ExpressionNode expr = parseTerm();
+        // Lambda hat höchste Priorität
+        if (match(TokenType.BACKSLASH)) {
+            return parseLambda();
+        }
+        if (match(TokenType.IF)) {
+            ExpressionNode cond = parseExpression();
+            consume(TokenType.THEN, "Expected 'then'");
+            ExpressionNode thenBranch = parseExpression();
+            consume(TokenType.ELSE, "Expected 'else'");
+            ExpressionNode elseBranch = parseExpression();
+            return new IfNode(cond, thenBranch, elseBranch);
+        }
+
+        return parseBinary();
+    }
+
+    private ExpressionNode parseLambda() {
+        Token param = expect(TokenType.IDENT, "Expected parameter name after '\\'");
+        expect(TokenType.ARROW, "Expected '->' after lambda parameter");
+
+        ExpressionNode body = parseExpression();
+
+        return new LambdaNode(param.text, body, param.line, param.column);
+    }
+
+    private ExpressionNode parseBinary() {
+        ExpressionNode expr = parseApplication();
 
         while (match(TokenType.PLUS) || match(TokenType.MINUS)) {
             Token operator = previous();
-            ExpressionNode right = parseTerm();
+            ExpressionNode right = parseApplication();
 
             expr = new BinaryExprNode(
                     expr,
@@ -115,26 +154,29 @@ public class Parser {
         return expr;
     }
 
-    private ExpressionNode parseTerm() {
-        ExpressionNode expr = parseFactor();
+    private ExpressionNode parseApplication() {
+        ExpressionNode expr = parsePrimary();
 
-        while (match(TokenType.STAR) || match(TokenType.SLASH)) {
-            Token operator = previous();
-            ExpressionNode right = parseFactor();
+        while (true) {
+            TokenType t = peek().type;
 
-            expr = new BinaryExprNode(
-                    expr,
-                    operator.text,
-                    right,
-                    operator.line,
-                    operator.column
-            );
+            // Ein Ausdruck kann starten mit:
+            if (t == TokenType.IDENT
+                    || t == TokenType.NUMBER
+                    || t == TokenType.LPAREN
+                    || t == TokenType.BACKSLASH) {
+
+                ExpressionNode arg = parsePrimary();
+                expr = new ApplicationNode(expr, arg, expr.line, expr.column);
+            } else {
+                break;
+            }
         }
 
         return expr;
     }
 
-    private ExpressionNode parseFactor() {
+    private ExpressionNode parsePrimary() {
         Token token = peek();
 
         if (match(TokenType.NUMBER)) {
@@ -149,6 +191,12 @@ public class Parser {
             ExpressionNode expr = parseExpression();
             expect(TokenType.RPAREN, "Expected ')' after expression");
             return expr;
+        }
+        if (match(TokenType.TRUE)) {
+            return new BoolNode(previous().line, previous().column, true);
+        }
+        if (match(TokenType.FALSE)) {
+            return new BoolNode(previous().line, previous().column, false);
         }
 
         error("Unexpected token: " + token.text, token);

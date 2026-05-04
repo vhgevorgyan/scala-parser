@@ -1,15 +1,14 @@
 package scala.parser.core;
 
 import java.util.List;
-
-import scala.parser.core.ast.ASTNode;
+import scala.parser.core.ast.ProgramNode;
 
 public class ParserResult {
 
-    public final ASTNode ast;
+    public final ProgramNode ast;
     public final List<ParserError> errors;
 
-    public ParserResult(ASTNode ast, List<ParserError> errors) {
+    public ParserResult(ProgramNode ast, List<ParserError> errors) {
         this.ast = ast;
         this.errors = errors;
     }

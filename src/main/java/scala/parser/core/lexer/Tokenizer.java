@@ -38,15 +38,102 @@ public class Tokenizer {
                 continue;
             }
 
+            // ------------------------------------
+            // Multi-character operators (MÜSSEN zuerst kommen)
+            // ------------------------------------
+            // ==
+            if (c == '=' && peekNext() == '=') {
+                tokens.add(new Token(TokenType.EQ, "==", line, column));
+                advance();
+                advance();
+                continue;
+            }
+
+            // !=
+            if (c == '!' && peekNext() == '=') {
+                tokens.add(new Token(TokenType.NEQ, "!=", line, column));
+                advance();
+                advance();
+                continue;
+            }
+
+            // <=
+            if (c == '<' && peekNext() == '=') {
+                tokens.add(new Token(TokenType.LE, "<=", line, column));
+                advance();
+                advance();
+                continue;
+            }
+
+            // >=
+            if (c == '>' && peekNext() == '=') {
+                tokens.add(new Token(TokenType.GE, ">=", line, column));
+                advance();
+                advance();
+                continue;
+            }
+
+            // ------------------------------------
+            // Lambda-Kalkül Erweiterung
+            // ------------------------------------
+            // ARROW: ->
+            if (c == '-' && peekNext() == '>') {
+                tokens.add(new Token(TokenType.ARROW, "->", line, column));
+                advance();
+                advance();
+                continue;
+            }
+
+            // BACKSLASH: \
+            if (c == '\\') {
+                tokens.add(new Token(TokenType.BACKSLASH, "\\", line, column));
+                advance();
+                continue;
+            }
+
+            // ------------------------------------
             // Single-character tokens
+            // ------------------------------------
             switch (c) {
-                case '+': tokens.add(makeToken(TokenType.PLUS)); advance(); break;
-                case '-': tokens.add(makeToken(TokenType.MINUS)); advance(); break;
-                case '*': tokens.add(makeToken(TokenType.STAR)); advance(); break;
-                case '/': tokens.add(makeToken(TokenType.SLASH)); advance(); break;
-                case '=': tokens.add(makeToken(TokenType.EQUAL)); advance(); break;
-                case '(': tokens.add(makeToken(TokenType.LPAREN)); advance(); break;
-                case ')': tokens.add(makeToken(TokenType.RPAREN)); advance(); break;
+                case '+':
+                    tokens.add(makeToken(TokenType.PLUS));
+                    advance();
+                    break;
+                case '-':
+                    tokens.add(makeToken(TokenType.MINUS));
+                    advance();
+                    break;
+                case '*':
+                    tokens.add(makeToken(TokenType.STAR));
+                    advance();
+                    break;
+                case '/':
+                    tokens.add(makeToken(TokenType.SLASH));
+                    advance();
+                    break;
+
+                case '=':
+                    tokens.add(makeToken(TokenType.EQUAL));
+                    advance();
+                    break;
+
+                case '<':
+                    tokens.add(makeToken(TokenType.LT));
+                    advance();
+                    break;
+                case '>':
+                    tokens.add(makeToken(TokenType.GT));
+                    advance();
+                    break;
+
+                case '(':
+                    tokens.add(makeToken(TokenType.LPAREN));
+                    advance();
+                    break;
+                case ')':
+                    tokens.add(makeToken(TokenType.RPAREN));
+                    advance();
+                    break;
 
                 default:
                     throw new RuntimeException("Unexpected character '" + c + "' at " + line + ":" + column);
@@ -57,16 +144,22 @@ public class Tokenizer {
         return tokens;
     }
 
-    // -------------------------
+    // ------------------------------------
     // Helper methods
-    // -------------------------
-
+    // ------------------------------------
     private boolean isAtEnd() {
         return pos >= input.length();
     }
 
     private char peek() {
         return input.charAt(pos);
+    }
+
+    private char peekNext() {
+        if (pos + 1 >= input.length()) {
+            return '\0';
+        }
+        return input.charAt(pos + 1);
     }
 
     private void advance() {
@@ -111,8 +204,20 @@ public class Tokenizer {
 
         String text = input.substring(start, pos);
 
-        if (text.equals("let")) {
-            return new Token(TokenType.LET, text, line, startCol);
+        // Keywords
+        switch (text) {
+            case "let":
+                return new Token(TokenType.LET, text, line, startCol);
+            case "true":
+                return new Token(TokenType.TRUE, text, line, startCol);
+            case "false":
+                return new Token(TokenType.FALSE, text, line, startCol);
+            case "if":
+                return new Token(TokenType.IF, text, line, startCol);
+            case "then":
+                return new Token(TokenType.THEN, text, line, startCol);
+            case "else":
+                return new Token(TokenType.ELSE, text, line, startCol);
         }
 
         return new Token(TokenType.IDENT, text, line, startCol);
