@@ -51,7 +51,7 @@ public class MyTextDocumentService implements TextDocumentService {
 
         var result = compiler.analyze(text);
 
-        var diagnostics = result.errors.stream().map(err -> {
+        var diagnostics = result.parserResult().errors.stream().map(err -> {
             Diagnostic diag = new Diagnostic();
             diag.setMessage(err.message);
             diag.setSeverity(DiagnosticSeverity.Error);
@@ -73,7 +73,7 @@ public class MyTextDocumentService implements TextDocumentService {
 
         var result = compiler.analyze(text);
 
-        var diagnostics = result.errors.stream().map(err -> {
+        var diagnostics = result.parserResult().errors.stream().map(err -> {
             Diagnostic diag = new Diagnostic();
             diag.setMessage(err.message);
             diag.setSeverity(DiagnosticSeverity.Error);
@@ -107,7 +107,7 @@ public class MyTextDocumentService implements TextDocumentService {
             int column = params.getPosition().getCharacter();
 
             var result = compiler.analyze(doc);
-            ASTNode ast = result.ast;
+            ASTNode ast = result.parserResult().ast;
             if (ast == null) {
                 return null;
             }
@@ -133,7 +133,7 @@ public class MyTextDocumentService implements TextDocumentService {
             }
 
             var result = compiler.analyze(doc);
-            var ast = result.ast;
+            var ast = result.parserResult().ast;
             if (ast == null) {
                 return new SemanticTokens(List.of());
             }

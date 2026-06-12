@@ -46,7 +46,7 @@ public class Evaluator {
 
         // Number literal
         if (node instanceof LiteralNode lit) {
-            return new NumberValue(Integer.parseInt(lit.text));
+            return new NumberValue(Integer.parseInt(lit.value));
         }
 
         // Identifier
@@ -68,38 +68,23 @@ public class Evaluator {
         }
 
         // Binary operations (arithmetik + vergleich)
-        if (node instanceof BinaryOpNode bin) {
+        if (node instanceof BinaryExprNode bin) {
             Value left = evalExpr(bin.left, env);
             Value right = evalExpr(bin.right, env);
 
-            // Zahlenarithmetik
             if (left instanceof NumberValue l && right instanceof NumberValue r) {
-                return switch (bin.op) {
-                    case PLUS ->
-                        new NumberValue(l.value + r.value);
-                    case MINUS ->
-                        new NumberValue(l.value - r.value);
-                    case STAR ->
-                        new NumberValue(l.value * r.value);
-                    case SLASH ->
-                        new NumberValue(l.value / r.value);
-
-                    // Vergleichsoperatoren
-                    case EQ ->
-                        new BoolValue(l.value == r.value);
-                    case NEQ ->
-                        new BoolValue(l.value != r.value);
-                    case LT ->
-                        new BoolValue(l.value < r.value);
-                    case GT ->
-                        new BoolValue(l.value > r.value);
-                    case LE ->
-                        new BoolValue(l.value <= r.value);
-                    case GE ->
-                        new BoolValue(l.value >= r.value);
-
-                    default ->
-                        throw new RuntimeException("Unknown operator: " + bin.op);
+                return switch (bin.operator) {
+                    case "+" -> new NumberValue(l.value + r.value);
+                    case "-" -> new NumberValue(l.value - r.value);
+                    case "*" -> new NumberValue(l.value * r.value);
+                    case "/" -> new NumberValue(l.value / r.value);
+                    case "==" -> new BoolValue(l.value == r.value);
+                    case "!=" -> new BoolValue(l.value != r.value);
+                    case "<" -> new BoolValue(l.value < r.value);
+                    case ">" -> new BoolValue(l.value > r.value);
+                    case "<=" -> new BoolValue(l.value <= r.value);
+                    case ">=" -> new BoolValue(l.value >= r.value);
+                    default -> throw new RuntimeException("Unknown operator: " + bin.operator);
                 };
             }
 
@@ -128,3 +113,4 @@ public class Evaluator {
 
         throw new RuntimeException("Unknown expression: " + node.getClass().getSimpleName());
     }
+}

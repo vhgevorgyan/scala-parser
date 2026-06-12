@@ -8,6 +8,8 @@ import scala.parser.core.ParserError;
 import scala.parser.core.ast.ASTNode;
 import scala.parser.core.ast.ApplicationNode;
 import scala.parser.core.ast.BinaryExprNode;
+import scala.parser.core.ast.BoolNode;
+import scala.parser.core.ast.IfNode;
 import scala.parser.core.ast.IdentifierNode;
 import scala.parser.core.ast.LambdaNode;
 import scala.parser.core.ast.LetStatementNode;
@@ -28,6 +30,7 @@ public class TypeChecker {
             for (ASTNode stmt : program.statements) {
                 check(stmt);
             }
+            return;
         }
 
         if (node instanceof LetStatementNode let) {
@@ -39,6 +42,10 @@ public class TypeChecker {
     private Type infer(ASTNode node) {
         if (node instanceof LiteralNode) {
             return Type.NUMBER;
+        }
+
+        if (node instanceof BoolNode) {
+            return Type.BOOL;
         }
 
         if (node instanceof IdentifierNode id) {
@@ -57,16 +64,55 @@ public class TypeChecker {
             Type left = infer(bin.left);
             Type right = infer(bin.right);
 
-            if (left != Type.NUMBER || right != Type.NUMBER) {
-                errors.add(new ParserError(
-                        "Operator '" + bin.operator + "' requires numbers",
-                        bin.line,
-                        bin.column
-                ));
-                return Type.UNKNOWN;
+            switch (bin.operator) {
+                case "+", "-", "*", "/" -> {
+                    if (left != Type.NUMBER || right != Type.NUMBER) {
+                        errors.add(new ParserError(
+                                "Operator '" + bin.operator + "' requires numbers",
+                                bin.line,
+                                bin.column
+                        ));
+                        return Type.UNKNOWN;
+                    }
+                    return Type.NUMBER;
+                }
+                case "==", "!=", "<", ">", "<=", ">=" -> {
+                    if (left != Type.NUMBER || right != Type.NUMBER) {
+                        errors.add(new ParserError(
+                                "Comparison operator '" + bin.operator + "' requires numbers",
+                                bin.line,
+                                bin.column
+                        ));
+                        return Type.UNKNOWN;
+                    }
+                    return Type.BOOL;
+                }
+                default -> {
+                    errors.add(new ParserError(
+                            "Unknown operator '" + bin.operator + "'",
+                            bin.line,
+                            bin.column
+                    ));
+                    return Type.UNKNOWN;
+                }
             }
+        }
 
-            return Type.NUMBER;
+        if (node instanceof IfNode i) {
+            Type condType = infer(i.condition);
+            if (condType != Type.BOOL && condType != Type.UNKNOWN) {
+                errors.add(new ParserError(
+                        "If condition must be boolean",
+                        i.condition.line,
+                        i.condition.column
+                ));
+            }
+            Type thenType = infer(i.thenBranch);
+            Type elseType = infer(i.elseBranch);
+            if (thenType == elseType) {
+                return thenType;
+            }
+            return Type.UNKNOWN;
         }
 
         if (node instanceof LambdaNode lam) {

@@ -3,12 +3,7 @@ package scala.parser.core.semantic;
 import java.util.ArrayList;
 import java.util.List;
 
-import scala.parser.core.ast.ASTNode;
-import scala.parser.core.ast.BinaryExprNode;
-import scala.parser.core.ast.IdentifierNode;
-import scala.parser.core.ast.LetStatementNode;
-import scala.parser.core.ast.LiteralNode;
-import scala.parser.core.ast.ProgramNode;
+import scala.parser.core.ast.*;
 
 public class SemanticTokenProvider {
 
@@ -20,6 +15,12 @@ public class SemanticTokenProvider {
 
     private static void walk(ASTNode node, List<SemanticToken> out) {
         if (node == null) {
+            return;
+        }
+
+        if (node instanceof BoolNode b) {
+            String text = String.valueOf(b.value);
+            out.add(new SemanticToken(b.line, b.column, text.length(), "keyword"));
             return;
         }
 
@@ -38,8 +39,28 @@ public class SemanticTokenProvider {
             return;
         }
 
+        if (node instanceof IfNode i) {
+            out.add(new SemanticToken(i.line, i.column, 2, "keyword"));
+            walk(i.condition, out);
+            walk(i.thenBranch, out);
+            walk(i.elseBranch, out);
+            return;
+        }
+
+        if (node instanceof LambdaNode lam) {
+            out.add(new SemanticToken(lam.line, lam.column, 1, "keyword"));
+            walk(lam.body, out);
+            return;
+        }
+
+        if (node instanceof ApplicationNode app) {
+            walk(app.function, out);
+            walk(app.argument, out);
+            return;
+        }
+
         if (node instanceof LetStatementNode let) {
-            out.add(new SemanticToken(let.line, let.column, 3, "keyword")); // "let"
+            out.add(new SemanticToken(let.line, let.column, 3, "keyword"));
             walk(let.value, out);
             return;
         }

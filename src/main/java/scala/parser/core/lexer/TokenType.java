@@ -11,7 +11,7 @@ public enum TokenType {
     EQUAL,
     // Parentheses
     LPAREN,
-    RPAREN, // End of file
+    RPAREN,
     EOF,
     BACKSLASH, // \ 
     ARROW, // -> 

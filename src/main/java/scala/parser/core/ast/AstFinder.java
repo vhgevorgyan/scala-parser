@@ -9,9 +9,7 @@ public class AstFinder {
     private static ASTNode findRecursive(ASTNode node, int line, int column) {
         if (node == null) return null;
 
-        // Position check
         if (node.line == line && node.column <= column) {
-            // Check, if there are deep nodes
             if (node instanceof ProgramNode program) {
                 for (ASTNode stmt : program.statements) {
                     ASTNode found = findRecursive(stmt, line, column);
@@ -22,9 +20,29 @@ public class AstFinder {
             if (node instanceof BinaryExprNode bin) {
                 ASTNode left = findRecursive(bin.left, line, column);
                 if (left != null) return left;
-
                 ASTNode right = findRecursive(bin.right, line, column);
                 if (right != null) return right;
+            }
+
+            if (node instanceof IfNode i) {
+                ASTNode cond = findRecursive(i.condition, line, column);
+                if (cond != null) return cond;
+                ASTNode thenB = findRecursive(i.thenBranch, line, column);
+                if (thenB != null) return thenB;
+                ASTNode elseB = findRecursive(i.elseBranch, line, column);
+                if (elseB != null) return elseB;
+            }
+
+            if (node instanceof ApplicationNode app) {
+                ASTNode fn = findRecursive(app.function, line, column);
+                if (fn != null) return fn;
+                ASTNode arg = findRecursive(app.argument, line, column);
+                if (arg != null) return arg;
+            }
+
+            if (node instanceof LambdaNode lam) {
+                ASTNode body = findRecursive(lam.body, line, column);
+                if (body != null) return body;
             }
 
             if (node instanceof LetStatementNode let) {
@@ -32,7 +50,6 @@ public class AstFinder {
                 if (val != null) return val;
             }
 
-            // Wenn kein tieferer Knoten passt → diesen zurückgeben
             return node;
         }
 

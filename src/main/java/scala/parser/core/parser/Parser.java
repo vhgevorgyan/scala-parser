@@ -78,6 +78,10 @@ public class Parser {
         return advance();
     }
 
+    private Token consume(TokenType type, String message) {
+        return expect(type, message);
+    }
+
     private void error(String message, Token token) {
         errors.add(new ParserError(message, token.line, token.column));
     }
@@ -123,7 +127,7 @@ public class Parser {
             return new IfNode(cond, thenBranch, elseBranch);
         }
 
-        return parseBinary();
+        return parseEquality();
     }
 
     private ExpressionNode parseLambda() {
@@ -135,20 +139,49 @@ public class Parser {
         return new LambdaNode(param.text, body, param.line, param.column);
     }
 
-    private ExpressionNode parseBinary() {
-        ExpressionNode expr = parseApplication();
+    private ExpressionNode parseEquality() {
+        ExpressionNode expr = parseComparison();
+
+        while (match(TokenType.EQ) || match(TokenType.NEQ)) {
+            Token operator = previous();
+            ExpressionNode right = parseComparison();
+            expr = new BinaryExprNode(expr, operator.text, right, operator.line, operator.column);
+        }
+
+        return expr;
+    }
+
+    private ExpressionNode parseComparison() {
+        ExpressionNode expr = parseTerm();
+
+        while (match(TokenType.LT) || match(TokenType.GT) || match(TokenType.LE) || match(TokenType.GE)) {
+            Token operator = previous();
+            ExpressionNode right = parseTerm();
+            expr = new BinaryExprNode(expr, operator.text, right, operator.line, operator.column);
+        }
+
+        return expr;
+    }
+
+    private ExpressionNode parseTerm() {
+        ExpressionNode expr = parseFactor();
 
         while (match(TokenType.PLUS) || match(TokenType.MINUS)) {
             Token operator = previous();
-            ExpressionNode right = parseApplication();
+            ExpressionNode right = parseFactor();
+            expr = new BinaryExprNode(expr, operator.text, right, operator.line, operator.column);
+        }
 
-            expr = new BinaryExprNode(
-                    expr,
-                    operator.text,
-                    right,
-                    operator.line,
-                    operator.column
-            );
+        return expr;
+    }
+
+    private ExpressionNode parseFactor() {
+        ExpressionNode expr = parseApplication();
+
+        while (match(TokenType.STAR) || match(TokenType.SLASH)) {
+            Token operator = previous();
+            ExpressionNode right = parseApplication();
+            expr = new BinaryExprNode(expr, operator.text, right, operator.line, operator.column);
         }
 
         return expr;
@@ -164,7 +197,9 @@ public class Parser {
             if (t == TokenType.IDENT
                     || t == TokenType.NUMBER
                     || t == TokenType.LPAREN
-                    || t == TokenType.BACKSLASH) {
+                    || t == TokenType.BACKSLASH
+                    || t == TokenType.TRUE
+                    || t == TokenType.FALSE) {
 
                 ExpressionNode arg = parsePrimary();
                 expr = new ApplicationNode(expr, arg, expr.line, expr.column);
