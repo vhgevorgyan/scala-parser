@@ -2,6 +2,7 @@ package scala.parser.lsp;
 
 import java.util.List;
 
+import scala.parser.core.ParserError;
 import scala.parser.core.ParserResult;
 import scala.parser.core.lexer.Token;
 import scala.parser.core.lexer.Tokenizer;
@@ -24,8 +25,12 @@ public class CompilerPipeline {
 
         Value value = null;
         if (result.errors.isEmpty()) {
-            Evaluator evaluator = new Evaluator();
-            value = evaluator.evalProgram(result.ast);
+            try {
+                Evaluator evaluator = new Evaluator();
+                value = evaluator.evalProgram(result.ast);
+            } catch (RuntimeException e) {
+                result.errors.add(new ParserError("Runtime error: " + e.getMessage(), 0, 0));
+            }
         }
 
         return new EvaluationResult(result, value, typeChecker.getInferredTypes());

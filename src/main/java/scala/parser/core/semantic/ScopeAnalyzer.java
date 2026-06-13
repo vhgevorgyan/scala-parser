@@ -57,7 +57,7 @@ public class ScopeAnalyzer {
         }
 
         if (node instanceof LambdaNode lam) {
-            out.add(new Definition(lam.param, lam.line + 1, lam.column + 1));
+            out.add(new Definition(lam.param, lam.line, lam.column));
             walkDefinitions(lam.body, out);
             return;
         }
@@ -65,8 +65,8 @@ public class ScopeAnalyzer {
         if (node instanceof CaseNode c) {
             walkDefinitions(c.expr, out);
             for (CaseNode.CaseBranch br : c.branches) {
-                for (String b : br.bindings()) {
-                    out.add(new Definition(b, br.body().line, br.body().column));
+                for (CaseNode.Binding b : br.bindings()) {
+                    out.add(new Definition(b.name(), b.line(), b.column()));
                 }
                 walkDefinitions(br.body(), out);
             }
@@ -118,8 +118,8 @@ public class ScopeAnalyzer {
         if (node instanceof CaseNode c) {
             walkReferences(c.expr, targetName, out);
             for (CaseNode.CaseBranch br : c.branches) {
-                for (String b : br.bindings()) {
-                    if (b.equals(targetName)) return;
+                for (CaseNode.Binding b : br.bindings()) {
+                    if (b.name().equals(targetName)) return;
                 }
                 walkReferences(br.body(), targetName, out);
             }

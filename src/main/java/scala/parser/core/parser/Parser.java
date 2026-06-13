@@ -193,9 +193,10 @@ public class Parser {
             Token ctor = expect(TokenType.IDENT, "Expected constructor name in case branch");
             if (ctor.type != TokenType.IDENT) { synchronize(); return new LiteralNode("0", ctor.line, ctor.column); }
 
-            List<String> bindings = new ArrayList<>();
+            List<CaseNode.Binding> bindings = new ArrayList<>();
             while (peek().type == TokenType.IDENT && !peek().text.equals("->")) {
-                bindings.add(advance().text);
+                Token t = advance();
+                bindings.add(new CaseNode.Binding(t.text, t.line, t.column));
             }
 
             expect(TokenType.ARROW, "Expected '->' after constructor pattern");

@@ -113,7 +113,10 @@ public class Tokenizer {
                 case ';' -> { tokens.add(makeToken(TokenType.SEMICOLON)); advance(); }
                 case ':' -> { tokens.add(makeToken(TokenType.COLON)); advance(); }
                 case '|' -> { tokens.add(makeToken(TokenType.PIPE)); advance(); }
-                default -> throw new RuntimeException("Unexpected character '" + c + "' at " + line + ":" + column);
+                default -> {
+                    // Skip unknown character and continue
+                    advance();
+                }
             }
         }
 

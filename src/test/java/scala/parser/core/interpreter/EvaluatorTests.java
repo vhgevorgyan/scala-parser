@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 
 import scala.parser.lsp.CompilerPipeline;
+import scala.parser.core.interpreter.EvaluationResult;
 
 class EvaluatorTests {
 
@@ -295,7 +296,8 @@ class EvaluatorTests {
 
     @Test
     void divisionByZero() {
-        assertThrows(RuntimeException.class, () -> eval("1 / 0"));
+        EvaluationResult r = new CompilerPipeline().analyze("1 / 0");
+        assertFalse(r.parserResult().errors.isEmpty());
     }
 
     @Test

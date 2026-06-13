@@ -260,7 +260,7 @@ class ParserTests {
         assertTrue(caseNode.branches.get(0).bindings().isEmpty());
         assertEquals("Just", caseNode.branches.get(1).constructor());
         assertEquals(1, caseNode.branches.get(1).bindings().size());
-        assertEquals("y", caseNode.branches.get(1).bindings().get(0));
+        assertEquals("y", caseNode.branches.get(1).bindings().get(0).name());
     }
 
     @Test
@@ -271,6 +271,8 @@ class ParserTests {
         assertEquals(1, caseNode.branches.size());
         assertEquals("Pair", caseNode.branches.get(0).constructor());
         assertEquals(2, caseNode.branches.get(0).bindings().size());
+        assertEquals("x", caseNode.branches.get(0).bindings().get(0).name());
+        assertEquals("y", caseNode.branches.get(0).bindings().get(1).name());
     }
 
     @Test

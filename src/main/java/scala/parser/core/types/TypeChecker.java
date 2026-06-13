@@ -298,7 +298,7 @@ public class TypeChecker {
 
                 // For constructors with multiple args, build nested function type
                 for (int i = 0; i < branch.bindings().size(); i++) {
-                    String binding = branch.bindings().get(i);
+                    String binding = branch.bindings().get(i).name();
                     TypeVar bindingType = freshVar();
                     branchEnv.put(binding, new TypeScheme(List.of(), bindingType));
                     expectedCtorType = new TypeFun(expectedCtorType, bindingType);
@@ -327,7 +327,7 @@ public class TypeChecker {
                 }
 
                 for (int i = 0; i < branch.bindings().size() && i < argTypes.size(); i++) {
-                    String binding = branch.bindings().get(i);
+                    String binding = branch.bindings().get(i).name();
                     Type bindingType = apply(matchSub, apply(s, argTypes.get(i)));
                     branchEnv.put(binding, new TypeScheme(List.of(), bindingType));
                 }

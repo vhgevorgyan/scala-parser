@@ -7,6 +7,9 @@ import scala.parser.core.ast.*;
 
 public class Evaluator {
 
+    private static final int MAX_DEPTH = 1000;
+    private int depth = 0;
+
     public Value evalProgram(ProgramNode program) {
         Env env = initEnv();
         Value last = null;
@@ -72,6 +75,17 @@ public class Evaluator {
     }
 
     public Value evalExpr(ExpressionNode node, Env env) {
+        if (depth >= MAX_DEPTH) throw new RuntimeException("Recursion depth limit exceeded");
+        depth++;
+
+        try {
+            return evalExprImpl(node, env);
+        } finally {
+            depth--;
+        }
+    }
+
+    private Value evalExprImpl(ExpressionNode node, Env env) {
         if (node instanceof StringLiteralNode s) {
             return new StringValue(s.value);
         }
@@ -125,7 +139,7 @@ public class Evaluator {
                 if (branch.constructor().equals(cv.name)) {
                     Env branchEnv = new Env(env);
                     for (int i = 0; i < branch.bindings().size() && i < cv.args.size(); i++) {
-                        branchEnv.define(branch.bindings().get(i), cv.args.get(i));
+                        branchEnv.define(branch.bindings().get(i).name(), cv.args.get(i));
                     }
                     return evalExpr(branch.body(), branchEnv);
                 }
