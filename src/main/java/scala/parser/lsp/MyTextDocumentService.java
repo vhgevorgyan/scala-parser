@@ -55,8 +55,12 @@ import scala.parser.core.semantic.SemanticTokenProvider;
 
 public class MyTextDocumentService implements TextDocumentService {
 
-    private final Map<String, String> documents = new HashMap<>();
+    private final DocumentManager documents;
     private final CompilerPipeline compiler = new CompilerPipeline();
+
+    public MyTextDocumentService(DocumentManager documents) {
+        this.documents = documents;
+    }
 
     private LanguageClient client;
 
@@ -68,7 +72,7 @@ public class MyTextDocumentService implements TextDocumentService {
     public void didOpen(DidOpenTextDocumentParams params) {
         String uri = params.getTextDocument().getUri();
         String text = params.getTextDocument().getText();
-        documents.put(uri, text);
+        documents.open(uri, text);
         publishDiagnostics(uri, text);
     }
 
@@ -76,14 +80,14 @@ public class MyTextDocumentService implements TextDocumentService {
     public void didChange(DidChangeTextDocumentParams params) {
         String uri = params.getTextDocument().getUri();
         String text = params.getContentChanges().get(0).getText();
-        documents.put(uri, text);
+        documents.change(uri, text);
         publishDiagnostics(uri, text);
     }
 
     @Override
     public void didClose(DidCloseTextDocumentParams params) {
         String uri = params.getTextDocument().getUri();
-        documents.remove(uri);
+        documents.close(uri);
         client.publishDiagnostics(new PublishDiagnosticsParams(uri, List.of()));
     }
 
@@ -296,7 +300,7 @@ public class MyTextDocumentService implements TextDocumentService {
         return CompletableFuture.supplyAsync(() -> {
             String uri = params.getTextDocument().getUri();
             String doc = documents.get(uri);
-            if (doc == null) return null;
+            if (doc == null) return new WorkspaceEdit(Map.of());
 
             int line = params.getPosition().getLine();
             int column = params.getPosition().getCharacter();
@@ -304,10 +308,10 @@ public class MyTextDocumentService implements TextDocumentService {
 
             var result = compiler.analyze(doc);
             ASTNode ast = result.parserResult().ast;
-            if (ast == null) return null;
+            if (ast == null) return new WorkspaceEdit(Map.of());
 
             ASTNode node = AstFinder.findNodeAt(ast, line, column);
-            if (!(node instanceof IdentifierNode id)) return null;
+            if (!(node instanceof IdentifierNode id)) return new WorkspaceEdit(Map.of());
 
             var refs = ScopeAnalyzer.collectReferences(ast, id.name);
             List<TextEdit> edits = refs.stream()

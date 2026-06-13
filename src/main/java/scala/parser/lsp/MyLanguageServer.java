@@ -22,8 +22,9 @@ import org.eclipse.lsp4j.services.WorkspaceService;
 
 public class MyLanguageServer implements LanguageServer, LanguageClientAware {
 
-    private final MyTextDocumentService textService = new MyTextDocumentService();
-    private final MyWorkspaceService workspaceService = new MyWorkspaceService();
+    private final DocumentManager documentManager = new DocumentManager();
+    private final MyTextDocumentService textService = new MyTextDocumentService(documentManager);
+    private final MyWorkspaceService workspaceService = new MyWorkspaceService(documentManager);
     private LanguageClient client;
 
     @Override

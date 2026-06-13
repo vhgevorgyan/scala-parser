@@ -28,5 +28,18 @@ public final class Env {
         }
         throw new RuntimeException("Unbound variable: " + name);
     }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        Env e = this;
+        while (e != null) {
+            for (var entry : e.values.entrySet()) {
+                sb.append(entry.getKey()).append(" = ").append(entry.getValue()).append("\n");
+            }
+            e = e.parent;
+        }
+        return sb.toString();
+    }
 }
 
