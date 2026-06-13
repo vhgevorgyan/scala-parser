@@ -20,160 +20,100 @@ public class Tokenizer {
         while (!isAtEnd()) {
             char c = peek();
 
-            // Whitespace
             if (Character.isWhitespace(c)) {
                 skipWhitespace();
                 continue;
             }
 
-            // Line comment
             if (c == '/' && peekNext() == '/') {
                 skipLineComment();
                 continue;
             }
 
-            // Block comment
             if (c == '/' && peekNext() == '*') {
                 skipBlockComment();
                 continue;
             }
 
-            // Numbers
             if (Character.isDigit(c)) {
                 tokens.add(readNumber());
                 continue;
             }
 
-            // String literals
             if (c == '"') {
                 tokens.add(readString());
                 continue;
             }
 
-            // Identifiers / Keywords
             if (Character.isLetter(c)) {
                 tokens.add(readIdentifierOrKeyword());
                 continue;
             }
 
-            // ------------------------------------
             // Multi-character operators
-            // ------------------------------------
             if (c == '=' && peekNext() == '=') {
                 tokens.add(new Token(TokenType.EQ, "==", line, column));
-                advance();
-                advance();
+                advance(); advance();
                 continue;
             }
 
             if (c == '!' && peekNext() == '=') {
                 tokens.add(new Token(TokenType.NEQ, "!=", line, column));
-                advance();
-                advance();
+                advance(); advance();
                 continue;
             }
 
             if (c == '<' && peekNext() == '=') {
                 tokens.add(new Token(TokenType.LE, "<=", line, column));
-                advance();
-                advance();
+                advance(); advance();
                 continue;
             }
 
             if (c == '>' && peekNext() == '=') {
                 tokens.add(new Token(TokenType.GE, ">=", line, column));
-                advance();
-                advance();
+                advance(); advance();
                 continue;
             }
 
-            // &&
             if (c == '&' && peekNext() == '&') {
                 tokens.add(new Token(TokenType.AND, "&&", line, column));
-                advance();
-                advance();
+                advance(); advance();
                 continue;
             }
 
-            // ||
             if (c == '|' && peekNext() == '|') {
                 tokens.add(new Token(TokenType.OR, "||", line, column));
-                advance();
-                advance();
+                advance(); advance();
                 continue;
             }
 
-            // ->
             if (c == '-' && peekNext() == '>') {
                 tokens.add(new Token(TokenType.ARROW, "->", line, column));
-                advance();
-                advance();
+                advance(); advance();
                 continue;
             }
 
-            // \
             if (c == '\\') {
                 tokens.add(new Token(TokenType.BACKSLASH, "\\", line, column));
                 advance();
                 continue;
             }
 
-            // ------------------------------------
-            // Single-character tokens
-            // ------------------------------------
             switch (c) {
-                case '+':
-                    tokens.add(makeToken(TokenType.PLUS));
-                    advance();
-                    break;
-                case '-':
-                    tokens.add(makeToken(TokenType.MINUS));
-                    advance();
-                    break;
-                case '*':
-                    tokens.add(makeToken(TokenType.STAR));
-                    advance();
-                    break;
-                case '/':
-                    tokens.add(makeToken(TokenType.SLASH));
-                    advance();
-                    break;
-
-                case '=':
-                    tokens.add(makeToken(TokenType.EQUAL));
-                    advance();
-                    break;
-
-                case '<':
-                    tokens.add(makeToken(TokenType.LT));
-                    advance();
-                    break;
-                case '>':
-                    tokens.add(makeToken(TokenType.GT));
-                    advance();
-                    break;
-
-                case '!':
-                    tokens.add(makeToken(TokenType.NOT));
-                    advance();
-                    break;
-
-                case '(':
-                    tokens.add(makeToken(TokenType.LPAREN));
-                    advance();
-                    break;
-                case ')':
-                    tokens.add(makeToken(TokenType.RPAREN));
-                    advance();
-                    break;
-
-                case ';':
-                    tokens.add(makeToken(TokenType.SEMICOLON));
-                    advance();
-                    break;
-
-                default:
-                    throw new RuntimeException("Unexpected character '" + c + "' at " + line + ":" + column);
+                case '+' -> { tokens.add(makeToken(TokenType.PLUS)); advance(); }
+                case '-' -> { tokens.add(makeToken(TokenType.MINUS)); advance(); }
+                case '*' -> { tokens.add(makeToken(TokenType.STAR)); advance(); }
+                case '/' -> { tokens.add(makeToken(TokenType.SLASH)); advance(); }
+                case '=' -> { tokens.add(makeToken(TokenType.EQUAL)); advance(); }
+                case '<' -> { tokens.add(makeToken(TokenType.LT)); advance(); }
+                case '>' -> { tokens.add(makeToken(TokenType.GT)); advance(); }
+                case '!' -> { tokens.add(makeToken(TokenType.NOT)); advance(); }
+                case '(' -> { tokens.add(makeToken(TokenType.LPAREN)); advance(); }
+                case ')' -> { tokens.add(makeToken(TokenType.RPAREN)); advance(); }
+                case ';' -> { tokens.add(makeToken(TokenType.SEMICOLON)); advance(); }
+                case ':' -> { tokens.add(makeToken(TokenType.COLON)); advance(); }
+                case '|' -> { tokens.add(makeToken(TokenType.PIPE)); advance(); }
+                default -> throw new RuntimeException("Unexpected character '" + c + "' at " + line + ":" + column);
             }
         }
 
@@ -181,9 +121,6 @@ public class Tokenizer {
         return tokens;
     }
 
-    // ------------------------------------
-    // Helper methods
-    // ------------------------------------
     private boolean isAtEnd() {
         return pos >= input.length();
     }
@@ -193,43 +130,28 @@ public class Tokenizer {
     }
 
     private char peekNext() {
-        if (pos + 1 >= input.length()) {
-            return '\0';
-        }
+        if (pos + 1 >= input.length()) return '\0';
         return input.charAt(pos + 1);
     }
 
     private void advance() {
-        if (peek() == '\n') {
-            line++;
-            column = 0;
-        } else {
-            column++;
-        }
+        if (peek() == '\n') { line++; column = 0; }
+        else { column++; }
         pos++;
     }
 
     private void skipWhitespace() {
-        while (!isAtEnd() && Character.isWhitespace(peek())) {
-            advance();
-        }
+        while (!isAtEnd() && Character.isWhitespace(peek())) advance();
     }
 
     private void skipLineComment() {
-        while (!isAtEnd() && peek() != '\n') {
-            advance();
-        }
+        while (!isAtEnd() && peek() != '\n') advance();
     }
 
     private void skipBlockComment() {
-        advance();
-        advance();
+        advance(); advance();
         while (!isAtEnd()) {
-            if (peek() == '*' && peekNext() == '/') {
-                advance();
-                advance();
-                return;
-            }
+            if (peek() == '*' && peekNext() == '/') { advance(); advance(); return; }
             advance();
         }
     }
@@ -241,20 +163,14 @@ public class Tokenizer {
     private Token readNumber() {
         int start = pos;
         int startCol = column;
-
-        while (!isAtEnd() && Character.isDigit(peek())) {
-            advance();
-        }
-
-        String text = input.substring(start, pos);
-        return new Token(TokenType.NUMBER, text, line, startCol);
+        while (!isAtEnd() && Character.isDigit(peek())) advance();
+        return new Token(TokenType.NUMBER, input.substring(start, pos), line, startCol);
     }
 
     private Token readString() {
         int startCol = column;
         int startLine = line;
         advance();
-
         StringBuilder sb = new StringBuilder();
         while (!isAtEnd() && peek() != '"') {
             if (peek() == '\\') {
@@ -272,39 +188,29 @@ public class Tokenizer {
             }
             advance();
         }
-
-        if (!isAtEnd()) {
-            advance();
-        }
-
+        if (!isAtEnd()) advance();
         return new Token(TokenType.STRING, sb.toString(), startLine, startCol);
     }
 
     private Token readIdentifierOrKeyword() {
         int start = pos;
         int startCol = column;
-
-        while (!isAtEnd() && Character.isLetterOrDigit(peek())) {
-            advance();
-        }
+        while (!isAtEnd() && Character.isLetterOrDigit(peek())) advance();
 
         String text = input.substring(start, pos);
 
-        switch (text) {
-            case "let":
-                return new Token(TokenType.LET, text, line, startCol);
-            case "true":
-                return new Token(TokenType.TRUE, text, line, startCol);
-            case "false":
-                return new Token(TokenType.FALSE, text, line, startCol);
-            case "if":
-                return new Token(TokenType.IF, text, line, startCol);
-            case "then":
-                return new Token(TokenType.THEN, text, line, startCol);
-            case "else":
-                return new Token(TokenType.ELSE, text, line, startCol);
-        }
-
-        return new Token(TokenType.IDENT, text, line, startCol);
+        return switch (text) {
+            case "let" -> new Token(TokenType.LET, text, line, startCol);
+            case "rec" -> new Token(TokenType.REC, text, line, startCol);
+            case "data" -> new Token(TokenType.DATA, text, line, startCol);
+            case "case" -> new Token(TokenType.CASE, text, line, startCol);
+            case "of" -> new Token(TokenType.OF, text, line, startCol);
+            case "true" -> new Token(TokenType.TRUE, text, line, startCol);
+            case "false" -> new Token(TokenType.FALSE, text, line, startCol);
+            case "if" -> new Token(TokenType.IF, text, line, startCol);
+            case "then" -> new Token(TokenType.THEN, text, line, startCol);
+            case "else" -> new Token(TokenType.ELSE, text, line, startCol);
+            default -> new Token(TokenType.IDENT, text, line, startCol);
+        };
     }
 }

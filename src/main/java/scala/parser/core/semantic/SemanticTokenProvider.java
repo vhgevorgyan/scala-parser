@@ -14,14 +14,10 @@ public class SemanticTokenProvider {
     }
 
     private static void walk(ASTNode node, List<SemanticToken> out) {
-        if (node == null) {
-            return;
-        }
+        if (node == null) return;
 
         if (node instanceof BoolNode b) {
-            String text = String.valueOf(b.value);
-            out.add(new SemanticToken(b.line, b.column, text.length(), "keyword"));
-            return;
+            out.add(new SemanticToken(b.line, b.column, String.valueOf(b.value).length(), "keyword")); return;
         }
 
         if (node instanceof IdentifierNode id) {
@@ -38,47 +34,47 @@ public class SemanticTokenProvider {
 
         if (node instanceof UnaryExprNode un) {
             out.add(new SemanticToken(un.line, un.column, un.operator.length(), "operator"));
-            walk(un.operand, out);
-            return;
+            walk(un.operand, out); return;
         }
 
         if (node instanceof BinaryExprNode bin) {
             out.add(new SemanticToken(bin.line, bin.column, bin.operator.length(), "operator"));
-            walk(bin.left, out);
-            walk(bin.right, out);
-            return;
+            walk(bin.left, out); walk(bin.right, out); return;
         }
 
         if (node instanceof IfNode i) {
             out.add(new SemanticToken(i.line, i.column, 2, "keyword"));
-            walk(i.condition, out);
-            walk(i.thenBranch, out);
-            walk(i.elseBranch, out);
-            return;
+            walk(i.condition, out); walk(i.thenBranch, out); walk(i.elseBranch, out); return;
         }
 
         if (node instanceof LambdaNode lam) {
             out.add(new SemanticToken(lam.line, lam.column, 1, "keyword"));
-            walk(lam.body, out);
-            return;
+            walk(lam.body, out); return;
         }
 
         if (node instanceof ApplicationNode app) {
-            walk(app.function, out);
-            walk(app.argument, out);
-            return;
+            walk(app.function, out); walk(app.argument, out); return;
         }
 
         if (node instanceof LetStatementNode let) {
-            out.add(new SemanticToken(let.line, let.column, 3, "keyword"));
-            walk(let.value, out);
+            out.add(new SemanticToken(let.line, let.column, let.isRec ? 7 : 3, "keyword"));
+            walk(let.value, out); return;
+        }
+
+        if (node instanceof DataDeclNode data) {
+            out.add(new SemanticToken(data.line, data.column, 4, "keyword"));
+            return;
+        }
+
+        if (node instanceof CaseNode c) {
+            out.add(new SemanticToken(c.line, c.column, 4, "keyword"));
+            walk(c.expr, out);
+            for (CaseNode.CaseBranch br : c.branches) walk(br.body(), out);
             return;
         }
 
         if (node instanceof ProgramNode program) {
-            for (ASTNode stmt : program.statements) {
-                walk(stmt, out);
-            }
+            for (ASTNode stmt : program.statements) walk(stmt, out);
         }
     }
 }

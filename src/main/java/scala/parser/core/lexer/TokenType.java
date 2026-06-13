@@ -2,7 +2,8 @@ package scala.parser.core.lexer;
 
 public enum TokenType {
     // Keywords
-    LET,
+    LET, REC,
+    DATA, CASE, OF,
     // Identifiers & literals
     IDENT,
     NUMBER,
@@ -10,11 +11,13 @@ public enum TokenType {
     // Operators
     PLUS, MINUS, STAR, SLASH,
     EQUAL,
+    COLON,
     // Logical
     AND, OR, NOT,
     // Parentheses
     LPAREN,
     RPAREN,
+    PIPE,
     EOF,
     BACKSLASH,
     ARROW,

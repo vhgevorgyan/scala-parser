@@ -1,0 +1,42 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Scala Parser",
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#keywords" },
+    { "include": "#numbers" },
+    { "include": "#strings" },
+    { "include": "#operators" },
+    { "include": "#identifiers" }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        { "begin": "//", "end": "$", "name": "comment.line.double-slash.scala-parser" },
+        { "begin": "/\\*", "end": "\\*/", "name": "comment.block.scala-parser" }
+      ]
+    },
+    "keywords": {
+      "match": "\\b(let|rec|data|case|of|if|then|else|true|false|succ|pred|iszero|print)\\b",
+      "name": "keyword.control.scala-parser"
+    },
+    "numbers": {
+      "match": "\\b[0-9]+\\b",
+      "name": "constant.numeric.scala-parser"
+    },
+    "strings": {
+      "begin": "\"",
+      "end": "\"",
+      "name": "string.quoted.double.scala-parser"
+    },
+    "operators": {
+      "match": "->|\\\\|&&|\\|\\||[!<>!=]=?|[+\\-*/=()|]",
+      "name": "keyword.operator.scala-parser"
+    },
+    "identifiers": {
+      "match": "\\b[a-zA-Z_][a-zA-Z0-9_]*\\b",
+      "name": "variable.other.scala-parser"
+    }
+  },
+  "scopeName": "source.scala-parser"
+}

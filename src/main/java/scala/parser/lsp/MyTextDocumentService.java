@@ -102,9 +102,10 @@ public class MyTextDocumentService implements TextDocumentService {
             Diagnostic diag = new Diagnostic();
             diag.setMessage(err.message);
             diag.setSeverity(DiagnosticSeverity.Error);
+            int length = Math.max(err.length, 1);
             diag.setRange(new Range(
                     new Position(err.line, err.column),
-                    new Position(err.line, err.column + 1)
+                    new Position(err.line, err.column + length)
             ));
             return diag;
         }).toList();

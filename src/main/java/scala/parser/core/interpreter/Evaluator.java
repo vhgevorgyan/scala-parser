@@ -1,18 +1,9 @@
 package scala.parser.core.interpreter;
 
-import scala.parser.core.ast.ASTNode;
-import scala.parser.core.ast.ApplicationNode;
-import scala.parser.core.ast.BinaryExprNode;
-import scala.parser.core.ast.BoolNode;
-import scala.parser.core.ast.ExpressionNode;
-import scala.parser.core.ast.IdentifierNode;
-import scala.parser.core.ast.IfNode;
-import scala.parser.core.ast.LambdaNode;
-import scala.parser.core.ast.LetStatementNode;
-import scala.parser.core.ast.LiteralNode;
-import scala.parser.core.ast.ProgramNode;
-import scala.parser.core.ast.StringLiteralNode;
-import scala.parser.core.ast.UnaryExprNode;
+import java.util.ArrayList;
+import java.util.List;
+
+import scala.parser.core.ast.*;
 
 public class Evaluator {
 
@@ -25,7 +16,7 @@ public class Evaluator {
         return last;
     }
 
-    private Env initEnv() {
+    public static Env initEnv() {
         Env env = new Env();
         env.define("succ", new BuiltinValue("succ", arg -> {
             if (arg instanceof NumberValue n) return new NumberValue(n.value + 1);
@@ -47,8 +38,21 @@ public class Evaluator {
     }
 
     private Value eval(ASTNode node, Env env) {
+        if (node instanceof DataDeclNode) {
+            return null;
+        }
+
         if (node instanceof LetStatementNode let) {
             Value v = eval(let.value, env);
+
+            if (let.isRec && v instanceof ClosureValue clos) {
+                Env recEnv = new Env(clos.env);
+                ClosureValue recClos = new ClosureValue(clos.param, clos.body, recEnv);
+                recEnv.define(let.name, recClos);
+                env.define(let.name, recClos);
+                return recClos;
+            }
+
             env.define(let.name, v);
             return v;
         }
@@ -60,8 +64,7 @@ public class Evaluator {
         throw new RuntimeException("Cannot evaluate node: " + node.getClass().getSimpleName());
     }
 
-    private Value evalExpr(ExpressionNode node, Env env) {
-
+    public Value evalExpr(ExpressionNode node, Env env) {
         if (node instanceof StringLiteralNode s) {
             return new StringValue(s.value);
         }
@@ -81,9 +84,7 @@ public class Evaluator {
         if (node instanceof UnaryExprNode un) {
             Value operand = evalExpr(un.operand, env);
             if (un.operator.equals("!")) {
-                if (operand instanceof BoolValue b) {
-                    return new BoolValue(!b.value);
-                }
+                if (operand instanceof BoolValue b) return new BoolValue(!b.value);
                 throw new RuntimeException("! requires boolean operand");
             }
             throw new RuntimeException("Unknown unary operator: " + un.operator);
@@ -91,34 +92,39 @@ public class Evaluator {
 
         if (node instanceof IfNode i) {
             Value cond = evalExpr(i.condition, env);
-
-            if (!(cond instanceof BoolValue b)) {
-                throw new RuntimeException("Condition must be boolean");
-            }
-
-            return b.value
-                    ? evalExpr(i.thenBranch, env)
-                    : evalExpr(i.elseBranch, env);
+            if (!(cond instanceof BoolValue b)) throw new RuntimeException("Condition must be boolean");
+            return b.value ? evalExpr(i.thenBranch, env) : evalExpr(i.elseBranch, env);
         }
 
         if (node instanceof BinaryExprNode bin) {
             Value left = evalExpr(bin.left, env);
             Value right = evalExpr(bin.right, env);
 
-            if (left instanceof NumberValue l && right instanceof NumberValue r) {
-                return evalNumberOp(bin.operator, l, r);
-            }
-
-            if (left instanceof BoolValue l && right instanceof BoolValue r) {
-                return evalBoolOp(bin.operator, l, r);
-            }
-
-            if (left instanceof StringValue ls && right instanceof StringValue rs) {
-                return evalStringOp(bin.operator, ls, rs);
-            }
+            if (left instanceof NumberValue l && right instanceof NumberValue r) return evalNumberOp(bin.operator, l, r);
+            if (left instanceof BoolValue l && right instanceof BoolValue r) return evalBoolOp(bin.operator, l, r);
+            if (left instanceof StringValue ls && right instanceof StringValue rs) return evalStringOp(bin.operator, ls, rs);
 
             throw new RuntimeException("Operator '" + bin.operator + "' not supported for " +
                     left.getClass().getSimpleName() + " and " + right.getClass().getSimpleName());
+        }
+
+        if (node instanceof CaseNode caseNode) {
+            Value expr = evalExpr(caseNode.expr, env);
+            if (!(expr instanceof ConstructorValue cv)) {
+                throw new RuntimeException("Case expression requires a constructor value");
+            }
+
+            for (CaseNode.CaseBranch branch : caseNode.branches) {
+                if (branch.constructor().equals(cv.name)) {
+                    Env branchEnv = new Env(env);
+                    for (int i = 0; i < branch.bindings().size() && i < cv.args.size(); i++) {
+                        branchEnv.define(branch.bindings().get(i), cv.args.get(i));
+                    }
+                    return evalExpr(branch.body(), branchEnv);
+                }
+            }
+
+            throw new RuntimeException("No matching branch for constructor '" + cv.name + "'");
         }
 
         if (node instanceof LambdaNode lam) {
@@ -139,6 +145,13 @@ public class Evaluator {
                 return builtin.apply(arg);
             }
 
+            // Constructor application: create ConstructorValue
+            if (fn instanceof ConstructorValue cv) {
+                List<Value> newArgs = new ArrayList<>(cv.args);
+                newArgs.add(arg);
+                return new ConstructorValue(cv.name, cv.dataType, newArgs);
+            }
+
             throw new RuntimeException("Trying to call a non-function");
         }
 
@@ -150,12 +163,7 @@ public class Evaluator {
             case "+" -> new NumberValue(l.value + r.value);
             case "-" -> new NumberValue(l.value - r.value);
             case "*" -> new NumberValue(l.value * r.value);
-            case "/" -> {
-                if (r.value == 0) {
-                    throw new RuntimeException("Division by zero");
-                }
-                yield new NumberValue(l.value / r.value);
-            }
+            case "/" -> { if (r.value == 0) throw new RuntimeException("Division by zero"); yield new NumberValue(l.value / r.value); }
             case "==" -> new BoolValue(l.value == r.value);
             case "!=" -> new BoolValue(l.value != r.value);
             case "<" -> new BoolValue(l.value < r.value);

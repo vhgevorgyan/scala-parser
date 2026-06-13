@@ -70,6 +70,12 @@ public class HoverProvider {
             if (f.from() instanceof TypeFun) from = "(" + from + ")";
             return from + " -> " + to;
         }
+        if (t instanceof TypeConstructor c) {
+            if (c.args().isEmpty()) return c.name();
+            StringBuilder sb = new StringBuilder(c.name());
+            for (Type a : c.args()) sb.append(" ").append(typeToString(a));
+            return sb.toString();
+        }
         return t.toString();
     }
 }

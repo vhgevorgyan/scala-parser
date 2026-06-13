@@ -1,0 +1,35 @@
+{
+  "name": "scala-parser",
+  "displayName": "Scala Parser Language Support",
+  "description": "Language support for the Scala Parser lambda calculus language",
+  "version": "0.1.0",
+  "publisher": "scala-parser",
+  "license": "MIT",
+  "engines": { "vscode": "^1.75.0" },
+  "categories": ["Programming Languages", "Linters"],
+  "activationEvents": ["onLanguage:scala-parser"],
+  "main": "./out/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "scala-parser",
+        "aliases": ["Scala Parser", "scala-parser"],
+        "extensions": [".sp"],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "scala-parser",
+        "scopeName": "source.scala-parser",
+        "path": "./syntaxes/scala-parser.tmLanguage.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "scala-parser.restart",
+        "title": "Scala Parser: Restart Language Server"
+      }
+    ]
+  }
+}

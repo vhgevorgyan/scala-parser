@@ -55,6 +55,15 @@ public class AstFinder {
                 if (operand != null) return operand;
             }
 
+            if (node instanceof CaseNode c) {
+                ASTNode expr = findRecursive(c.expr, line, column);
+                if (expr != null) return expr;
+                for (CaseNode.CaseBranch br : c.branches) {
+                    ASTNode body = findRecursive(br.body(), line, column);
+                    if (body != null) return body;
+                }
+            }
+
             return node;
         }
 
