@@ -1,6 +1,9 @@
 package scala.parser.core.interpreter;
 
-import scala.parser.core.ParserResult;
-import scala.parser.core.interpreter.Value;
+import java.util.Map;
 
-public record EvaluationResult(ParserResult parserResult, Value value) {}
+import scala.parser.core.ParserResult;
+import scala.parser.core.ast.ExpressionNode;
+import scala.parser.core.types.Type;
+
+public record EvaluationResult(ParserResult parserResult, Value value, Map<ExpressionNode, Type> inferredTypes) {}

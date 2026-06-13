@@ -28,6 +28,6 @@ public class CompilerPipeline {
             value = evaluator.evalProgram(result.ast);
         }
 
-        return new EvaluationResult(result, value);
+        return new EvaluationResult(result, value, typeChecker.getInferredTypes());
     }
 }

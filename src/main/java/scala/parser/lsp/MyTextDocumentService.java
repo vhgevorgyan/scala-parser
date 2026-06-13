@@ -113,7 +113,7 @@ public class MyTextDocumentService implements TextDocumentService {
             }
 
             ASTNode node = AstFinder.findNodeAt(ast, line, column);
-            String text = HoverProvider.getHoverText(node);
+            String text = HoverProvider.getHoverText(node, result.inferredTypes());
             if (text == null) {
                 return null;
             }

@@ -33,7 +33,11 @@ public class Parser {
         List<ASTNode> statements = new ArrayList<>();
 
         while (!isAtEnd()) {
+            int before = pos;
             statements.add(parseStatement());
+            if (pos == before) {
+                advance();
+            }
         }
 
         ProgramNode program = new ProgramNode(statements);
@@ -98,6 +102,11 @@ public class Parser {
 
     private ASTNode parseLetStatement() {
         Token name = expect(TokenType.IDENT, "Expected identifier after 'let'");
+        if (name.type != TokenType.IDENT) {
+            synchronize();
+            return new LetStatementNode(name.text, new LiteralNode("0", name.line, name.column), name.line, name.column);
+        }
+
         expect(TokenType.EQUAL, "Expected '=' after identifier");
 
         ExpressionNode value = parseExpression();
@@ -108,6 +117,13 @@ public class Parser {
                 name.line,
                 name.column
         );
+    }
+
+    private void synchronize() {
+        while (!isAtEnd()) {
+            if (peek().type == TokenType.LET) return;
+            advance();
+        }
     }
 
     // ---------------------------------------------------------

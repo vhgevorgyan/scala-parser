@@ -1,8 +1,25 @@
 package scala.parser.core.hover;
 
+import java.util.Map;
+
 import scala.parser.core.ast.*;
+import scala.parser.core.types.*;
 
 public class HoverProvider {
+
+    public static String getHoverText(ASTNode node, Map<ExpressionNode, Type> inferredTypes) {
+        String base = getHoverText(node);
+        if (base == null) return null;
+
+        if (node instanceof ExpressionNode expr && inferredTypes != null) {
+            Type type = inferredTypes.get(expr);
+            if (type != null) {
+                return base + " — " + typeToString(type);
+            }
+        }
+
+        return base;
+    }
 
     public static String getHoverText(ASTNode node) {
         if (node == null) return null;
@@ -40,5 +57,18 @@ public class HoverProvider {
         }
 
         return null;
+    }
+
+    private static String typeToString(Type t) {
+        if (t instanceof TypeNumber) return "Number";
+        if (t instanceof TypeBool) return "Bool";
+        if (t instanceof TypeVar v) return v.name();
+        if (t instanceof TypeFun f) {
+            String from = typeToString(f.from());
+            String to = typeToString(f.to());
+            if (f.from() instanceof TypeFun) from = "(" + from + ")";
+            return from + " -> " + to;
+        }
+        return t.toString();
     }
 }
