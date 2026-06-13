@@ -38,7 +38,14 @@ public class Evaluator {
     }
 
     private Value eval(ASTNode node, Env env) {
-        if (node instanceof DataDeclNode) {
+        if (node instanceof DataDeclNode data) {
+            for (DataDeclNode.ConstructorDef ctor : data.constructors) {
+                if (ctor.argTypes().isEmpty()) {
+                    env.define(ctor.name(), new ConstructorValue(ctor.name(), data.name, new ArrayList<>()));
+                } else {
+                    env.define(ctor.name(), new ConstructorBuilder(data.name, ctor.name(), ctor.argTypes().size()));
+                }
+            }
             return null;
         }
 
@@ -145,11 +152,9 @@ public class Evaluator {
                 return builtin.apply(arg);
             }
 
-            // Constructor application: create ConstructorValue
-            if (fn instanceof ConstructorValue cv) {
-                List<Value> newArgs = new ArrayList<>(cv.args);
-                newArgs.add(arg);
-                return new ConstructorValue(cv.name, cv.dataType, newArgs);
+            // Constructor builder: accumulate args
+            if (fn instanceof ConstructorBuilder cb) {
+                return cb.apply(arg);
             }
 
             throw new RuntimeException("Trying to call a non-function");

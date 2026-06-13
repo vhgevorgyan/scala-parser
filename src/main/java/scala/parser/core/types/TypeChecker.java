@@ -242,6 +242,23 @@ public class TypeChecker {
                 return new InferResult(new Substitution(), new TypeVar("?"));
             }
 
+            // String concatenation: allow + on strings
+            if (op.equals("+") && appliedT1 instanceof TypeString) {
+                Substitution s3;
+                try { s3 = unify(apply(s2, t1), new TypeString()); }
+                catch (TypeErrorException e) {
+                    errors.add(new ParserError("Operator '+' requires string, got " + appliedT1, bin.left.line, bin.left.column));
+                    return new InferResult(new Substitution(), new TypeVar("?"));
+                }
+                Substitution s4;
+                try { s4 = unify(apply(s3, t2), new TypeString()); }
+                catch (TypeErrorException e) {
+                    errors.add(new ParserError("Operator '+' requires string, got " + apply(s3, t2), bin.right.line, bin.right.column));
+                    return new InferResult(new Substitution(), new TypeVar("?"));
+                }
+                return new InferResult(compose(s4, compose(s3, compose(s2, s1))), new TypeString());
+            }
+
             Type operandType = isLogical ? new TypeBool() : new TypeNumber();
             Substitution s3;
             try { s3 = unify(appliedT1, operandType); }

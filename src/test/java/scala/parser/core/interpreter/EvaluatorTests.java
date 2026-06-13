@@ -211,4 +211,161 @@ class EvaluatorTests {
         Value v = eval("let x = 10\nlet f = \\y -> x + y\nlet r = f 5");
         assertEquals(15, ((NumberValue) v).value);
     }
+
+    @Test
+    void letRecFactorial() {
+        Value v = eval("let rec fact = \\n -> if n == 0 then 1 else n * fact (n - 1)\nlet r = fact 5");
+        assertEquals(120, ((NumberValue) v).value);
+    }
+
+    @Test
+    void letRecFibonacci() {
+        Value v = eval("let rec fib = \\n -> if n == 0 then 0 else if n == 1 then 1 else fib (n - 1) + fib (n - 2)\nlet r = fib 10");
+        assertEquals(55, ((NumberValue) v).value);
+    }
+
+    @Test
+    void letRecSimple() {
+        Value v = eval("let rec x = 42\nlet r = x");
+        assertEquals(42, ((NumberValue) v).value);
+    }
+
+    @Test
+    void unaryNotTrue() {
+        Value v = eval("!true");
+        assertFalse(((BoolValue) v).value);
+    }
+
+    @Test
+    void unaryNotFalse() {
+        Value v = eval("!false");
+        assertTrue(((BoolValue) v).value);
+    }
+
+    @Test
+    void doubleNot() {
+        Value v = eval("!!true");
+        assertTrue(((BoolValue) v).value);
+    }
+
+    @Test
+    void logicalAndTrueFalse() {
+        Value v = eval("true && false");
+        assertFalse(((BoolValue) v).value);
+    }
+
+    @Test
+    void logicalAndTrueTrue() {
+        Value v = eval("true && true");
+        assertTrue(((BoolValue) v).value);
+    }
+
+    @Test
+    void logicalOrTrueFalse() {
+        Value v = eval("true || false");
+        assertTrue(((BoolValue) v).value);
+    }
+
+    @Test
+    void logicalOrFalseFalse() {
+        Value v = eval("false || false");
+        assertFalse(((BoolValue) v).value);
+    }
+
+    @Test
+    void stringLiteral() {
+        Value v = eval("\"hello\"");
+        assertInstanceOf(StringValue.class, v);
+        assertEquals("hello", ((StringValue) v).value);
+    }
+
+    @Test
+    void stringConcat() {
+        Value v = eval("\"hello\" + \" world\"");
+        assertInstanceOf(StringValue.class, v);
+        assertEquals("hello world", ((StringValue) v).value);
+    }
+
+    @Test
+    void letString() {
+        Value v = eval("let s = \"test\"\nlet r = s");
+        assertInstanceOf(StringValue.class, v);
+        assertEquals("test", ((StringValue) v).value);
+    }
+
+    @Test
+    void divisionByZero() {
+        assertThrows(RuntimeException.class, () -> eval("1 / 0"));
+    }
+
+    @Test
+    void builtinPrint() {
+        Value v = eval("print 42");
+        assertEquals(42, ((NumberValue) v).value);
+    }
+
+    @Test
+    void semicolonSequencing() {
+        Value v = eval("let x = 1; let y = 2; let z = 3");
+        assertEquals(3, ((NumberValue) v).value);
+    }
+
+    @Test
+    void zeroArgConstructor() {
+        Value v = eval("data Bool = True | False\nlet b = True");
+        assertInstanceOf(ConstructorValue.class, v);
+        ConstructorValue cv = (ConstructorValue) v;
+        assertEquals("True", cv.name);
+    }
+
+    @Test
+    void oneArgConstructor() {
+        Value v = eval("data Maybe a = Nothing | Just a\nlet x = Just 42");
+        assertInstanceOf(ConstructorValue.class, v);
+        ConstructorValue cv = (ConstructorValue) v;
+        assertEquals("Just", cv.name);
+        assertEquals(1, cv.args.size());
+        assertEquals(42, ((NumberValue) cv.args.get(0)).value);
+    }
+
+    @Test
+    void multiArgConstructor() {
+        Value v = eval("data Pair a b = Pair a b\nlet p = Pair 1 true");
+        assertInstanceOf(ConstructorValue.class, v);
+        ConstructorValue cv = (ConstructorValue) v;
+        assertEquals("Pair", cv.name);
+        assertEquals(2, cv.args.size());
+        assertEquals(1, ((NumberValue) cv.args.get(0)).value);
+        assertTrue(((BoolValue) cv.args.get(1)).value);
+    }
+
+    @Test
+    void caseExprSimple() {
+        Value v = eval("data Maybe a = Nothing | Just a\nlet x = Just 42\ncase x of Nothing -> 0 | Just y -> y");
+        assertEquals(42, ((NumberValue) v).value);
+    }
+
+    @Test
+    void caseExprNothing() {
+        Value v = eval("data Maybe a = Nothing | Just a\nlet x = Nothing\ncase x of Nothing -> 0 | Just y -> 1");
+        assertEquals(0, ((NumberValue) v).value);
+    }
+
+    @Test
+    void caseExprBoolConstructors() {
+        Value v = eval("data Bool = True | False\nlet b = True\ncase b of True -> 1 | False -> 0");
+        assertEquals(1, ((NumberValue) v).value);
+    }
+
+    @Test
+    void caseExprMultiBinding() {
+        Value v = eval("data Pair a b = Pair a b\nlet p = Pair 3 4\ncase p of Pair x y -> x + y");
+        assertEquals(7, ((NumberValue) v).value);
+    }
+
+    @Test
+    void nestedConstructorInCase() {
+        Value v = eval("data Maybe a = Nothing | Just a\nlet x = Just (Just 42)\ncase x of Nothing -> 0 | Just y -> case y of Nothing -> 0 | Just z -> z");
+        assertEquals(42, ((NumberValue) v).value);
+    }
 }

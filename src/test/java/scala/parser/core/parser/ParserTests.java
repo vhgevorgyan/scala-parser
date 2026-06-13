@@ -204,4 +204,121 @@ class ParserTests {
         ParserResult r = parse("()");
         assertFalse(r.errors.isEmpty());
     }
+
+    @Test
+    void letRec() {
+        ParserResult r = parse("let rec fact = \\n -> if n == 0 then 1 else n * fact (n - 1)");
+        assertTrue(r.errors.isEmpty());
+        LetStatementNode let = (LetStatementNode) r.ast.statements.get(0);
+        assertEquals("fact", let.name);
+        assertTrue(let.isRec);
+        assertInstanceOf(LambdaNode.class, let.value);
+    }
+
+    @Test
+    void typeAnnotation() {
+        ParserResult r = parse("let x : Number = 42");
+        assertTrue(r.errors.isEmpty());
+        LetStatementNode let = (LetStatementNode) r.ast.statements.get(0);
+        assertEquals("x", let.name);
+        assertNotNull(let.declaredType);
+    }
+
+    @Test
+    void dataDecl() {
+        ParserResult r = parse("data Maybe a = Nothing | Just a");
+        assertTrue(r.errors.isEmpty());
+        DataDeclNode data = (DataDeclNode) r.ast.statements.get(0);
+        assertEquals("Maybe", data.name);
+        assertEquals(1, data.params.size());
+        assertEquals("a", data.params.get(0));
+        assertEquals(2, data.constructors.size());
+        assertEquals("Nothing", data.constructors.get(0).name());
+        assertTrue(data.constructors.get(0).argTypes().isEmpty());
+        assertEquals("Just", data.constructors.get(1).name());
+        assertEquals(1, data.constructors.get(1).argTypes().size());
+    }
+
+    @Test
+    void dataDeclNoParams() {
+        ParserResult r = parse("data Bool = True | False");
+        assertTrue(r.errors.isEmpty());
+        DataDeclNode data = (DataDeclNode) r.ast.statements.get(0);
+        assertEquals("Bool", data.name);
+        assertTrue(data.params.isEmpty());
+        assertEquals(2, data.constructors.size());
+    }
+
+    @Test
+    void caseExpr() {
+        ParserResult r = parse("case x of Nothing -> 0 | Just y -> y");
+        assertTrue(r.errors.isEmpty());
+        CaseNode caseNode = (CaseNode) r.ast.statements.get(0);
+        assertInstanceOf(IdentifierNode.class, caseNode.expr);
+        assertEquals(2, caseNode.branches.size());
+        assertEquals("Nothing", caseNode.branches.get(0).constructor());
+        assertTrue(caseNode.branches.get(0).bindings().isEmpty());
+        assertEquals("Just", caseNode.branches.get(1).constructor());
+        assertEquals(1, caseNode.branches.get(1).bindings().size());
+        assertEquals("y", caseNode.branches.get(1).bindings().get(0));
+    }
+
+    @Test
+    void caseMultiBindings() {
+        ParserResult r = parse("case p of Pair x y -> x");
+        assertTrue(r.errors.isEmpty());
+        CaseNode caseNode = (CaseNode) r.ast.statements.get(0);
+        assertEquals(1, caseNode.branches.size());
+        assertEquals("Pair", caseNode.branches.get(0).constructor());
+        assertEquals(2, caseNode.branches.get(0).bindings().size());
+    }
+
+    @Test
+    void semicolonsSkipBetweenStatements() {
+        ParserResult r = parse("let x = 1; let y = 2");
+        assertTrue(r.errors.isEmpty());
+        assertEquals(3, r.ast.statements.size());
+        assertInstanceOf(LetStatementNode.class, r.ast.statements.get(0));
+        assertInstanceOf(LiteralNode.class, r.ast.statements.get(1));
+        assertInstanceOf(LetStatementNode.class, r.ast.statements.get(2));
+    }
+
+    @Test
+    void unaryNot() {
+        ParserResult r = parse("!true");
+        assertTrue(r.errors.isEmpty());
+        UnaryExprNode unary = (UnaryExprNode) r.ast.statements.get(0);
+        assertEquals("!", unary.operator);
+    }
+
+    @Test
+    void logicalAndOr() {
+        ParserResult r = parse("true && false || true");
+        assertTrue(r.errors.isEmpty());
+    }
+
+    @Test
+    void stringLiteral() {
+        ParserResult r = parse("let s = \"hello\"");
+        assertTrue(r.errors.isEmpty());
+        LetStatementNode let = (LetStatementNode) r.ast.statements.get(0);
+        assertInstanceOf(StringLiteralNode.class, let.value);
+        StringLiteralNode s = (StringLiteralNode) let.value;
+        assertEquals("hello", s.value);
+    }
+
+    @Test
+    void recKeyword() {
+        ParserResult r = parse("let rec x = 42");
+        assertTrue(r.errors.isEmpty());
+        LetStatementNode let = (LetStatementNode) r.ast.statements.get(0);
+        assertTrue(let.isRec);
+    }
+
+    @Test
+    void dataAndConstructorUsage() {
+        ParserResult r = parse("data Maybe a = Nothing | Just a\nlet x = Just 42");
+        assertTrue(r.errors.isEmpty());
+        assertEquals(2, r.ast.statements.size());
+    }
 }

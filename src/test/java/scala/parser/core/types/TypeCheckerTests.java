@@ -172,4 +172,124 @@ class TypeCheckerTests {
         EvaluationResult r = analyze("let id = \\x -> x\nlet c = id true\nlet n = id 42\nlet res = c");
         assertTrue(r.parserResult().errors.isEmpty());
     }
+
+    @Test
+    void letRec() {
+        EvaluationResult r = analyze("let rec fact = \\n -> if n == 0 then 1 else n * fact (n - 1)");
+        assertTrue(r.parserResult().errors.isEmpty());
+    }
+
+    @Test
+    void letRecTypeError() {
+        EvaluationResult r = analyze("let rec f = \\x -> if f then 1 else 2");
+        assertFalse(r.parserResult().errors.isEmpty());
+    }
+
+    @Test
+    void typeAnnotationCorrect() {
+        EvaluationResult r = analyze("let x : Number = 42");
+        assertTrue(r.parserResult().errors.isEmpty());
+    }
+
+    @Test
+    void typeAnnotationMismatch() {
+        EvaluationResult r = analyze("let x : Number = true");
+        assertFalse(r.parserResult().errors.isEmpty());
+    }
+
+    @Test
+    void typeAnnotationBool() {
+        EvaluationResult r = analyze("let b : Bool = true");
+        assertTrue(r.parserResult().errors.isEmpty());
+    }
+
+    @Test
+    void dataDeclSimple() {
+        EvaluationResult r = analyze("data Maybe a = Nothing | Just a");
+        assertTrue(r.parserResult().errors.isEmpty());
+    }
+
+    @Test
+    void dataDeclWithConstructorUsage() {
+        EvaluationResult r = analyze("data Maybe a = Nothing | Just a\nlet x = Just 42");
+        assertTrue(r.parserResult().errors.isEmpty());
+    }
+
+    @Test
+    void dataDeclZeroArgConstructor() {
+        EvaluationResult r = analyze("data Bool = True | False\nlet b = True");
+        assertTrue(r.parserResult().errors.isEmpty());
+    }
+
+    @Test
+    void caseExprTypeCheck() {
+        EvaluationResult r = analyze("data Maybe a = Nothing | Just a\nlet x = Just 42\ncase x of Nothing -> 0 | Just y -> y");
+        assertTrue(r.parserResult().errors.isEmpty());
+    }
+
+    @Test
+    void caseExprResultType() {
+        EvaluationResult r = analyze("data Maybe a = Nothing | Just a\nlet x = Nothing\ncase x of Nothing -> 0 | Just y -> 1");
+        assertTrue(r.parserResult().errors.isEmpty());
+    }
+
+    @Test
+    void caseBranchTypesMustMatch() {
+        EvaluationResult r = analyze("data Maybe a = Nothing | Just a\nlet x = Just true\ncase x of Nothing -> 0 | Just y -> false");
+        assertFalse(r.parserResult().errors.isEmpty());
+    }
+
+    @Test
+    void logicalNot() {
+        EvaluationResult r = analyze("!true");
+        assertTrue(r.parserResult().errors.isEmpty());
+    }
+
+    @Test
+    void logicalNotNonBool() {
+        EvaluationResult r = analyze("!42");
+        assertFalse(r.parserResult().errors.isEmpty());
+    }
+
+    @Test
+    void logicalAnd() {
+        EvaluationResult r = analyze("true && false");
+        assertTrue(r.parserResult().errors.isEmpty());
+    }
+
+    @Test
+    void logicalOr() {
+        EvaluationResult r = analyze("true || false");
+        assertTrue(r.parserResult().errors.isEmpty());
+    }
+
+    @Test
+    void logicalAndNonBool() {
+        EvaluationResult r = analyze("1 && 2");
+        assertFalse(r.parserResult().errors.isEmpty());
+    }
+
+    @Test
+    void logicalOrNonBool() {
+        EvaluationResult r = analyze("1 || 2");
+        assertFalse(r.parserResult().errors.isEmpty());
+    }
+
+    @Test
+    void stringLiteralType() {
+        EvaluationResult r = analyze("let s = \"hello\"");
+        assertTrue(r.parserResult().errors.isEmpty());
+    }
+
+    @Test
+    void unaryNotInLet() {
+        EvaluationResult r = analyze("let x = true\nlet y = !x");
+        assertTrue(r.parserResult().errors.isEmpty());
+    }
+
+    @Test
+    void logicalChain() {
+        EvaluationResult r = analyze("let a = true\nlet b = false\nlet c = a && b || !a");
+        assertTrue(r.parserResult().errors.isEmpty());
+    }
 }
