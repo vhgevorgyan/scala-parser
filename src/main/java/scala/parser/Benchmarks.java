@@ -30,19 +30,33 @@ public class Benchmarks {
 
     private static void benchmark(String name, String code) {
         System.out.println("--- " + name + " ---");
-
-        // Tokenize
-        long start = System.nanoTime();
         int iterations = 1000;
-        List<Token> tokens = null;
+        int warmup = 200;
+
+        // Tokenize tokens once
+        List<Token> tokens = new Tokenizer(code).tokenize();
+
+        // Warmup: parse + typecheck to warm up JIT
+        for (int i = 0; i < warmup; i++) {
+            Parser p = new Parser(tokens);
+            var r = p.parse();
+            TypeChecker tc = new TypeChecker(r.errors);
+            tc.check(r.ast);
+        }
+
+        // Benchmark tokenize
+        System.gc();
+        long start = System.nanoTime();
+        List<Token> t2 = null;
         for (int i = 0; i < iterations; i++) {
             Tokenizer t = new Tokenizer(code);
-            tokens = t.tokenize();
+            t2 = t.tokenize();
         }
         long tokenizeTime = (System.nanoTime() - start) / iterations;
-        System.out.println("  Tokenize:  " + tokenizeTime + " ns  (" + tokens.size() + " tokens)");
+        System.out.println("  Tokenize:  " + tokenizeTime + " ns  (" + t2.size() + " tokens)");
 
-        // Parse
+        // Benchmark parse
+        System.gc();
         start = System.nanoTime();
         for (int i = 0; i < iterations; i++) {
             Parser p = new Parser(tokens);
@@ -51,7 +65,8 @@ public class Benchmarks {
         long parseTime = (System.nanoTime() - start) / iterations;
         System.out.println("  Parse:     " + parseTime + " ns");
 
-        // Parse + Type Check
+        // Benchmark parse + type check
+        System.gc();
         start = System.nanoTime();
         for (int i = 0; i < iterations; i++) {
             Parser p = new Parser(tokens);
@@ -62,10 +77,8 @@ public class Benchmarks {
         long typeTime = (System.nanoTime() - start) / iterations;
         System.out.println("  + TypeCheck: " + typeTime + " ns");
 
-        // Total throughput
         double totalMs = (tokenizeTime + parseTime + typeTime) / 1_000_000.0;
         System.out.printf("  Total:     %.3f ms\n", totalMs);
-
         System.out.println();
     }
 

@@ -167,9 +167,10 @@ public class MyTextDocumentService implements TextDocumentService {
         String[] lines = doc.split("\n", -1);
         if (line < 0 || line >= lines.length) return "";
         String textLine = lines[line];
-        int start = Math.min(column, textLine.length());
+        if (textLine.isEmpty()) return "";
+        int start = Math.min(Math.max(column, 0), textLine.length());
         int end = start;
-        while (start > 0 && Character.isLetterOrDigit(textLine.charAt(start - 1))) {
+        while (start > 0 && start <= textLine.length() && Character.isLetterOrDigit(textLine.charAt(start - 1))) {
             start--;
         }
         return textLine.substring(start, end);

@@ -2,12 +2,11 @@ plugins {
 	java
 	id("org.springframework.boot") version "4.0.1"
 	id("io.spring.dependency-management") version "1.1.7"
-	id("org.asciidoctor.jvm.convert") version "4.0.5"
 }
 
 group = "scala"
 version = "0.0.1-SNAPSHOT"
-description = "Scalar parser"
+description = "Scala Parser"
 
 java {
 	toolchain {
@@ -15,44 +14,34 @@ java {
 	}
 }
 
-configurations {
-	compileOnly {
-		extendsFrom(configurations.annotationProcessor.get())
-	}
-}
-
 repositories {
 	mavenCentral()
 }
 
-extra["snippetsDir"] = file("build/generated-snippets")
-
 dependencies {
-	implementation("org.springframework.boot:spring-boot-starter-security-oauth2-client")
-	implementation("org.springframework.boot:spring-boot-starter-thymeleaf")
-	implementation("org.thymeleaf.extras:thymeleaf-extras-springsecurity6")
 	implementation("org.eclipse.lsp4j:org.eclipse.lsp4j:0.21.0")
-  	implementation("org.eclipse.lsp4j:org.eclipse.lsp4j.jsonrpc:0.21.0")
-	compileOnly("org.projectlombok:lombok")
-	developmentOnly("org.springframework.boot:spring-boot-devtools")
-	annotationProcessor("org.projectlombok:lombok")
-	testImplementation("org.springframework.boot:spring-boot-restdocs")
-	testImplementation("org.springframework.boot:spring-boot-starter-security-oauth2-client-test")
-	testImplementation("org.springframework.boot:spring-boot-starter-thymeleaf-test")
-	testImplementation("org.springframework.restdocs:spring-restdocs-mockmvc")
+	implementation("org.eclipse.lsp4j:org.eclipse.lsp4j.jsonrpc:0.21.0")
+	testImplementation("org.junit.jupiter:junit-jupiter:5.12.2")
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
-
 }
 
 tasks.withType<Test> {
 	useJUnitPlatform()
 }
 
-tasks.test {
-	outputs.dir(project.extra["snippetsDir"]!!)
+tasks.named<Jar>("jar") {
+	manifest {
+		attributes("Main-Class" to "scala.parser.ParserApplication")
+	}
+	from(configurations.runtimeClasspath.map { config ->
+		config.map { if (it.isDirectory) it else zipTree(it) }
+	})
+	duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
-tasks.asciidoctor {
-	inputs.dir(project.extra["snippetsDir"]!!)
-	dependsOn(tasks.test)
+tasks.register<Copy>("copyJarToExtension") {
+	dependsOn("jar")
+	from(layout.buildDirectory.file("libs/${project.name}-${project.version}.jar"))
+	into(layout.projectDirectory.dir("scala-parser-vscode/server"))
+	rename(".*", "scala-parser-lsp.jar")
 }

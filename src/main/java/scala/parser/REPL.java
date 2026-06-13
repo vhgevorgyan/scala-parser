@@ -1,5 +1,7 @@
 package scala.parser;
 
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.Scanner;
 
@@ -14,7 +16,7 @@ import scala.parser.core.types.TypeChecker;
 public class REPL {
 
     public static void main(String[] args) {
-        System.out.println("Scala Parser REPL — type expressions, :type <expr>, or :quit");
+        System.out.println("Scala Parser REPL — :help for commands");
         Env env = Evaluator.initEnv();
 
         Scanner scanner = new Scanner(System.in);
@@ -22,10 +24,25 @@ public class REPL {
         while (true) {
             System.out.print("> ");
             if (!scanner.hasNextLine()) break;
-            String line = scanner.nextLine().trim();
+            String line = scanner.nextLine();
 
-            if (line.isEmpty()) continue;
+            if (line.trim().isEmpty()) continue;
+
+            // Remove trailing ; which is treated as a no-op statement
+            if (line.endsWith(";")) line = line.substring(0, line.length() - 1);
+
             if (line.equals(":quit") || line.equals(":q")) break;
+
+            if (line.equals(":help") || line.equals(":h")) {
+                System.out.println("Commands:");
+                System.out.println("  :help / :h      Show this help");
+                System.out.println("  :quit / :q      Exit REPL");
+                System.out.println("  :type <e> / :t  Show type of expression");
+                System.out.println("  :env            Show environment");
+                System.out.println("  :load <file>    Load and evaluate a file");
+                System.out.println("  <expr>          Evaluate expression");
+                continue;
+            }
 
             if (line.startsWith(":type ") || line.startsWith(":t ")) {
                 String expr = line.startsWith(":t ") ? line.substring(3).trim() : line.substring(6).trim();
@@ -34,7 +51,19 @@ public class REPL {
             }
 
             if (line.startsWith(":env")) {
-                System.out.println("Environment: " + env);
+                System.out.print(env);
+                continue;
+            }
+
+            if (line.startsWith(":load ")) {
+                String path = line.substring(6).trim();
+                try {
+                    String content = Files.readString(Paths.get(path));
+                    System.out.println("Loading: " + path);
+                    evaluate(content, env);
+                } catch (Exception e) {
+                    System.err.println("Error loading file: " + e.getMessage());
+                }
                 continue;
             }
 
