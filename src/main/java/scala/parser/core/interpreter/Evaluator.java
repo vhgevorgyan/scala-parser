@@ -15,12 +15,33 @@ import scala.parser.core.ast.ProgramNode;
 public class Evaluator {
 
     public Value evalProgram(ProgramNode program) {
-        Env env = new Env();
+        Env env = initEnv();
         Value last = null;
         for (ASTNode stmt : program.statements) {
             last = eval(stmt, env);
         }
         return last;
+    }
+
+    private Env initEnv() {
+        Env env = new Env();
+        env.define("succ", new BuiltinValue("succ", arg -> {
+            if (arg instanceof NumberValue n) return new NumberValue(n.value + 1);
+            throw new RuntimeException("succ expects a number");
+        }));
+        env.define("pred", new BuiltinValue("pred", arg -> {
+            if (arg instanceof NumberValue n) return new NumberValue(n.value - 1);
+            throw new RuntimeException("pred expects a number");
+        }));
+        env.define("iszero", new BuiltinValue("iszero", arg -> {
+            if (arg instanceof NumberValue n) return new BoolValue(n.value == 0);
+            throw new RuntimeException("iszero expects a number");
+        }));
+        env.define("print", new BuiltinValue("print", arg -> {
+            System.out.println(arg);
+            return arg;
+        }));
+        return env;
     }
 
     private Value eval(ASTNode node, Env env) {
@@ -101,14 +122,17 @@ public class Evaluator {
             Value fn = evalExpr(app.function, env);
             Value arg = evalExpr(app.argument, env);
 
-            if (!(fn instanceof ClosureValue clos)) {
-                throw new RuntimeException("Trying to call a non-function");
+            if (fn instanceof ClosureValue clos) {
+                Env newEnv = new Env(clos.env);
+                newEnv.define(clos.param, arg);
+                return evalExpr(clos.body, newEnv);
             }
 
-            Env newEnv = new Env(clos.env);
-            newEnv.define(clos.param, arg);
+            if (fn instanceof BuiltinValue builtin) {
+                return builtin.apply(arg);
+            }
 
-            return evalExpr(clos.body, newEnv);
+            throw new RuntimeException("Trying to call a non-function");
         }
 
         throw new RuntimeException("Unknown expression: " + node.getClass().getSimpleName());

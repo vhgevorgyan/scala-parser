@@ -47,6 +47,19 @@ public class TypeChecker {
 
     public TypeChecker(List<ParserError> errors) {
         this.errors = errors;
+        initBuiltins();
+    }
+
+    private void initBuiltins() {
+        Type num = new TypeNumber();
+        Type bool = new TypeBool();
+        Type numToNum = new TypeFun(num, num);
+        Type numToBool = new TypeFun(num, bool);
+
+        env.put("succ", new TypeScheme(List.of(), numToNum));
+        env.put("pred", new TypeScheme(List.of(), numToNum));
+        env.put("iszero", new TypeScheme(List.of(), numToBool));
+        env.put("print", new TypeScheme(List.of(), numToNum));
     }
 
     public Map<ExpressionNode, Type> getInferredTypes() {
