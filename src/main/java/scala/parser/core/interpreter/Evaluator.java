@@ -11,6 +11,8 @@ import scala.parser.core.ast.LambdaNode;
 import scala.parser.core.ast.LetStatementNode;
 import scala.parser.core.ast.LiteralNode;
 import scala.parser.core.ast.ProgramNode;
+import scala.parser.core.ast.StringLiteralNode;
+import scala.parser.core.ast.UnaryExprNode;
 
 public class Evaluator {
 
@@ -60,22 +62,33 @@ public class Evaluator {
 
     private Value evalExpr(ExpressionNode node, Env env) {
 
-        // Boolean literal
+        if (node instanceof StringLiteralNode s) {
+            return new StringValue(s.value);
+        }
+
         if (node instanceof BoolNode b) {
             return new BoolValue(b.value);
         }
 
-        // Number literal
         if (node instanceof LiteralNode lit) {
             return new NumberValue(Integer.parseInt(lit.value));
         }
 
-        // Identifier
         if (node instanceof IdentifierNode id) {
             return env.lookup(id.name);
         }
 
-        // If expression
+        if (node instanceof UnaryExprNode un) {
+            Value operand = evalExpr(un.operand, env);
+            if (un.operator.equals("!")) {
+                if (operand instanceof BoolValue b) {
+                    return new BoolValue(!b.value);
+                }
+                throw new RuntimeException("! requires boolean operand");
+            }
+            throw new RuntimeException("Unknown unary operator: " + un.operator);
+        }
+
         if (node instanceof IfNode i) {
             Value cond = evalExpr(i.condition, env);
 
@@ -88,36 +101,30 @@ public class Evaluator {
                     : evalExpr(i.elseBranch, env);
         }
 
-        // Binary operations (arithmetik + vergleich)
         if (node instanceof BinaryExprNode bin) {
             Value left = evalExpr(bin.left, env);
             Value right = evalExpr(bin.right, env);
 
             if (left instanceof NumberValue l && right instanceof NumberValue r) {
-                return switch (bin.operator) {
-                    case "+" -> new NumberValue(l.value + r.value);
-                    case "-" -> new NumberValue(l.value - r.value);
-                    case "*" -> new NumberValue(l.value * r.value);
-                    case "/" -> new NumberValue(l.value / r.value);
-                    case "==" -> new BoolValue(l.value == r.value);
-                    case "!=" -> new BoolValue(l.value != r.value);
-                    case "<" -> new BoolValue(l.value < r.value);
-                    case ">" -> new BoolValue(l.value > r.value);
-                    case "<=" -> new BoolValue(l.value <= r.value);
-                    case ">=" -> new BoolValue(l.value >= r.value);
-                    default -> throw new RuntimeException("Unknown operator: " + bin.operator);
-                };
+                return evalNumberOp(bin.operator, l, r);
             }
 
-            throw new RuntimeException("Binary operator requires numbers");
+            if (left instanceof BoolValue l && right instanceof BoolValue r) {
+                return evalBoolOp(bin.operator, l, r);
+            }
+
+            if (left instanceof StringValue ls && right instanceof StringValue rs) {
+                return evalStringOp(bin.operator, ls, rs);
+            }
+
+            throw new RuntimeException("Operator '" + bin.operator + "' not supported for " +
+                    left.getClass().getSimpleName() + " and " + right.getClass().getSimpleName());
         }
 
-        // Lambda
         if (node instanceof LambdaNode lam) {
             return new ClosureValue(lam.param, lam.body, env);
         }
 
-        // Function application
         if (node instanceof ApplicationNode app) {
             Value fn = evalExpr(app.function, env);
             Value arg = evalExpr(app.argument, env);
@@ -136,5 +143,45 @@ public class Evaluator {
         }
 
         throw new RuntimeException("Unknown expression: " + node.getClass().getSimpleName());
+    }
+
+    private Value evalNumberOp(String op, NumberValue l, NumberValue r) {
+        return switch (op) {
+            case "+" -> new NumberValue(l.value + r.value);
+            case "-" -> new NumberValue(l.value - r.value);
+            case "*" -> new NumberValue(l.value * r.value);
+            case "/" -> {
+                if (r.value == 0) {
+                    throw new RuntimeException("Division by zero");
+                }
+                yield new NumberValue(l.value / r.value);
+            }
+            case "==" -> new BoolValue(l.value == r.value);
+            case "!=" -> new BoolValue(l.value != r.value);
+            case "<" -> new BoolValue(l.value < r.value);
+            case ">" -> new BoolValue(l.value > r.value);
+            case "<=" -> new BoolValue(l.value <= r.value);
+            case ">=" -> new BoolValue(l.value >= r.value);
+            default -> throw new RuntimeException("Unknown operator: " + op);
+        };
+    }
+
+    private Value evalBoolOp(String op, BoolValue l, BoolValue r) {
+        return switch (op) {
+            case "==" -> new BoolValue(l.value == r.value);
+            case "!=" -> new BoolValue(l.value != r.value);
+            case "&&" -> new BoolValue(l.value && r.value);
+            case "||" -> new BoolValue(l.value || r.value);
+            default -> throw new RuntimeException("Operator '" + op + "' not supported for booleans");
+        };
+    }
+
+    private Value evalStringOp(String op, StringValue l, StringValue r) {
+        return switch (op) {
+            case "==" -> new BoolValue(l.value.equals(r.value));
+            case "!=" -> new BoolValue(!l.value.equals(r.value));
+            case "+" -> new StringValue(l.value + r.value);
+            default -> throw new RuntimeException("Operator '" + op + "' not supported for strings");
+        };
     }
 }

@@ -26,9 +26,27 @@ public class Tokenizer {
                 continue;
             }
 
+            // Line comment
+            if (c == '/' && peekNext() == '/') {
+                skipLineComment();
+                continue;
+            }
+
+            // Block comment
+            if (c == '/' && peekNext() == '*') {
+                skipBlockComment();
+                continue;
+            }
+
             // Numbers
             if (Character.isDigit(c)) {
                 tokens.add(readNumber());
+                continue;
+            }
+
+            // String literals
+            if (c == '"') {
+                tokens.add(readString());
                 continue;
             }
 
@@ -39,9 +57,8 @@ public class Tokenizer {
             }
 
             // ------------------------------------
-            // Multi-character operators (MÜSSEN zuerst kommen)
+            // Multi-character operators
             // ------------------------------------
-            // ==
             if (c == '=' && peekNext() == '=') {
                 tokens.add(new Token(TokenType.EQ, "==", line, column));
                 advance();
@@ -49,7 +66,6 @@ public class Tokenizer {
                 continue;
             }
 
-            // !=
             if (c == '!' && peekNext() == '=') {
                 tokens.add(new Token(TokenType.NEQ, "!=", line, column));
                 advance();
@@ -57,7 +73,6 @@ public class Tokenizer {
                 continue;
             }
 
-            // <=
             if (c == '<' && peekNext() == '=') {
                 tokens.add(new Token(TokenType.LE, "<=", line, column));
                 advance();
@@ -65,7 +80,6 @@ public class Tokenizer {
                 continue;
             }
 
-            // >=
             if (c == '>' && peekNext() == '=') {
                 tokens.add(new Token(TokenType.GE, ">=", line, column));
                 advance();
@@ -73,10 +87,23 @@ public class Tokenizer {
                 continue;
             }
 
-            // ------------------------------------
-            // Lambda-Kalkül Erweiterung
-            // ------------------------------------
-            // ARROW: ->
+            // &&
+            if (c == '&' && peekNext() == '&') {
+                tokens.add(new Token(TokenType.AND, "&&", line, column));
+                advance();
+                advance();
+                continue;
+            }
+
+            // ||
+            if (c == '|' && peekNext() == '|') {
+                tokens.add(new Token(TokenType.OR, "||", line, column));
+                advance();
+                advance();
+                continue;
+            }
+
+            // ->
             if (c == '-' && peekNext() == '>') {
                 tokens.add(new Token(TokenType.ARROW, "->", line, column));
                 advance();
@@ -84,7 +111,7 @@ public class Tokenizer {
                 continue;
             }
 
-            // BACKSLASH: \
+            // \
             if (c == '\\') {
                 tokens.add(new Token(TokenType.BACKSLASH, "\\", line, column));
                 advance();
@@ -126,12 +153,22 @@ public class Tokenizer {
                     advance();
                     break;
 
+                case '!':
+                    tokens.add(makeToken(TokenType.NOT));
+                    advance();
+                    break;
+
                 case '(':
                     tokens.add(makeToken(TokenType.LPAREN));
                     advance();
                     break;
                 case ')':
                     tokens.add(makeToken(TokenType.RPAREN));
+                    advance();
+                    break;
+
+                case ';':
+                    tokens.add(makeToken(TokenType.SEMICOLON));
                     advance();
                     break;
 
@@ -178,6 +215,25 @@ public class Tokenizer {
         }
     }
 
+    private void skipLineComment() {
+        while (!isAtEnd() && peek() != '\n') {
+            advance();
+        }
+    }
+
+    private void skipBlockComment() {
+        advance();
+        advance();
+        while (!isAtEnd()) {
+            if (peek() == '*' && peekNext() == '/') {
+                advance();
+                advance();
+                return;
+            }
+            advance();
+        }
+    }
+
     private Token makeToken(TokenType type) {
         return new Token(type, String.valueOf(peek()), line, column);
     }
@@ -194,6 +250,36 @@ public class Tokenizer {
         return new Token(TokenType.NUMBER, text, line, startCol);
     }
 
+    private Token readString() {
+        int startCol = column;
+        int startLine = line;
+        advance();
+
+        StringBuilder sb = new StringBuilder();
+        while (!isAtEnd() && peek() != '"') {
+            if (peek() == '\\') {
+                advance();
+                if (isAtEnd()) break;
+                switch (peek()) {
+                    case 'n' -> sb.append('\n');
+                    case 't' -> sb.append('\t');
+                    case '"' -> sb.append('"');
+                    case '\\' -> sb.append('\\');
+                    default -> sb.append(peek());
+                }
+            } else {
+                sb.append(peek());
+            }
+            advance();
+        }
+
+        if (!isAtEnd()) {
+            advance();
+        }
+
+        return new Token(TokenType.STRING, sb.toString(), startLine, startCol);
+    }
+
     private Token readIdentifierOrKeyword() {
         int start = pos;
         int startCol = column;
@@ -204,7 +290,6 @@ public class Tokenizer {
 
         String text = input.substring(start, pos);
 
-        // Keywords
         switch (text) {
             case "let":
                 return new Token(TokenType.LET, text, line, startCol);

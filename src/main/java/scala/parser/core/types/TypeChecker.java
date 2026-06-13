@@ -19,6 +19,8 @@ import scala.parser.core.ast.LambdaNode;
 import scala.parser.core.ast.LetStatementNode;
 import scala.parser.core.ast.LiteralNode;
 import scala.parser.core.ast.ProgramNode;
+import scala.parser.core.ast.StringLiteralNode;
+import scala.parser.core.ast.UnaryExprNode;
 
 public class TypeChecker {
 
@@ -43,7 +45,7 @@ public class TypeChecker {
     private int varCounter = 0;
     private final List<ParserError> errors;
     private final Map<String, TypeScheme> env = new HashMap<>();
-    private final Map<ExpressionNode, Type> inferredTypes = new HashMap<>();
+    private final Map<ASTNode, Type> inferredTypes = new HashMap<>();
 
     public TypeChecker(List<ParserError> errors) {
         this.errors = errors;
@@ -62,7 +64,7 @@ public class TypeChecker {
         env.put("print", new TypeScheme(List.of(), numToNum));
     }
 
-    public Map<ExpressionNode, Type> getInferredTypes() {
+    public Map<ASTNode, Type> getInferredTypes() {
         return inferredTypes;
     }
 
@@ -88,6 +90,7 @@ public class TypeChecker {
             TypeScheme scheme = generalize(env, type);
             env.put(let.name, scheme);
             inferredTypes.put(let.value, type);
+            inferredTypes.put(let, scheme.body());
             return;
         }
 
@@ -101,6 +104,10 @@ public class TypeChecker {
     private InferResult inferExpr(Map<String, TypeScheme> env, ExpressionNode expr) {
         if (expr instanceof LiteralNode) {
             return new InferResult(new Substitution(), new TypeNumber());
+        }
+
+        if (expr instanceof StringLiteralNode) {
+            return new InferResult(new Substitution(), new TypeString());
         }
 
         if (expr instanceof BoolNode) {
@@ -131,33 +138,36 @@ public class TypeChecker {
 
             boolean isArithmetic = op.equals("+") || op.equals("-") || op.equals("*") || op.equals("/");
             boolean isComparison = op.equals("==") || op.equals("!=") || op.equals("<") || op.equals(">") || op.equals("<=") || op.equals(">=");
+            boolean isLogical = op.equals("&&") || op.equals("||");
 
-            if (!isArithmetic && !isComparison) {
+            if (!isArithmetic && !isComparison && !isLogical) {
                 errors.add(new ParserError("Unknown operator '" + op + "'", bin.line, bin.column));
                 return new InferResult(new Substitution(), new TypeVar("?"));
             }
 
+            Type operandType = isLogical ? new TypeBool() : new TypeNumber();
+
             Substitution s3;
             try {
-                s3 = unify(appliedT1, new TypeNumber());
+                s3 = unify(appliedT1, operandType);
             } catch (TypeErrorException e) {
                 errors.add(new ParserError(
-                        "Operator '" + op + "' requires numbers, got " + appliedT1,
+                        "Operator '" + op + "' requires " + operandType + ", got " + appliedT1,
                         bin.left.line, bin.left.column));
                 return new InferResult(new Substitution(), new TypeVar("?"));
             }
 
             Substitution s4;
             try {
-                s4 = unify(apply(s3, t2), new TypeNumber());
+                s4 = unify(apply(s3, t2), operandType);
             } catch (TypeErrorException e) {
                 errors.add(new ParserError(
-                        "Operator '" + op + "' requires numbers, got " + apply(s3, t2),
+                        "Operator '" + op + "' requires " + operandType + ", got " + apply(s3, t2),
                         bin.right.line, bin.right.column));
                 return new InferResult(new Substitution(), new TypeVar("?"));
             }
 
-            Type resultType = isComparison ? new TypeBool() : new TypeNumber();
+            Type resultType = isArithmetic ? new TypeNumber() : new TypeBool();
             return new InferResult(compose(s4, compose(s3, compose(s2, s1))), resultType);
         }
 
@@ -200,6 +210,24 @@ public class TypeChecker {
             return new InferResult(
                     compose(s5, compose(s4, compose(s3, compose(s2, s1)))),
                     apply(s5, appliedTThen));
+        }
+
+        if (expr instanceof UnaryExprNode un) {
+            InferResult opResult = inferExpr(env, un.operand);
+            Substitution s1 = opResult.sub;
+            Type t1 = opResult.type;
+
+            Substitution s2;
+            try {
+                s2 = unify(apply(s1, t1), new TypeBool());
+            } catch (TypeErrorException e) {
+                errors.add(new ParserError(
+                        "Operator '" + un.operator + "' requires boolean, got " + apply(s1, t1),
+                        un.operand.line, un.operand.column));
+                return new InferResult(new Substitution(), new TypeVar("?"));
+            }
+
+            return new InferResult(compose(s2, s1), new TypeBool());
         }
 
         if (expr instanceof LambdaNode lam) {
@@ -267,6 +295,9 @@ public class TypeChecker {
         if (a instanceof TypeBool && b instanceof TypeBool) {
             return new Substitution();
         }
+        if (a instanceof TypeString && b instanceof TypeString) {
+            return new Substitution();
+        }
         if (a instanceof TypeFun fa && b instanceof TypeFun fb) {
             Substitution s1 = unify(fa.from(), fb.from());
             Substitution s2 = unify(apply(s1, fa.to()), apply(s1, fb.to()));
@@ -292,7 +323,7 @@ public class TypeChecker {
         if (t instanceof TypeFun f) {
             return occurs(name, f.from()) || occurs(name, f.to());
         }
-        return false;
+        return false; // TypeNumber, TypeBool, TypeString have no variables
     }
 
     // --- Substitution application ---

@@ -50,6 +50,11 @@ public class AstFinder {
                 if (val != null) return val;
             }
 
+            if (node instanceof UnaryExprNode un) {
+                ASTNode operand = findRecursive(un.operand, line, column);
+                if (operand != null) return operand;
+            }
+
             return node;
         }
 

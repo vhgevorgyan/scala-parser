@@ -7,12 +7,12 @@ import scala.parser.core.types.*;
 
 public class HoverProvider {
 
-    public static String getHoverText(ASTNode node, Map<ExpressionNode, Type> inferredTypes) {
+    public static String getHoverText(ASTNode node, Map<ASTNode, Type> inferredTypes) {
         String base = getHoverText(node);
         if (base == null) return null;
 
-        if (node instanceof ExpressionNode expr && inferredTypes != null) {
-            Type type = inferredTypes.get(expr);
+        if (inferredTypes != null) {
+            Type type = inferredTypes.get(node);
             if (type != null) {
                 return base + " — " + typeToString(type);
             }
@@ -62,6 +62,7 @@ public class HoverProvider {
     private static String typeToString(Type t) {
         if (t instanceof TypeNumber) return "Number";
         if (t instanceof TypeBool) return "Bool";
+        if (t instanceof TypeString) return "String";
         if (t instanceof TypeVar v) return v.name();
         if (t instanceof TypeFun f) {
             String from = typeToString(f.from());

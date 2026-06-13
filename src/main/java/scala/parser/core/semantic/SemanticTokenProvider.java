@@ -28,8 +28,18 @@ public class SemanticTokenProvider {
             out.add(new SemanticToken(id.line, id.column, id.name.length(), "variable"));
         }
 
+        if (node instanceof StringLiteralNode s) {
+            out.add(new SemanticToken(s.line, s.column, s.value.length() + 2, "string"));
+        }
+
         if (node instanceof LiteralNode lit) {
             out.add(new SemanticToken(lit.line, lit.column, lit.value.length(), "number"));
+        }
+
+        if (node instanceof UnaryExprNode un) {
+            out.add(new SemanticToken(un.line, un.column, un.operator.length(), "operator"));
+            walk(un.operand, out);
+            return;
         }
 
         if (node instanceof BinaryExprNode bin) {

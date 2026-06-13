@@ -3,11 +3,13 @@ package scala.parser.lsp;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
+import org.eclipse.lsp4j.CodeActionOptions;
 import org.eclipse.lsp4j.CompletionOptions;
 import org.eclipse.lsp4j.InitializeParams;
 import org.eclipse.lsp4j.InitializeResult;
 import org.eclipse.lsp4j.MessageParams;
 import org.eclipse.lsp4j.MessageType;
+import org.eclipse.lsp4j.RenameOptions;
 import org.eclipse.lsp4j.SemanticTokensLegend;
 import org.eclipse.lsp4j.SemanticTokensWithRegistrationOptions;
 import org.eclipse.lsp4j.ServerCapabilities;
@@ -37,10 +39,14 @@ public class MyLanguageServer implements LanguageServer, LanguageClientAware {
         capabilities.setTextDocumentSync(TextDocumentSyncKind.Full);
         capabilities.setHoverProvider(true);
         capabilities.setCompletionProvider(new CompletionOptions());
+        capabilities.setDefinitionProvider(true);
+        capabilities.setReferencesProvider(true);
+        capabilities.setDocumentSymbolProvider(true);
+        capabilities.setCodeActionProvider(new CodeActionOptions(List.of("quickfix")));
+        capabilities.setRenameProvider(new RenameOptions());
 
-        // Semantic Tokens
         var legend = new SemanticTokensLegend(
-                List.of("variable", "number", "operator", "keyword"),
+                List.of("variable", "number", "operator", "keyword", "string"),
                 List.of()
         );
 

@@ -6,17 +6,20 @@ public enum TokenType {
     // Identifiers & literals
     IDENT,
     NUMBER,
+    STRING,
     // Operators
     PLUS, MINUS, STAR, SLASH,
     EQUAL,
+    // Logical
+    AND, OR, NOT,
     // Parentheses
     LPAREN,
     RPAREN,
     EOF,
-    BACKSLASH, // \ 
-    ARROW, // -> 
+    BACKSLASH,
+    ARROW,
     TRUE, FALSE,
     IF, THEN, ELSE,
     EQ, NEQ, LT, GT, LE, GE,
-
+    SEMICOLON,
 }
