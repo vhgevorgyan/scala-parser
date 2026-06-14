@@ -282,12 +282,10 @@ public class MyTextDocumentService implements TextDocumentService {
             var defs = ScopeAnalyzer.collectDefinitions(ast);
             List<Either<org.eclipse.lsp4j.SymbolInformation, DocumentSymbol>> symbols = new ArrayList<>();
             for (var d : defs) {
-                var si = new org.eclipse.lsp4j.SymbolInformation(
-                        d.name(), SymbolKind.Variable,
-                        new org.eclipse.lsp4j.Location(uri,
-                                new Range(new Position(d.line(), d.column()),
-                                        new Position(d.line(), d.column() + d.name().length()))));
-                symbols.add(Either.forLeft(si));
+                var range = new Range(new Position(d.line(), d.column()),
+                        new Position(d.line(), d.column() + d.name().length()));
+                var ds = new DocumentSymbol(d.name(), SymbolKind.Variable, range, range);
+                symbols.add(Either.forRight(ds));
             }
             return symbols;
         });

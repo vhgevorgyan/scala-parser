@@ -2,6 +2,7 @@ package scala.parser;
 
 import java.util.List;
 
+import scala.parser.core.interpreter.Evaluator;
 import scala.parser.core.lexer.*;
 import scala.parser.core.parser.Parser;
 import scala.parser.core.types.TypeChecker;
@@ -76,6 +77,33 @@ public class Benchmarks {
         }
         long typeTime = (System.nanoTime() - start) / iterations;
         System.out.println("  + TypeCheck: " + typeTime + " ns");
+
+        // Benchmark evaluate (only if no errors)
+        String evalLabel = "  + Evaluate:  ";
+        long evalTime = 0;
+        {
+            Parser p = new Parser(tokens);
+            var result = p.parse();
+            if (result.errors.isEmpty()) {
+                TypeChecker tc = new TypeChecker(result.errors);
+                tc.check(result.ast);
+                if (result.errors.isEmpty()) {
+                    System.gc();
+                    start = System.nanoTime();
+                    for (int i = 0; i < iterations; i++) {
+                        Evaluator ev = new Evaluator();
+                        ev.evalProgram(result.ast);
+                    }
+                    evalTime = (System.nanoTime() - start) / iterations;
+                    System.out.println(evalLabel + evalTime + " ns");
+                }
+            }
+            if (result.errors.isEmpty()) {
+                // Already printed above
+            } else {
+                System.out.println(evalLabel + "(skipped - errors)");
+            }
+        }
 
         double totalMs = (tokenizeTime + parseTime + typeTime) / 1_000_000.0;
         System.out.printf("  Total:     %.3f ms\n", totalMs);

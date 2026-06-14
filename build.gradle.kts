@@ -22,6 +22,7 @@ dependencies {
 	implementation("org.eclipse.lsp4j:org.eclipse.lsp4j:0.21.0")
 	implementation("org.eclipse.lsp4j:org.eclipse.lsp4j.jsonrpc:0.21.0")
 	testImplementation("org.junit.jupiter:junit-jupiter:5.12.2")
+	testImplementation("net.jqwik:jqwik:1.9.2")
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 

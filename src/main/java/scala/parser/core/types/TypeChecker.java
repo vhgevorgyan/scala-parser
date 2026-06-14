@@ -17,10 +17,6 @@ public class TypeChecker {
         public Substitution(String var, Type type) { this(Map.of(var, type)); }
     }
 
-    private static class TypeErrorException extends Exception {
-        public TypeErrorException(String message) { super(message); }
-    }
-
     private record InferResult(Substitution sub, Type type) {}
 
     private int varCounter = 0;
@@ -61,6 +57,10 @@ public class TypeChecker {
             Substitution sub;
 
             if (let.isRec) {
+                if (let.value instanceof IdentifierNode id && id.name.equals(let.name)) {
+                    errors.add(new ParserError("Recursive let '" + let.name + "' directly refers to itself; wrap body in a lambda", let.line, let.column));
+                    return;
+                }
                 TypeVar recType = freshVar();
                 env.put(let.name, new TypeScheme(List.of(), recType));
                 result = inferExpr(env, let.value);
@@ -87,8 +87,10 @@ public class TypeChecker {
                     try {
                         sub = compose(unify(type, let.declaredType), sub);
                     } catch (TypeErrorException e) {
+                        String detail = e.left != null ? "cannot unify " + e.left + " with " + e.right
+                            : "declared " + let.declaredType + " vs inferred " + type;
                         errors.add(new ParserError(
-                                "Declared type " + let.declaredType + " does not match inferred type " + type,
+                                "Type annotation mismatch in '" + let.name + "': " + detail,
                                 let.line, let.column));
                         return;
                     }
@@ -188,7 +190,8 @@ public class TypeChecker {
                 Substitution s2 = unify(apply(s1, t1), new TypeBool());
                 return new InferResult(compose(s2, s1), new TypeBool());
             } catch (TypeErrorException e) {
-                errors.add(new ParserError("Operator '" + un.operator + "' requires boolean, got " + apply(s1, t1),
+                String got = apply(s1, t1).toString();
+                errors.add(new ParserError("Operator '" + un.operator + "' requires Bool, got " + got,
                         un.operand.line, un.operand.column));
                 return new InferResult(new Substitution(), new TypeVar("?"));
             }
@@ -201,7 +204,11 @@ public class TypeChecker {
             Substitution s2;
             try { s2 = unify(apply(s1, t1), new TypeBool()); }
             catch (TypeErrorException e) {
-                errors.add(new ParserError("If condition must be boolean, got " + apply(s1, t1), i.condition.line, i.condition.column));
+                String condType = apply(s1, t1).toString();
+                String detail = e.left != null && e.right != null
+                    ? "cannot unify " + e.left + " with " + e.right
+                    : "got " + condType;
+                errors.add(new ParserError("If condition must be Bool, " + detail, i.condition.line, i.condition.column));
                 s2 = new Substitution();
             }
             Map<String, TypeScheme> envAfterCond = apply(compose(s2, s1), env);
@@ -216,7 +223,12 @@ public class TypeChecker {
             Substitution s5;
             try { s5 = unify(appliedTThen, tElse); }
             catch (TypeErrorException e) {
-                errors.add(new ParserError("If branches must have the same type, got " + appliedTThen + " and " + tElse, i.line, i.column));
+                String thenS = appliedTThen.toString(), elseS = tElse.toString();
+                String detail = e.left != null && e.right != null
+                    ? "cannot unify " + e.left + " with " + e.right
+                    : "then:" + thenS + " else:" + elseS;
+                errors.add(new ParserError("If branches must have same type, " + detail,
+                    i.thenBranch.line, i.thenBranch.column));
                 return new InferResult(new Substitution(), new TypeVar("?"));
             }
             return new InferResult(compose(s5, compose(s4, compose(s3, compose(s2, s1)))), apply(s5, appliedTThen));
@@ -263,13 +275,15 @@ public class TypeChecker {
             Substitution s3;
             try { s3 = unify(appliedT1, operandType); }
             catch (TypeErrorException e) {
-                errors.add(new ParserError("Operator '" + op + "' requires " + operandType + ", got " + appliedT1, bin.left.line, bin.left.column));
+                String detail = e.left != null ? "cannot unify " + e.left + " with " + e.right : "got " + appliedT1;
+                errors.add(new ParserError("Operator '" + op + "' requires " + operandType + ", " + detail, bin.left.line, bin.left.column));
                 return new InferResult(new Substitution(), new TypeVar("?"));
             }
             Substitution s4;
             try { s4 = unify(apply(s3, t2), operandType); }
             catch (TypeErrorException e) {
-                errors.add(new ParserError("Operator '" + op + "' requires " + operandType + ", got " + apply(s3, t2), bin.right.line, bin.right.column));
+                String detail = e.left != null ? "cannot unify " + e.left + " with " + e.right : "got " + apply(s3, t2);
+                errors.add(new ParserError("Operator '" + op + "' requires " + operandType + ", " + detail, bin.right.line, bin.right.column));
                 return new InferResult(new Substitution(), new TypeVar("?"));
             }
             Type resultType = isArithmetic ? new TypeNumber() : new TypeBool();
@@ -285,30 +299,22 @@ public class TypeChecker {
             for (CaseNode.CaseBranch branch : caseNode.branches) {
                 TypeScheme ctorScheme = env.get(branch.constructor());
                 if (ctorScheme == null) {
-                    errors.add(new ParserError("Unknown constructor '" + branch.constructor() + "'", caseNode.line, caseNode.column));
+                    errors.add(new ParserError("Unknown constructor '" + branch.constructor() + "'", caseNode.line, caseNode.column, branch.constructor().length()));
                     return new InferResult(new Substitution(), new TypeVar("?"));
                 }
 
                 Type ctorType = instantiate(ctorScheme);
                 Map<String, TypeScheme> branchEnv = new HashMap<>(apply(s, env));
 
-                // Match constructor type against expr type to find type args
-                TypeVar branchResultType = freshVar();
-                Type expectedCtorType = new TypeFun(exprType, branchResultType);
-
-                // For constructors with multiple args, build nested function type
+                // For constructors with multiple args, add fresh binding types
                 for (int i = 0; i < branch.bindings().size(); i++) {
                     String binding = branch.bindings().get(i).name();
                     TypeVar bindingType = freshVar();
                     branchEnv.put(binding, new TypeScheme(List.of(), bindingType));
-                    expectedCtorType = new TypeFun(expectedCtorType, bindingType);
                 }
 
-                // Actually for constructors, we need to decompose:
-                // If ctor has type A -> B -> Maybe A, and we're matching Maybe X,
-                // we unify ctor result with Maybe X, getting bindings for A, B, etc.
-                // Then extract the argument types for the branch bindings.
-
+                // Decompose constructor type: A -> B -> Ctor A B
+                // argTypes = [A, B], appliedCtor = Ctor A B
                 Type appliedCtor = ctorType;
                 List<Type> argTypes = new ArrayList<>();
                 while (appliedCtor instanceof TypeFun f) {
@@ -320,9 +326,10 @@ public class TypeChecker {
                 try {
                     matchSub = unify(apply(s, appliedCtor), apply(s, exprType));
                 } catch (TypeErrorException e) {
+                    String detail = e.left != null ? "cannot unify " + e.left + " with " + e.right : "";
                     errors.add(new ParserError(
-                            "Constructor '" + branch.constructor() + "' cannot be matched against " + apply(s, exprType),
-                            caseNode.line, caseNode.column));
+                            "Constructor '" + branch.constructor() + "' incompatible with scrutinee type " + apply(s, exprType) + (detail.isEmpty() ? "" : " (" + detail + ")"),
+                            caseNode.expr.line, caseNode.expr.column));
                     return new InferResult(new Substitution(), new TypeVar("?"));
                 }
 
@@ -343,14 +350,30 @@ public class TypeChecker {
                         Substitution unif = unify(apply(s, resultType), apply(s, branchType));
                         s = compose(unif, s);
                     } catch (TypeErrorException e) {
+                        String detail = e.left != null ? "cannot unify " + e.left + " with " + e.right : "got " + apply(s, resultType) + " vs " + apply(s, branchType);
                         errors.add(new ParserError(
-                                "Case branches must have the same type, got " + apply(s, resultType) + " and " + apply(s, branchType),
-                                caseNode.line, caseNode.column));
+                                "Case branches must have the same type, " + detail,
+                                branch.body().line, branch.body().column));
                         return new InferResult(new Substitution(), new TypeVar("?"));
                     }
                 }
             }
 
+            Type resolved = apply(s, exprType);
+            if (resolved instanceof TypeConstructor tc) {
+                DataDeclNode decl = dataTypes.get(tc.name());
+                if (decl != null) {
+                    Set<String> matched = new HashSet<>();
+                    for (var br : caseNode.branches) matched.add(br.constructor());
+                    for (var ctor : decl.constructors) {
+                        if (!matched.contains(ctor.name())) {
+                            errors.add(new ParserError(
+                                "Non-exhaustive pattern: missing constructor '" + ctor.name() + "' for type '" + decl.name + "'",
+                                caseNode.line, caseNode.column));
+                        }
+                    }
+                }
+            }
             return new InferResult(s, resultType != null ? apply(s, resultType) : new TypeVar("?"));
         }
 
@@ -377,7 +400,10 @@ public class TypeChecker {
             Substitution s3;
             try { s3 = unify(appliedT1, new TypeFun(t2, resultType)); }
             catch (TypeErrorException e) {
-                errors.add(new ParserError("Type error: cannot apply " + appliedT1 + " to " + t2, app.line, app.column));
+                String detail = e.left != null
+                    ? "cannot unify " + e.left + " with " + e.right
+                    : "cannot apply " + appliedT1 + " to " + t2;
+                errors.add(new ParserError("Type error: " + detail, app.function.line, app.function.column));
                 return new InferResult(new Substitution(), new TypeVar("?"));
             }
             return new InferResult(compose(s3, compose(s2, s1)), apply(s3, resultType));
@@ -402,7 +428,7 @@ public class TypeChecker {
         }
         if (a instanceof TypeConstructor ca && b instanceof TypeConstructor cb) {
             if (!ca.name().equals(cb.name()) || ca.args().size() != cb.args().size()) {
-                throw new TypeErrorException("Cannot unify " + a + " with " + b);
+                throw new TypeErrorException("Cannot unify " + a + " with " + b, a, b);
             }
             Substitution result = new Substitution();
             for (int i = 0; i < ca.args().size(); i++) {
@@ -410,12 +436,12 @@ public class TypeChecker {
             }
             return result;
         }
-        throw new TypeErrorException("Cannot unify " + a + " with " + b);
+        throw new TypeErrorException("Cannot unify " + a + " with " + b, a, b);
     }
 
     private Substitution unifyVar(String name, Type t) throws TypeErrorException {
         if (t instanceof TypeVar v && v.name().equals(name)) return new Substitution();
-        if (occurs(name, t)) throw new TypeErrorException("Occurs check: " + name + " in " + t);
+        if (occurs(name, t)) throw new TypeErrorException("Occurs check: " + name + " in " + t, new TypeVar(name), t);
         return new Substitution(name, t);
     }
 
