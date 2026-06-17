@@ -512,4 +512,59 @@ class TypeSoundnessTests {
             if (!b1.bindings().get(i).name().equals(b2.bindings().get(i).name())) return false;
         return astEquals(b1.body(), b2.body());
     }
+
+    // ---------------------------------------------------------------
+    // Type Error Localization (mutation-based)
+    // ---------------------------------------------------------------
+
+    @Property(tries = 1000)
+    void typeErrorLocalization(@ForAll("program") ProgramNode program) {
+        String source = stringify(program);
+        var tokens = new Tokenizer(source).tokenize();
+        var result = new Parser(tokens).parse();
+        if (!result.errors.isEmpty()) return;
+        var errors = new ArrayList<ParserError>();
+        new TypeChecker(errors).check(result.ast);
+        if (!errors.isEmpty()) return;
+
+        var mutable = new ArrayList<Token>();
+        for (var tok : tokens) {
+            if (tok.type == TokenType.NUMBER || tok.type == TokenType.TRUE
+                || tok.type == TokenType.FALSE || tok.type == TokenType.STRING)
+                mutable.add(tok);
+        }
+        if (mutable.isEmpty()) return;
+
+        var rand = new Random();
+        int pick = rand.nextInt(mutable.size());
+        var target = mutable.get(pick);
+        var replacement = mutationOf(target, rand);
+
+        var mutatedTokens = new ArrayList<Token>(tokens.size());
+        for (var tok : tokens)
+            mutatedTokens.add(tok == target ? replacement : tok);
+
+        var mutatedResult = new Parser(mutatedTokens).parse();
+        if (mutatedResult.errors.isEmpty()) return;
+
+        var first = mutatedResult.errors.get(0);
+        boolean correct = first.line == target.line && first.column == target.column;
+        assertTrue(correct,
+            "Error localization failed: mutated at (" + target.line + "," + target.column + ") "
+            + "but first error at (" + first.line + "," + first.column + "): "
+            + first.message);
+    }
+
+    private static Token mutationOf(Token original, Random rand) {
+        return switch (original.type) {
+            case NUMBER -> rand.nextBoolean()
+                ? new Token(TokenType.TRUE, "true", original.line, original.column)
+                : new Token(TokenType.STRING, "x", original.line, original.column);
+            case TRUE, FALSE -> rand.nextBoolean()
+                ? new Token(TokenType.NUMBER, "0", original.line, original.column)
+                : new Token(TokenType.STRING, "x", original.line, original.column);
+            case STRING -> new Token(TokenType.NUMBER, "0", original.line, original.column);
+            default -> throw new IllegalArgumentException("" + original.type);
+        };
+    }
 }
