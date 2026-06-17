@@ -141,7 +141,7 @@ Zeitmessung für Tokenize/Parse/Typecheck/Evaluate mit Warmup und `System.gc()` 
 | `TypeCheckerTests` | ~40 | HM-Inferenz, let-Poly, ADTs, Fehlererkennung |
 | `EvaluatorTests` | ~30 | Alle Values, Builtins, Rekursion, Pattern Matching |
 
-### 4.2 Property-Based Tests (jqwik) – 9000+ Tries
+### 4.2 Property-Based Tests (jqwik) – 9500+ Tries
 
 | Property | Tries | Beschreibung |
 |---|---|---|
@@ -157,6 +157,7 @@ Zeitmessung für Tokenize/Parse/Typecheck/Evaluate mit Warmup und `System.gc()` 
 | **typeErrorMessagesAreInformative** | 500 | Alle Fehler >5 Zeichen, nicht leer |
 | **exhaustivenessCheck** | 1000 | Fehlende Konstruktoren → "missing constructor" |
 | **typeErrorLocalization** | 1000 | Mutation-basierte Lokalisierung: Typfehler zeigt auf mutierte Stelle |
+| **errorRecoveryQuality** | 500 | Mutation-basierte Cascade-Messung: Präzision der Fehlerrecovery nach Syntaxfehler |
 
 ---
 

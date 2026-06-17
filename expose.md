@@ -128,7 +128,7 @@ Systematische Tests aller Komponenten:
 - **Type Checker**: HM-Inferenz, Polymorphie, ADTs, Fehlererkennung
 - **Evaluator**: Alle Values, Builtins, Rekursion, Pattern Matching
 
-### 4.2 Property-Based Tests (jqwik) – 12 Properties, ~9000+ Tries
+### 4.2 Property-Based Tests (jqwik) – 13 Properties, ~9500+ Tries
 
 Zufallsgenerierte Programme mit Invarianten:
 
@@ -146,6 +146,7 @@ Zufallsgenerierte Programme mit Invarianten:
 | | exhaustivenessCheck | Fehlende Konstruktoren → "missing constructor" |
 | **Error Quality** | typeErrorMessagesAreInformative | Fehler >5 Zeichen, nicht leer |
 | | **typeErrorLocalization** | Mutation: Typfehler zeigt auf die mutierte Stelle (1000×) |
+| **Recovery** | **errorRecoveryQuality** | Mutation: Cascade-Messung der Fehlerrecovery (500×) |
 
 ---
 
@@ -170,6 +171,7 @@ Zufallsgenerierte Programme mit Invarianten:
 4. **Property-Based Testing** für Typsysteme: Automatisierte Generierung von Programmen mit Invarianten-Prüfung
 5. **LSP-Integration als Fallstudie**: Wie tiefe Sprachfeatures (Typinferenz, ADTs) in moderne Editoren eingebettet werden
 6. **Mutation-basierte Fehlerlokalisierung**: Automatisierte Evaluation der Qualität von Typfehler-Meldungen durch zufällige Mutation und Positionsprüfung
+7. **Fehlerrecovery-Evaluation**: Messung der Cascade-Effekte nach Syntaxfehlern mittels Token-Mutation
 
 ---
 
