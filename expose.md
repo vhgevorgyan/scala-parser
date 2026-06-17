@@ -128,14 +128,24 @@ Systematische Tests aller Komponenten:
 - **Type Checker**: HM-Inferenz, Polymorphie, ADTs, Fehlererkennung
 - **Evaluator**: Alle Values, Builtins, Rekursion, Pattern Matching
 
-### 4.2 Property-Based Tests (jqwik)
+### 4.2 Property-Based Tests (jqwik) – 12 Properties, ~9000+ Tries
 
 Zufallsgenerierte Programme mit Invarianten:
-- **Type Soundness**: Wohlgetypt → kein Laufzeitfehler
-- **Determinism**: Gleiches Programm → gleiches Ergebnis
-- **Weakening**: Unused Let ändert Typability nicht
-- **Parse Round-Trip**: AST → Source → parse → identisch (5000+ Versuche)
-- **Negative Tests**: Fehlererkennung wird validiert
+
+| Kategorie | Property | Beschreibung |
+|---|---|---|
+| **Soundness** | Type Soundness | Wohlgetypt → kein Laufzeitfehler |
+| **Stabilität** | Determinism | Gleiches Programm → gleicher Typ + Wert |
+| | Weakening | Unused Let ändert Typability nicht |
+| **Round-Trip** | Parse Round-Trip | AST → Source → parse → identisch |
+| | Fuzz (5000×) | Wie oben, massiv mehr Iterationen |
+| **Fehlererkennung** | notOnNonBool | `!` auf Number → Fehler erwähnt Bool |
+| | ifCondMustBeBool | If mit Number → Fehler erwähnt Bool |
+| | noDirectSelfRecursion | `let rec f = f` wird abgefangen |
+| | undeclaredVariable | Unbekannte Variable → "Undefined" |
+| | exhaustivenessCheck | Fehlende Konstruktoren → "missing constructor" |
+| **Error Quality** | typeErrorMessagesAreInformative | Fehler >5 Zeichen, nicht leer |
+| | **typeErrorLocalization** | Mutation: Typfehler zeigt auf die mutierte Stelle (1000×) |
 
 ---
 
@@ -159,6 +169,7 @@ Zufallsgenerierte Programme mit Invarianten:
 3. **Exhaustiveness Checking** für Pattern Matching im Kontext von HM-Inferenz
 4. **Property-Based Testing** für Typsysteme: Automatisierte Generierung von Programmen mit Invarianten-Prüfung
 5. **LSP-Integration als Fallstudie**: Wie tiefe Sprachfeatures (Typinferenz, ADTs) in moderne Editoren eingebettet werden
+6. **Mutation-basierte Fehlerlokalisierung**: Automatisierte Evaluation der Qualität von Typfehler-Meldungen durch zufällige Mutation und Positionsprüfung
 
 ---
 
