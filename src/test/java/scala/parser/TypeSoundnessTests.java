@@ -4,6 +4,7 @@ import java.util.*;
 import java.util.stream.*;
 
 import net.jqwik.api.*;
+import net.jqwik.api.statistics.*;
 import scala.parser.core.*;
 import scala.parser.core.ast.*;
 import scala.parser.core.ast.CaseNode.*;
@@ -566,5 +567,52 @@ class TypeSoundnessTests {
             case STRING -> new Token(TokenType.NUMBER, "0", original.line, original.column);
             default -> throw new IllegalArgumentException("" + original.type);
         };
+    }
+
+    // ---------------------------------------------------------------
+    // Error Recovery Quality — mutation-based cascade measurement
+    // ---------------------------------------------------------------
+
+    @Property(tries = 500)
+    void errorRecoveryQuality(@ForAll("program") ProgramNode program) {
+        String source = stringify(program);
+        var tokens = new Tokenizer(source).tokenize();
+
+        var deletable = new ArrayList<Integer>();
+        for (int i = 0; i < tokens.size() - 1; i++) {
+            var t = tokens.get(i).type;
+            if (t != TokenType.SEMICOLON && t != TokenType.EOF)
+                deletable.add(i);
+        }
+        if (deletable.isEmpty()) return;
+
+        var rand = new Random();
+        int kind = rand.nextInt(3);
+        int idx = deletable.get(rand.nextInt(deletable.size()));
+        var tok = tokens.get(idx);
+
+        var mutant = new ArrayList<Token>(tokens);
+        switch (kind) {
+            case 0 -> mutant.remove(idx);
+            case 1 -> mutant.set(idx, new Token(
+                TokenType.IDENT, "!!INVALID!!", tok.line, tok.column));
+            default -> mutant.add(idx, new Token(
+                TokenType.IDENT, "!!INVALID!!", tok.line, tok.column));
+        }
+
+        var result = new Parser(mutant).parse();
+        if (result.errors.isEmpty()) return;
+
+        int total = result.errors.size();
+        // Precision = how many of the reported errors are real (1) vs cascade
+        double precision = 1.0 / total;
+        // Record as jqwik statistics
+        Statistics.collect("cascade/errors", total);
+        Statistics.collect("cascade/precision", String.format("%.2f", precision));
+
+        // Sanity: most mutations should produce ≤5 cascade errors
+        assertTrue(total <= 10,
+            "Excessive error cascade (" + total + " errors from 1 mutation):\n"
+            + "Source: " + source.replace("\n", "\\n"));
     }
 }
