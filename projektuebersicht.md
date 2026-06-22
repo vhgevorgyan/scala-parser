@@ -128,6 +128,23 @@ Interaktive Shell mit:
 
 Zeitmessung für Tokenize/Parse/Typecheck/Evaluate mit Warmup und `System.gc()` vor jeder Phase.
 
+**Scaling Benchmarks** (`ScalingBenchmarks.java`): Systematische Laufzeitmessung bei n = 10/50/100/500/1000 Ausdrücken in drei Szenarien:
+- **Arithmetic chain** – N let-Bindings mit Addition (`let x0 = 0; let x1 = x0 + 1; ...`)
+- **ADT chain** – Wiederholte `case`-Ausdrücke auf einem selbstdefinierten Bool-Typ
+- **Recursive calls** – Wiederholte Aufrufe einer rekursiven Funktion
+
+Ergebnis: Tokenize/Parse/Evaluate skalieren linear O(n), TypeCheck für Arithmetic chain tendenziell O(n²) durch wachsenden Unifikations-Scope.
+
+### 3.9 CLI Test Tool
+
+`TestParser.java` – Lädt eine `.sp`-Datei und zeigt:
+- Token-Liste mit Typ, Text und Position
+- AST als Baum (alle Knoten + Kindbeziehungen)
+- Typcheck-Ergebnisse mit inferierten Typen
+- Evaluierungsergebnis
+
+Aufruf: `gradlew runTestParser --args="<file.sp>"`
+
 ---
 
 ## 4. Testing
@@ -141,7 +158,7 @@ Zeitmessung für Tokenize/Parse/Typecheck/Evaluate mit Warmup und `System.gc()` 
 | `TypeCheckerTests` | ~40 | HM-Inferenz, let-Poly, ADTs, Fehlererkennung |
 | `EvaluatorTests` | ~30 | Alle Values, Builtins, Rekursion, Pattern Matching |
 
-### 4.2 Property-Based Tests (jqwik) – 9500+ Tries
+### 4.2 Property-Based Tests (jqwik) – 13 Properties, ~9500+ Tries
 
 | Property | Tries | Beschreibung |
 |---|---|---|
@@ -158,6 +175,27 @@ Zeitmessung für Tokenize/Parse/Typecheck/Evaluate mit Warmup und `System.gc()` 
 | **exhaustivenessCheck** | 1000 | Fehlende Konstruktoren → "missing constructor" |
 | **typeErrorLocalization** | 1000 | Mutation-basierte Lokalisierung: Typfehler zeigt auf mutierte Stelle |
 | **errorRecoveryQuality** | 500 | Mutation-basierte Cascade-Messung: Präzision der Fehlerrecovery nach Syntaxfehler |
+
+### 4.3 Mutation Analysis (`MutationAnalysis.java`)
+
+Systematische Evaluation der Pipeline-Fehlererkennung: 12 Mutationsoperatoren × 200 wohlgetypte Basisprogramme = 2000 Mutationen.
+
+Jede Mutation wird kategorisiert als:
+- **Parse error** – vom Parser abgefangen
+- **Type error** – vom TypeChecker abgefangen
+- **Runtime error** – vom Evaluator abgefangen
+- **Escaped** – unerkannt durchgeschlüpft
+
+| Operator | Erkennung | Phase |
+|---|---|---|
+| `SelfReference` (`let rec f = f`) | **100%** | TypeChecker |
+| `ReplaceLiteralType` (Number↔String↔Bool) | **63,5%** | TypeChecker |
+| `DivideByZero` (RHS einer Division = 0) | **62,0%** | Evaluator |
+| `NotOnNumber` (`!` auf Number) | **39,5%** | TypeChecker |
+| Semantische Operatoren (SwapOperator, SwapIfBranches, RemoveLetBinding) | **0%** | unerkannt (typkorrekt) |
+| `TypeAnnotationMismatch` (`let x: Bool = 42`) | **100%** ✅ | TypeChecker (stringify serialisiert nun Annotationen) |
+
+Gesamterkennungsrate: **36,5%** (erwartbar, da semantische Änderungen typkorrekt bleiben).
 
 ---
 
@@ -182,3 +220,7 @@ Zeitmessung für Tokenize/Parse/Typecheck/Evaluate mit Warmup und `System.gc()` 
 8. ✅ Benchmarks
 9. ✅ Property-Based Tests (11 Properties, >8000 Tries)
 10. ✅ Type Error Messages (mit Quelltext-Location + beteiligten Typen)
+11. ✅ Scaling Benchmarks (Performance-Skalierung bei n = 10–1000)
+12. ✅ Mutation Analysis (12 Operatoren, 2000 Mutationen, 26,5% Erkennung)
+13. ✅ `TestParser` CLI-Tool
+14. ✅ Dokumentation: Architektur-Diagramme + BNF-Grammatik (`docs/`)

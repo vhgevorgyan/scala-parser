@@ -354,7 +354,9 @@ class TypeSoundnessTests {
             return sb.append('\n').toString();
         }
         if (node instanceof LetStatementNode l) {
-            return "let " + l.name + " = " + stringify(l.value);
+            String rec = l.isRec ? "rec " : "";
+            String ann = (l.declaredType != null) ? " : " + l.declaredType : "";
+            return "let " + rec + l.name + ann + " = " + stringify(l.value);
         }
         if (node instanceof DataDeclNode d) {
             var sb = new StringBuilder("data ").append(d.name);

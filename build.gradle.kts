@@ -30,6 +30,21 @@ tasks.withType<Test> {
 	useJUnitPlatform()
 }
 
+tasks.register<JavaExec>("runScalingBenchmarks") {
+	mainClass.set("scala.parser.ScalingBenchmarks")
+	classpath = sourceSets.main.get().runtimeClasspath
+}
+
+tasks.register<JavaExec>("runTestParser") {
+	mainClass.set("scala.parser.TestParser")
+	classpath = sourceSets.main.get().runtimeClasspath
+}
+
+tasks.register<JavaExec>("runMutationAnalysis") {
+	mainClass.set("scala.parser.MutationAnalysis")
+	classpath = sourceSets.main.get().runtimeClasspath
+}
+
 tasks.named<Jar>("jar") {
 	manifest {
 		attributes("Main-Class" to "scala.parser.ParserApplication")

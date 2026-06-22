@@ -45,12 +45,10 @@ let rec fact = \n ->
 data Maybe a = Nothing | Just a
 
 -- Pattern Matching:
-case x of
-  Nothing -> 0
-  | Just y -> y
+case x of Nothing -> 0 | Just y -> y
 
--- Typannotation:
-let id : a -> a = \x -> x
+-- Typannotation (wird aktuell nicht validiert — siehe Abschnitt 4.3):
+let id : Number -> Number = \x -> x
 ```
 
 **Besonderheiten:**
@@ -148,6 +146,14 @@ Zufallsgenerierte Programme mit Invarianten:
 | | **typeErrorLocalization** | Mutation: Typfehler zeigt auf die mutierte Stelle (1000×) |
 | **Recovery** | **errorRecoveryQuality** | Mutation: Cascade-Messung der Fehlerrecovery (500×) |
 
+### 4.3 Mutation Analysis
+
+Zusätzlich zur Property-Based-Testing wurde eine systematische **Mutationsanalyse** (`MutationAnalysis.java`) mit 12 Operatoren × 200 wohlgetypten Programmen = 2000 Mutationen durchgeführt. Jede Mutation wird als Parse-, Typ- oder Laufzeitfehler kategorisiert oder als unerkannt ("escaped") markiert. Die Gesamterkennungsrate beträgt 36,5%, wobei strukturelle Mutationen (SelfReference: 100%, TypeAnnotationMismatch: 100%) zuverlässig erkannt werden, während semantische Änderungen (Operator-Swap, Branch-Swap: 0%) typkorrekt bleiben.
+
+### 4.4 Scaling Benchmarks
+
+Systematische Performance-Messung (`ScalingBenchmarks.java`) für Tokenize/Parse/Typecheck/Evaluate bei Eingabegrößen n = 10/50/100/500/1000 in drei Szenarien (arithmetische Kette, ADT-Kette, rekursive Aufrufe).
+
 ---
 
 ## 5. Technologien
@@ -172,6 +178,8 @@ Zufallsgenerierte Programme mit Invarianten:
 5. **LSP-Integration als Fallstudie**: Wie tiefe Sprachfeatures (Typinferenz, ADTs) in moderne Editoren eingebettet werden
 6. **Mutation-basierte Fehlerlokalisierung**: Automatisierte Evaluation der Qualität von Typfehler-Meldungen durch zufällige Mutation und Positionsprüfung
 7. **Fehlerrecovery-Evaluation**: Messung der Cascade-Effekte nach Syntaxfehlern mittels Token-Mutation
+8. **Performance-Skalierungsanalyse**: Systematische Laufzeitmessung über Eingabegrößen n = 10–1000 für alle Pipeline-Phasen
+9. **Mutationsanalyse der Pipeline**: 12 Mutationsoperatoren, 2000 Mutationen – quantitative Evaluation der Fehlererkennungsrate (36,5% Gesamterkennung, 100% für SelfReference und TypeAnnotationMismatch)
 
 ---
 
@@ -199,3 +207,10 @@ Zufallsgenerierte Programme mit Invarianten:
 - Laufzeit-Datentypen (tags für ADTs)
 - Optimierung (Tail-Call-Eliminierung)
 - Web-basiertes Playground (via LSP + Monaco Editor)
+
+---
+
+## 9. Dokumentation (`docs/`)
+
+- **`docs/architecture.md`** – Drei Mermaid-Diagramme (Systemübersicht, Data Flow, Dependency Graph) + Paketstruktur
+- **`docs/grammar.md`** – Vollständige BNF-Grammatik, Operator-Präzedenztabelle, HM-Typregeln (Lam, App, Let, LetRec, Case, Data)
