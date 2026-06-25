@@ -4,24 +4,32 @@
 
 Das Projekt implementiert eine **vollständige kleine funktionale Programmiersprache** (Lambda-Kalkül mit let-Polymorphismus, algebraischen Datentypen und Pattern Matching) in **Java 24**, inklusive **LSP-Server** und **VS-Code-Erweiterung**.
 
+Die Syntax orientiert sich an **Scala 3**: `val`/`def` für Definitionen, `match`/`case` für Pattern Matching, `(x: Int) => body` für Lambda-Ausdrücke, `{ }` für Block-Ausdrücke und `if (cond) expr else expr` für Konditionale.
+
 ---
 
 ## 2. Sprachumfang
 
 | Feature | Beispiel |
-|---|---|
+|---|---|---|
 | Zahlen, Booleans, Strings | `42`, `true`, `"hello"` |
 | Arithmetik | `+`, `-`, `*`, `/` |
+| Unäres Minus | `-x` |
 | Vergleiche | `==`, `!=`, `<`, `>`, `<=`, `>=` |
 | Logik | `&&`, `\|\|`, `!` |
-| If-then-else | `if x > 0 then x else 0` |
-| Lambda | `\x -> x + 1` |
-| Applikation | `f x` |
-| Let-Bindung | `let x = 42 in x` |
-| Rekursion | `let rec fact = \n -> if n==0 then 1 else n * fact (n-1)` |
-| Typannotation | `let x : Number = 42` |
-| Algebraische Datentypen | `data Maybe a = Nothing \| Just a` |
-| Pattern Matching | `case x of Nothing -> 0 \| Just y -> y` |
+| If-then-else (else optional) | `if (x > 0) x else 0` / `if (cond) print(1)` |
+| Lambda | `(x: Int) => x + 1` |
+| Applikation | `f(x)` |
+| Val-Bindung | `val x = 42` |
+| Def-Rekursion, multi-param | `def add(x: Int, y: Int): Int = x + y` |
+| Typannotation | `val x: Int = 42` |
+| Type Ascription | `(x + 1: Int)` |
+| Block-Ausdrücke | `{ val x = 1; x + 1 }` |
+| Unit-Typ + `()`-Literal | `val x: Unit = ()` |
+| Algebraische Datentypen (Scala 3 enum) | `enum Maybe[A] { case Nothing; case Just(x: A) }` |
+| Pattern Matching | `x match { case Nothing => 0; case Just(y) => y }` |
+| Wildcard-Pattern `_` | `case _ => 0` |
+| Literal-Patterns | `case 0 => "zero"`, `case true => "yes"` |
 | Builtins | `succ`, `pred`, `iszero`, `print` |
 
 ---
@@ -61,8 +69,8 @@ Source Code (.sp)
 ### 3.1 Lexer (Tokenizer)
 
 Zeichenweiser Scanner, produziert `Token(type, text, line, column)`-Liste. Erkennt:
-- Identifier, Keywords (`let`, `rec`, `data`, `case`, `of`, `if`, `then`, `else`, `true`, `false`)
-- Zahlen, Strings (mit Escapes), Operatoren
+- Identifier, Keywords (`val`, `def`, `enum`, `match`, `case`, `if`, `else`, `true`, `false`)
+- Zahlen, Strings (mit Escapes), Operatoren (`=>`, `==`, `!=`, `<=`, `>=`, `&&`, `||`)
 - Kommentare `//` und `/* */`
 - Unbekannte Zeichen werden übersprungen (fehlertolerant)
 
@@ -70,9 +78,11 @@ Zeichenweiser Scanner, produziert `Token(type, text, line, column)`-Liste. Erken
 
 Recursive-Descent-Parser mit Operator-Präzedenz (14 Stufen). Baut `ProgramNode`-AST. Features:
 - Fehlererkennung und -synchronisation (Parser Recovery)
-- `parseCase()`: PIPE-getrennte Branches
-- `parseType()`: Typannotationen
-- Lookahead für `rec` bei `let`
+- `parseValDef()`: `val x = expr` / `val x: Type = expr` / `def f(x: Type): RetType = body`
+- `parseMatchBody()`: `{ case P => body; ... }`
+- `isLambdaStart()`: Lookahead erkennt `(x: Type) =>` vor Klammerausdruck
+- `parseBlock()`: `{ stmts }` als Block-Ausdruck
+- Application stoppt an Zeilengrenzen (neue Anweisung auf neuer Zeile)
 
 ### 3.3 Type Checker (Hindley-Milner / Algorithmus W)
 
@@ -80,11 +90,12 @@ Kern: **let-Polymorphismus** mit `generalize`/`instantiate`, Unifikation mit `oc
 
 - `TypeScheme` für polymorphe Typen (`forall a. a -> a`)
 - Typ-Inferenz für alle Ausdrücke
-- ADT-Constructor-Registrierung beim `data`-Deklaration
-- **Exhaustiveness Check**: prüft ob alle Konstruktoren gematched werden
+- ADT-Constructor-Registrierung beim `enum`-Deklaration
+- **Exhaustiveness Check**: prüft ob alle Konstruktoren gematched werden (inkl. Wildcard `_`)
+- **Type Ascription**: `(expr: Type)` annotiert Typ und leitet erzwungenen Typ ab
 - **let-rec**: Fixpoint-Semantik mit frischer TypeVar vor RHS-Inferenz
-- **let-rec Selbstreferenz**: `let rec f = f` wird abgefangen
-- Detaillierte Fehlermeldungen mit Quelltext-Location
+- **Rekursive Selbstreferenz**: `def f = f` wird abgefangen
+- **Detaillierte Fehlermeldungen** mit Quelltext-Location
 
 ### 3.4 Evaluator
 
@@ -149,7 +160,7 @@ Aufruf: `gradlew runTestParser --args="<file.sp>"`
 
 ## 4. Testing
 
-### 4.1 Unit Tests (JUnit 5) – 146+ Tests
+### 4.1 Unit Tests (JUnit 5) – 166+ Tests
 
 | Testklasse | Tests | Abdeckung |
 |---|---|---|
@@ -164,12 +175,12 @@ Aufruf: `gradlew runTestParser --args="<file.sp>"`
 |---|---|---|
 | **typeSoundness** | 1000 | Wohlgetyptes Programm → Evaluator crasht nicht |
 | **determinism** | 500 | Gleiches Programm → gleicher Typ + gleicher Wert |
-| **weakening** | 500 | Unused Let prependen → Typability bleibt erhalten |
+| **weakening** | 500 | Unused val prependen → Typability bleibt erhalten |
 | **parseRoundTrip** | 500 | AST → Source → parse → strukturell identisch |
 | **parseRoundTripFuzz** | 5000 | Wie oben, massiv mehr Iterationen |
 | **notOnNonBool** | 500 | `!` auf Number → Fehler erwähnt "Bool" |
 | **ifCondMustBeBool** | 500 | If mit Number-Cond → Fehler erwähnt "Bool" |
-| **noDirectSelfRecursion** | 500 | `let rec f = f` → Selbstreferenz-Fehler |
+| **noDirectSelfRecursion** | 500 | `def f = f` → Selbstreferenz-Fehler |
 | **undeclaredVariable** | 500 | Unbekannte Variable → "Undefined" |
 | **typeErrorMessagesAreInformative** | 500 | Alle Fehler >5 Zeichen, nicht leer |
 | **exhaustivenessCheck** | 1000 | Fehlende Konstruktoren → "missing constructor" |
@@ -188,7 +199,7 @@ Jede Mutation wird kategorisiert als:
 
 | Operator | Erkennung | Phase |
 |---|---|---|
-| `SelfReference` (`let rec f = f`) | **100%** | TypeChecker |
+| `SelfReference` (`def f = f`) | **100%** | TypeChecker |
 | `ReplaceLiteralType` (Number↔String↔Bool) | **63,5%** | TypeChecker |
 | `DivideByZero` (RHS einer Division = 0) | **62,0%** | Evaluator |
 | `NotOnNumber` (`!` auf Number) | **39,5%** | TypeChecker |
@@ -211,9 +222,9 @@ Gesamterkennungsrate: **36,5%** (erwartbar, da semantische Änderungen typkorrek
 ## 6. Erreichte Meilensteine
 
 1. ✅ Lexer (vollständig, fehlertolerant)
-2. ✅ Parser (rekursiver Abstieg, Fehlerrecovery, ADTs, Case)
-3. ✅ HM-Typinferenz (let-Polymorphismus, ADTs, Exhaustiveness)
-4. ✅ Evaluator (Closures, Fixpoint, ADTs, ConstructorBuilder)
+2. ✅ Parser (rekursiver Abstieg, Fehlerrecovery, ADTs, Case, Literal-Patterns, Wildcard)
+3. ✅ HM-Typinferenz (let-Polymorphismus, ADTs, Exhaustiveness, Type Ascription, Unit)
+4. ✅ Evaluator (Closures, Fixpoint, ADTs, ConstructorBuilder, UnitValue)
 5. ✅ LSP Server (Hover, Completion, GotoDef, References, Rename, Diagnostics, Code Actions, Semantic Tokens)
 6. ✅ VS Code Extension
 7. ✅ REPL
@@ -224,3 +235,4 @@ Gesamterkennungsrate: **36,5%** (erwartbar, da semantische Änderungen typkorrek
 12. ✅ Mutation Analysis (12 Operatoren, 2000 Mutationen, 26,5% Erkennung)
 13. ✅ `TestParser` CLI-Tool
 14. ✅ Dokumentation: Architektur-Diagramme + BNF-Grammatik (`docs/`)
+15. ✅ Scala-3-Syntax-Lücken geschlossen: `Unit`/`()`, `if` ohne `else`, Wildcard `_`, Literal-Patterns, Multi-Parameter-Defs, Type Ascription

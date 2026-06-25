@@ -7,8 +7,18 @@ import scala.parser.core.ast.*;
 
 public class Evaluator {
 
-    private static final int MAX_DEPTH = 1000;
+    private int maxDepth = 1000;
     private int depth = 0;
+
+    public Evaluator() {}
+
+    public Evaluator(int maxDepth) {
+        this.maxDepth = maxDepth;
+    }
+
+    public void setMaxDepth(int maxDepth) {
+        this.maxDepth = maxDepth;
+    }
 
     public Value evalProgram(ProgramNode program) {
         Env env = initEnv();
@@ -37,12 +47,19 @@ public class Evaluator {
             System.out.println(arg);
             return arg;
         }));
+        // List constructors
+        env.define("Nil", new ConstructorValue("Nil", "List", new ArrayList<>()));
+        env.define("Cons", new ConstructorBuilder("List", "Cons", 2));
         return env;
     }
 
     private Value eval(ASTNode node, Env env) {
-        if (node instanceof DataDeclNode data) {
-            for (DataDeclNode.ConstructorDef ctor : data.constructors) {
+        if (node instanceof TypeAliasNode) {
+            return null; // type aliases are erased at runtime
+        }
+
+        if (node instanceof EnumDeclNode data) {
+            for (EnumDeclNode.ConstructorDef ctor : data.constructors) {
                 if (ctor.argTypes().isEmpty()) {
                     env.define(ctor.name(), new ConstructorValue(ctor.name(), data.name, new ArrayList<>()));
                 } else {
@@ -75,7 +92,7 @@ public class Evaluator {
     }
 
     public Value evalExpr(ExpressionNode node, Env env) {
-        if (depth >= MAX_DEPTH) throw new RuntimeException("Recursion depth limit exceeded");
+        if (depth >= maxDepth) throw new RuntimeException("Recursion depth limit exceeded");
         depth++;
 
         try {
@@ -86,6 +103,10 @@ public class Evaluator {
     }
 
     private Value evalExprImpl(ExpressionNode node, Env env) {
+        if (node instanceof UnitLiteralNode) {
+            return new UnitValue();
+        }
+
         if (node instanceof StringLiteralNode s) {
             return new StringValue(s.value);
         }
@@ -98,6 +119,14 @@ public class Evaluator {
             return new NumberValue(Integer.parseInt(lit.value));
         }
 
+        if (node instanceof TupleNode tuple) {
+            List<Value> values = new ArrayList<>();
+            for (ExpressionNode elem : tuple.elements) {
+                values.add(evalExpr(elem, env));
+            }
+            return new TupleValue(values);
+        }
+
         if (node instanceof IdentifierNode id) {
             return env.lookup(id.name);
         }
@@ -108,18 +137,32 @@ public class Evaluator {
                 if (operand instanceof BoolValue b) return new BoolValue(!b.value);
                 throw new RuntimeException("! requires boolean operand");
             }
+            if (un.operator.equals("-")) {
+                if (operand instanceof NumberValue n) return new NumberValue(-n.value);
+                throw new RuntimeException("- requires numeric operand");
+            }
             throw new RuntimeException("Unknown unary operator: " + un.operator);
         }
 
         if (node instanceof IfNode i) {
             Value cond = evalExpr(i.condition, env);
             if (!(cond instanceof BoolValue b)) throw new RuntimeException("Condition must be boolean");
-            return b.value ? evalExpr(i.thenBranch, env) : evalExpr(i.elseBranch, env);
+            if (b.value) return evalExpr(i.thenBranch, env);
+            if (i.elseBranch != null) return evalExpr(i.elseBranch, env);
+            return new UnitValue();
         }
 
         if (node instanceof BinaryExprNode bin) {
             Value left = evalExpr(bin.left, env);
             Value right = evalExpr(bin.right, env);
+
+            // Range operator
+            if (bin.operator.equals("..")) {
+                if (left instanceof NumberValue l && right instanceof NumberValue r) {
+                    return new TupleValue(List.of(left, right));
+                }
+                throw new RuntimeException("Range '..' requires numeric operands, got " + left + " and " + right);
+            }
 
             if (left instanceof NumberValue l && right instanceof NumberValue r) return evalNumberOp(bin.operator, l, r);
             if (left instanceof BoolValue l && right instanceof BoolValue r) return evalBoolOp(bin.operator, l, r);
@@ -132,11 +175,29 @@ public class Evaluator {
         if (node instanceof CaseNode caseNode) {
             Value expr = evalExpr(caseNode.expr, env);
             if (!(expr instanceof ConstructorValue cv)) {
-                throw new RuntimeException("Case expression requires a constructor value");
+                // Allow matching on literals (for literal patterns)
+                for (CaseNode.CaseBranch branch : caseNode.branches) {
+                    if (branch.literalPattern() != null) {
+                        Value pat = evalLiteralPattern(branch.literalPattern());
+                        if (valuesEqual(expr, pat)) {
+                            return evalExpr(branch.body(), env);
+                        }
+                    }
+                    if (branch.constructor() == null && branch.literalPattern() == null) {
+                        // Wildcard
+                        return evalExpr(branch.body(), env);
+                    }
+                }
+                throw new RuntimeException("No matching branch for value: " + expr);
             }
 
             for (CaseNode.CaseBranch branch : caseNode.branches) {
-                if (branch.constructor().equals(cv.name)) {
+                // Wildcard before constructor patterns
+                if (branch.constructor() == null && branch.literalPattern() == null) {
+                    return evalExpr(branch.body(), env);
+                }
+
+                if (branch.constructor() != null && branch.constructor().equals(cv.name)) {
                     Env branchEnv = new Env(env);
                     for (int i = 0; i < branch.bindings().size() && i < cv.args.size(); i++) {
                         branchEnv.define(branch.bindings().get(i).name(), cv.args.get(i));
@@ -146,6 +207,19 @@ public class Evaluator {
             }
 
             throw new RuntimeException("No matching branch for constructor '" + cv.name + "'");
+        }
+
+        if (node instanceof BlockNode block) {
+            Env blockEnv = new Env(env);
+            Value last = null;
+            for (ASTNode stmt : block.statements) {
+                last = eval(stmt, blockEnv);
+            }
+            return last;
+        }
+
+        if (node instanceof AscriptionNode asc) {
+            return evalExpr(asc.expr, env);
         }
 
         if (node instanceof LambdaNode lam) {
@@ -210,5 +284,18 @@ public class Evaluator {
             case "+" -> new StringValue(l.value + r.value);
             default -> throw new RuntimeException("Operator '" + op + "' not supported for strings");
         };
+    }
+
+    private Value evalLiteralPattern(ExpressionNode node) {
+        if (node instanceof LiteralNode lit) return new NumberValue(Integer.parseInt(lit.value));
+        if (node instanceof BoolNode b) return new BoolValue(b.value);
+        throw new RuntimeException("Unexpected literal pattern type: " + node.getClass().getSimpleName());
+    }
+
+    private boolean valuesEqual(Value a, Value b) {
+        if (a instanceof NumberValue na && b instanceof NumberValue nb) return na.value == nb.value;
+        if (a instanceof BoolValue ba && b instanceof BoolValue bb) return ba.value == bb.value;
+        if (a instanceof StringValue sa && b instanceof StringValue sb) return sa.value.equals(sb.value);
+        return false;
     }
 }

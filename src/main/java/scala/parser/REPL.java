@@ -103,8 +103,8 @@ public class REPL {
             Value last = null;
 
             for (ASTNode stmt : program.statements) {
-                if (stmt instanceof DataDeclNode) {
-                    System.out.println("=> (data type defined)");
+                if (stmt instanceof EnumDeclNode) {
+                    System.out.println("=> (enum type defined)");
                     continue;
                 }
 

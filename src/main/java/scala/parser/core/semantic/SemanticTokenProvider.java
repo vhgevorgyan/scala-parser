@@ -44,12 +44,16 @@ public class SemanticTokenProvider {
 
         if (node instanceof IfNode i) {
             out.add(new SemanticToken(i.line, i.column, 2, "keyword"));
-            walk(i.condition, out); walk(i.thenBranch, out); walk(i.elseBranch, out); return;
+            walk(i.condition, out); walk(i.thenBranch, out);
+            if (i.elseBranch != null) walk(i.elseBranch, out); return;
+        }
+
+        if (node instanceof AscriptionNode asc) {
+            walk(asc.expr, out); return;
         }
 
         if (node instanceof LambdaNode lam) {
             out.add(new SemanticToken(lam.line, lam.column, 1, "keyword"));
-            out.add(new SemanticToken(lam.line, lam.column + 1, lam.param.length(), "variable"));
             walk(lam.body, out); return;
         }
 
@@ -58,23 +62,19 @@ public class SemanticTokenProvider {
         }
 
         if (node instanceof LetStatementNode let) {
-            out.add(new SemanticToken(let.line, let.column, let.isRec ? 7 : 3, "keyword"));
-            int nameCol = let.column + (let.isRec ? 8 : 4);
+            out.add(new SemanticToken(let.line, let.column, let.isRec ? 3 : 3, "keyword"));
+            int nameCol = let.column + 4;
             out.add(new SemanticToken(let.line, nameCol, let.name.length(), "variable"));
             walk(let.value, out); return;
         }
 
-        if (node instanceof DataDeclNode data) {
+        if (node instanceof EnumDeclNode data) {
             out.add(new SemanticToken(data.line, data.column, 4, "keyword"));
-            int col = data.column + 5; // after "data "
-            if (data.params.isEmpty()) {
-                out.add(new SemanticToken(data.line, col, data.name.length(), "keyword"));
-            }
             return;
         }
 
         if (node instanceof CaseNode c) {
-            out.add(new SemanticToken(c.line, c.column, 4, "keyword"));
+            out.add(new SemanticToken(c.line, c.column, 5, "keyword"));
             walk(c.expr, out);
             for (CaseNode.CaseBranch br : c.branches) {
                 for (CaseNode.Binding b : br.bindings()) {
@@ -82,6 +82,11 @@ public class SemanticTokenProvider {
                 }
                 walk(br.body(), out);
             }
+            return;
+        }
+
+        if (node instanceof BlockNode block) {
+            for (ASTNode s : block.statements) walk(s, out);
             return;
         }
 

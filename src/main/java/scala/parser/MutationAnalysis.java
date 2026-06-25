@@ -296,7 +296,7 @@ public class MutationAnalysis {
         }
     }
 
-    /** Create let rec f = f (self-reference) */
+    /** Create def f = f (self-reference) */
     static class SelfReference implements MutationOperator {
         public String name() { return "SelfReference"; }
         public ProgramNode apply(ProgramNode program, Random rand) {
@@ -433,9 +433,9 @@ public class MutationAnalysis {
         public String name() { return "UndeclaredConstructor"; }
         public ProgramNode apply(ProgramNode program, Random rand) {
             var stmts = new ArrayList<>(program.statements);
-            // Find a data decl to know which constructor would be valid,
+            // Find an enum decl to know which constructor would be valid,
             // then use a completely bogus constructor name
-            boolean hasData = program.statements.stream().anyMatch(s -> s instanceof DataDeclNode);
+            boolean hasData = program.statements.stream().anyMatch(s -> s instanceof EnumDeclNode);
             if (!hasData) return null;
             stmts.add(new IdentifierNode("NonExistentConstructor", 0, 0));
             return new ProgramNode(stmts);
@@ -486,35 +486,62 @@ public class MutationAnalysis {
             return sb.append('\n').toString();
         }
         if (node instanceof LetStatementNode l) {
-            String rec = l.isRec ? "rec " : "";
-            String ann = (l.declaredType != null) ? " : " + l.declaredType : "";
-            return "let " + rec + l.name + ann + " = " + stringify(l.value);
-        }
-        if (node instanceof DataDeclNode d) {
-            var sb = new StringBuilder("data ").append(d.name);
-            for (var p : d.params) sb.append(' ').append(p);
-            sb.append(" = ");
-            for (int i = 0; i < d.constructors.size(); i++) {
-                if (i > 0) sb.append(" | ");
-                var c = d.constructors.get(i);
-                sb.append(c.name());
-                for (var a : c.argTypes()) sb.append(' ').append(a);
+            String ann = (l.declaredType != null) ? ": " + l.declaredType : "";
+            if (l.isRec && l.value instanceof LambdaNode lam) {
+                String paramAnn = lam.declaredType != null ? ": " + lam.declaredType : "";
+                return "def " + l.name + "(" + lam.param + paramAnn + ")" + ann + " = " + stringify(lam.body);
             }
+            return "val " + l.name + ann + " = " + stringify(l.value);
+        }
+        if (node instanceof EnumDeclNode d) {
+            var sb = new StringBuilder("enum ").append(d.name);
+            if (!d.params.isEmpty()) {
+                sb.append('[');
+                for (int i = 0; i < d.params.size(); i++) {
+                    if (i > 0) sb.append(", ");
+                    sb.append(d.params.get(i));
+                }
+                sb.append(']');
+            }
+            sb.append(" { ");
+            for (int i = 0; i < d.constructors.size(); i++) {
+                if (i > 0) sb.append("; ");
+                var c = d.constructors.get(i);
+                sb.append("case ").append(c.name());
+                if (!c.argTypes().isEmpty()) {
+                    sb.append('(');
+                    for (int j = 0; j < c.argTypes().size(); j++) {
+                        if (j > 0) sb.append(", ");
+                        sb.append("x").append(j).append(": ").append(c.argTypes().get(j));
+                    }
+                    sb.append(')');
+                }
+            }
+            sb.append(" }");
             return sb.toString();
         }
         if (node instanceof LambdaNode lam) {
-            return "\\" + lam.param + " -> " + stringify(lam.body);
+            String ann = lam.declaredType != null ? ": " + lam.declaredType : "";
+            return "(" + lam.param + ann + ") => " + stringify(lam.body);
         }
         if (node instanceof ApplicationNode app) {
             var fn = stringify(app.function);
             var a = stringify(app.argument);
             if (needsParen(app.function)) fn = "(" + fn + ")";
             if (needsParen(app.argument)) a = "(" + a + ")";
-            return "(" + fn + " " + a + ")";
+            return fn + "(" + a + ")";
         }
         if (node instanceof IfNode i) {
-            return "if " + stringify(i.condition) + " then " + stringify(i.thenBranch)
-                + " else " + stringify(i.elseBranch);
+            var sb = new StringBuilder("if (").append(stringify(i.condition)).append(") ")
+                .append(stringify(i.thenBranch));
+            if (i.elseBranch != null) {
+                sb.append(" else ").append(stringify(i.elseBranch));
+            }
+            return sb.toString();
+        }
+        if (node instanceof UnitLiteralNode) return "()";
+        if (node instanceof AscriptionNode asc) {
+            return "(" + stringify(asc.expr) + ": " + asc.declaredType + ")";
         }
         if (node instanceof LiteralNode lit) return lit.value;
         if (node instanceof BoolNode b) return String.valueOf(b.value);
@@ -529,21 +556,44 @@ public class MutationAnalysis {
         }
         if (node instanceof UnaryExprNode un) {
             var op = stringify(un.operand);
-            if (needsParen(un.operand)) op = "(" + op + ")";
+            if (needsParen(un.operand) || un.operand instanceof ApplicationNode) op = "(" + op + ")";
             return un.operator + op;
         }
         if (node instanceof CaseNode c) {
-            var sb = new StringBuilder("case ").append(stringify(c.expr)).append(" of ");
+            var sb = new StringBuilder(stringify(c.expr)).append(" match {");
             for (int i = 0; i < c.branches.size(); i++) {
-                if (i > 0) sb.append(" | ");
                 var br = c.branches.get(i);
-                sb.append(br.constructor());
-                for (var b : br.bindings()) sb.append(' ').append(b.name());
-                sb.append(" -> ");
+                if (br.constructor() != null) {
+                    sb.append(" case ").append(br.constructor());
+                    if (!br.bindings().isEmpty()) {
+                        sb.append('(');
+                        for (int j = 0; j < br.bindings().size(); j++) {
+                            if (j > 0) sb.append(", ");
+                            sb.append(br.bindings().get(j).name());
+                        }
+                        sb.append(')');
+                    }
+                } else if (br.literalPattern() != null) {
+                    sb.append(" case ").append(stringify(br.literalPattern()));
+                } else {
+                    sb.append(" case _");
+                }
+                sb.append(" => ");
                 var body = stringify(br.body());
                 if (containsCase(br.body())) body = "(" + body + ")";
                 sb.append(body);
+                if (i < c.branches.size() - 1) sb.append(";");
             }
+            sb.append(" }");
+            return sb.toString();
+        }
+        if (node instanceof BlockNode b) {
+            var sb = new StringBuilder("{");
+            for (int i = 0; i < b.statements.size(); i++) {
+                sb.append(" ").append(stringify(b.statements.get(i)));
+                if (i < b.statements.size() - 1) sb.append(";");
+            }
+            sb.append(" }");
             return sb.toString();
         }
         return "0";
@@ -552,15 +602,17 @@ public class MutationAnalysis {
     private static boolean containsCase(ExpressionNode e) {
         if (e instanceof CaseNode) return true;
         if (e instanceof LambdaNode lam) return containsCase(lam.body);
-        if (e instanceof IfNode i) return containsCase(i.condition) || containsCase(i.thenBranch) || containsCase(i.elseBranch);
+        if (e instanceof IfNode i) return containsCase(i.condition) || containsCase(i.thenBranch) || (i.elseBranch != null && containsCase(i.elseBranch));
         if (e instanceof ApplicationNode app) return containsCase(app.function) || containsCase(app.argument);
         if (e instanceof BinaryExprNode bin) return containsCase(bin.left) || containsCase(bin.right);
         if (e instanceof UnaryExprNode un) return containsCase(un.operand);
+        if (e instanceof AscriptionNode asc) return containsCase(asc.expr);
+        if (e instanceof BlockNode b) { for (var s : b.statements) if (s instanceof ExpressionNode ex && containsCase(ex)) return true; return false; }
         return false;
     }
 
     private static boolean needsParen(ExpressionNode e) {
-        return e instanceof IfNode || e instanceof LambdaNode || e instanceof CaseNode;
+        return e instanceof IfNode || e instanceof LambdaNode || e instanceof CaseNode || e instanceof BlockNode || e instanceof AscriptionNode;
     }
 
     private static String escapeStr(String s) {

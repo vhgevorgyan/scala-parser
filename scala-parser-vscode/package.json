@@ -5,16 +5,28 @@
   "version": "0.1.0",
   "publisher": "scala-parser",
   "license": "MIT",
-  "engines": { "vscode": "^1.75.0" },
-  "categories": ["Programming Languages", "Linters"],
-  "activationEvents": ["onLanguage:scala-parser"],
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Linters"
+  ],
+  "activationEvents": [
+    "onLanguage:scala-parser"
+  ],
   "main": "./out/extension.js",
   "contributes": {
     "languages": [
       {
         "id": "scala-parser",
-        "aliases": ["Scala Parser", "scala-parser"],
-        "extensions": [".sp"],
+        "aliases": [
+          "Scala Parser",
+          "scala-parser"
+        ],
+        "extensions": [
+          ".sp"
+        ],
         "configuration": "./language-configuration.json"
       }
     ],
@@ -31,5 +43,11 @@
         "title": "Scala Parser: Restart Language Server"
       }
     ]
+  },
+  "devDependencies": {
+    "@types/node": "^26.0.0",
+    "@types/vscode": "^1.125.0",
+    "typescript": "^6.0.3",
+    "vscode-languageclient": "^10.0.0"
   }
 }

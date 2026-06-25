@@ -25,22 +25,25 @@ flowchart TB
     end
 
     subgraph AST["Abstract Syntax Tree"]
-        LIT["LiteralNode / BoolNode / StringLiteralNode"]
+        LIT["LiteralNode / BoolNode / StringLiteralNode / UnitLiteralNode"]
         ID["IdentifierNode"]
         BIN["BinaryExprNode / UnaryExprNode"]
         IF["IfNode"]
         LAM["LambdaNode"]
         APP["ApplicationNode"]
         LET["LetStatementNode"]
-        DATA["DataDeclNode"]
+        ENUM["EnumDeclNode"]
         CASE["CaseNode / CaseBranch"]
+        BLOCK["BlockNode"]
+        ASC["AscriptionNode"]
     end
 
     subgraph TYPES["Type System"]
         TNUM["TypeNumber"]
         TBOOL["TypeBool"]
         TSTR["TypeString"]
-        TFUN["TypeFun (a -> b)"]
+        TUNIT["TypeUnit"]
+        TFUN["TypeFun (A => B)"]
         TVAR["TypeVar (t0, t1, ...)"]
         TCTOR["TypeConstructor (Maybe a)"]
         SCHEME["TypeScheme (forall a. ...)"]
@@ -50,6 +53,7 @@ flowchart TB
         VNUM["NumberValue"]
         VBOOL["BoolValue"]
         VSTR["StringValue"]
+        VUNIT["UnitValue"]
         CLOSURE["ClosureValue"]
         BUILTIN["BuiltinValue"]
         CTORVAL["ConstructorValue"]
@@ -141,7 +145,7 @@ flowchart LR
     TypeChecker --> TypeErrorException
     TypeChecker --> Type
     TypeChecker --> TypeScheme
-    TypeChecker --> DataDeclNode
+    TypeChecker --> EnumDeclNode
 
     Evaluator --> Env
     Evaluator --> Value
@@ -163,7 +167,7 @@ scala.parser
 ├── core
 │   ├── ParserError.java         -- Error record (message, line, col, length)
 │   ├── ParserResult.java        -- AST + error list container
-│   ├── ast/                     -- 16 AST node types
+│   ├── ast/                     -- ~18 AST node types
 │   ├── lexer/                   -- Tokenizer + Token + TokenType
 │   ├── parser/                  -- Recursive-descent Parser
 │   ├── types/                   -- Type hierarchy + TypeChecker + TypeErrorException

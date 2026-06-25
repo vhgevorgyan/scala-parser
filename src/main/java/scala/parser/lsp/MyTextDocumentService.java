@@ -44,6 +44,7 @@ import scala.parser.core.ParserResult;
 import scala.parser.core.ast.ASTNode;
 import scala.parser.core.ast.AstFinder;
 import scala.parser.core.ast.IdentifierNode;
+import scala.parser.core.ast.EnumDeclNode;
 import scala.parser.core.ast.LetStatementNode;
 import scala.parser.core.ast.ProgramNode;
 import scala.parser.core.hover.HoverProvider;
@@ -133,7 +134,7 @@ public class MyTextDocumentService implements TextDocumentService {
             Set<String> suggestions = new HashSet<>();
 
             // Keywords
-            String[] keywords = {"let", "if", "then", "else", "true", "false"};
+            String[] keywords = {"val", "def", "match", "if", "else", "true", "false", "case", "enum"};
             for (String kw : keywords) {
                 if (kw.startsWith(prefix)) suggestions.add(kw);
             }
@@ -151,6 +152,11 @@ public class MyTextDocumentService implements TextDocumentService {
                 for (var stmt : ast.statements) {
                     if (stmt instanceof LetStatementNode let) {
                         if (let.name.startsWith(prefix)) suggestions.add(let.name);
+                    }
+                    if (stmt instanceof EnumDeclNode en) {
+                        for (var ctor : en.constructors) {
+                            if (ctor.name().startsWith(prefix)) suggestions.add(ctor.name());
+                        }
                     }
                 }
             }
@@ -338,21 +344,21 @@ public class MyTextDocumentService implements TextDocumentService {
 
                 if (msg.contains("Undefined variable")) {
                     String name = msg.replace("Undefined variable '", "").replace("'", "");
-                    CodeAction defineLet = new CodeAction("Define '" + name + "' with let");
+                    CodeAction defineLet = new CodeAction("Define '" + name + "' with val");
                     defineLet.setKind("quickfix");
                     defineLet.setDiagnostics(List.of(d));
                     Position pos = d.getRange().getStart();
                     var edit = new TextEdit(
                             new Range(new Position(0, 0), new Position(0, 0)),
-                            "let " + name + " = 0\n");
+                            "val " + name + " = 0\n");
                     var changes = new HashMap<String, List<TextEdit>>();
                     changes.put(params.getTextDocument().getUri(), List.of(edit));
                     defineLet.setEdit(new WorkspaceEdit(changes));
                     actions.add(Either.forRight(defineLet));
                 }
 
-                if (msg.contains("Expected identifier after 'let'")) {
-                    CodeAction addIdent = new CodeAction("Add identifier after 'let'");
+                if (msg.contains("Expected identifier after 'val'") || msg.contains("Expected identifier after 'def'")) {
+                    CodeAction addIdent = new CodeAction("Add identifier after 'val/def'");
                     addIdent.setKind("quickfix");
                     addIdent.setDiagnostics(List.of(d));
                     Position pos = d.getRange().getStart();

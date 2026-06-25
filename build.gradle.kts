@@ -1,7 +1,5 @@
 plugins {
 	java
-	id("org.springframework.boot") version "4.0.1"
-	id("io.spring.dependency-management") version "1.1.7"
 }
 
 group = "scala"
@@ -51,7 +49,9 @@ tasks.named<Jar>("jar") {
 	}
 	from(configurations.runtimeClasspath.map { config ->
 		config.map { if (it.isDirectory) it else zipTree(it) }
-	})
+	}) {
+		exclude("META-INF/*.SF", "META-INF/*.DSA", "META-INF/*.RSA")
+	}
 	duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 

@@ -49,8 +49,8 @@ public class ScopeAnalyzer {
             return;
         }
 
-        if (node instanceof DataDeclNode data) {
-            for (DataDeclNode.ConstructorDef ctor : data.constructors) {
+        if (node instanceof EnumDeclNode data) {
+            for (EnumDeclNode.ConstructorDef ctor : data.constructors) {
                 out.add(new Definition(ctor.name(), data.line, data.column));
             }
             return;
@@ -70,6 +70,11 @@ public class ScopeAnalyzer {
                 }
                 walkDefinitions(br.body(), out);
             }
+            return;
+        }
+
+        if (node instanceof BlockNode block) {
+            for (ASTNode s : block.statements) walkDefinitions(s, out);
             return;
         }
     }
@@ -104,7 +109,11 @@ public class ScopeAnalyzer {
         if (node instanceof IfNode i) {
             walkReferences(i.condition, targetName, out);
             walkReferences(i.thenBranch, targetName, out);
-            walkReferences(i.elseBranch, targetName, out); return;
+            if (i.elseBranch != null) walkReferences(i.elseBranch, targetName, out); return;
+        }
+
+        if (node instanceof AscriptionNode asc) {
+            walkReferences(asc.expr, targetName, out); return;
         }
 
         if (node instanceof ApplicationNode app) {
@@ -123,6 +132,11 @@ public class ScopeAnalyzer {
                 }
                 walkReferences(br.body(), targetName, out);
             }
+            return;
+        }
+
+        if (node instanceof BlockNode block) {
+            for (ASTNode s : block.statements) walkReferences(s, targetName, out);
             return;
         }
     }

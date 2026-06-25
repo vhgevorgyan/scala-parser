@@ -57,6 +57,12 @@ public class Tokenizer {
                 continue;
             }
 
+            if (c == '=' && peekNext() == '>') {
+                tokens.add(new Token(TokenType.ARROW, "=>", line, column));
+                advance(); advance();
+                continue;
+            }
+
             if (c == '!' && peekNext() == '=') {
                 tokens.add(new Token(TokenType.NEQ, "!=", line, column));
                 advance(); advance();
@@ -87,17 +93,29 @@ public class Tokenizer {
                 continue;
             }
 
-            if (c == '-' && peekNext() == '>') {
-                tokens.add(new Token(TokenType.ARROW, "->", line, column));
+            // Unicode operator aliases (Scala 3 style)
+            if (c == '\u2265') { tokens.add(new Token(TokenType.GE, ">=", line, column)); advance(); continue; } // ≥
+            if (c == '\u2264') { tokens.add(new Token(TokenType.LE, "<=", line, column)); advance(); continue; } // ≤
+            if (c == '\u2260') { tokens.add(new Token(TokenType.NEQ, "!=", line, column)); advance(); continue; } // ≠
+            if (c == '\u2192') { tokens.add(new Token(TokenType.ARROW, "=>", line, column)); advance(); continue; } // →
+            if (c == '\u2190') { tokens.add(new Token(TokenType.EQUAL, "=", line, column)); advance(); continue; } // ←
+            if (c == '\u00B7') { tokens.add(new Token(TokenType.STAR, "*", line, column)); advance(); continue; }  // ·
+
+            // Range operator ..
+            if (c == '.' && peekNext() == '.') {
+                tokens.add(new Token(TokenType.DOTDOT, "..", line, column));
                 advance(); advance();
                 continue;
             }
 
-            if (c == '\\') {
-                tokens.add(new Token(TokenType.BACKSLASH, "\\", line, column));
-                advance();
+            // Operator-style identifier :: (infix cons)
+            if (c == ':' && peekNext() == ':') {
+                tokens.add(new Token(TokenType.IDENT, "::", line, column));
+                advance(); advance();
                 continue;
             }
+
+
 
             switch (c) {
                 case '+' -> { tokens.add(makeToken(TokenType.PLUS)); advance(); }
@@ -110,9 +128,15 @@ public class Tokenizer {
                 case '!' -> { tokens.add(makeToken(TokenType.NOT)); advance(); }
                 case '(' -> { tokens.add(makeToken(TokenType.LPAREN)); advance(); }
                 case ')' -> { tokens.add(makeToken(TokenType.RPAREN)); advance(); }
+                case '{' -> { tokens.add(makeToken(TokenType.LBRACE)); advance(); }
+                case '}' -> { tokens.add(makeToken(TokenType.RBRACE)); advance(); }
                 case ';' -> { tokens.add(makeToken(TokenType.SEMICOLON)); advance(); }
                 case ':' -> { tokens.add(makeToken(TokenType.COLON)); advance(); }
+                case ',' -> { tokens.add(makeToken(TokenType.COMMA)); advance(); }
+                case '_' -> { tokens.add(makeToken(TokenType.UNDERSCORE)); advance(); }
                 case '|' -> { tokens.add(makeToken(TokenType.PIPE)); advance(); }
+                case '[' -> { tokens.add(makeToken(TokenType.LBRACKET)); advance(); }
+                case ']' -> { tokens.add(makeToken(TokenType.RBRACKET)); advance(); }
                 default -> {
                     // Skip unknown character and continue
                     advance();
@@ -203,15 +227,15 @@ public class Tokenizer {
         String text = input.substring(start, pos);
 
         return switch (text) {
-            case "let" -> new Token(TokenType.LET, text, line, startCol);
-            case "rec" -> new Token(TokenType.REC, text, line, startCol);
-            case "data" -> new Token(TokenType.DATA, text, line, startCol);
+            case "val" -> new Token(TokenType.VAL, text, line, startCol);
+            case "def" -> new Token(TokenType.DEF, text, line, startCol);
+            case "type" -> new Token(TokenType.TYPE, text, line, startCol);
+            case "enum" -> new Token(TokenType.ENUM, text, line, startCol);
             case "case" -> new Token(TokenType.CASE, text, line, startCol);
-            case "of" -> new Token(TokenType.OF, text, line, startCol);
+            case "match" -> new Token(TokenType.MATCH, text, line, startCol);
             case "true" -> new Token(TokenType.TRUE, text, line, startCol);
             case "false" -> new Token(TokenType.FALSE, text, line, startCol);
             case "if" -> new Token(TokenType.IF, text, line, startCol);
-            case "then" -> new Token(TokenType.THEN, text, line, startCol);
             case "else" -> new Token(TokenType.ELSE, text, line, startCol);
             default -> new Token(TokenType.IDENT, text, line, startCol);
         };

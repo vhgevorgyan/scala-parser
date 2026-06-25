@@ -8,7 +8,7 @@ import net.jqwik.api.statistics.*;
 import scala.parser.core.*;
 import scala.parser.core.ast.*;
 import scala.parser.core.ast.CaseNode.*;
-import scala.parser.core.ast.DataDeclNode.ConstructorDef;
+import scala.parser.core.ast.EnumDeclNode.ConstructorDef;
 import scala.parser.core.interpreter.Evaluator;
 import scala.parser.core.interpreter.Value;
 import scala.parser.core.lexer.*;
@@ -153,7 +153,7 @@ class TypeSoundnessTests {
         var errors = new ArrayList<ParserError>();
         new TypeChecker(errors).check(recProg);
         boolean hasRecError = errors.stream().anyMatch(e -> e.message.contains("directly refers to itself"));
-        assertTrue(hasRecError, "let rec f = f must produce self-reference error");
+        assertTrue(hasRecError, "def f = f must produce self-reference error");
     }
 
     @Property(tries = 500)
@@ -181,7 +181,7 @@ class TypeSoundnessTests {
     @Property(tries = 1000)
     void exhaustivenessCheck(@ForAll("programWithData") ProgramNode program) {
         if (program.statements.isEmpty()) return;
-        // Find a data decl and a case expression that might miss constructors
+        // Find an enum decl and a case expression that might miss constructors
         var errors = new ArrayList<ParserError>();
         new TypeChecker(errors).check(program);
         for (var e : errors) {
@@ -219,7 +219,7 @@ class TypeSoundnessTests {
             var stmts = new ArrayList<ASTNode>();
             if (!DATA_TPL.isEmpty()) {
                 var tpl = DATA_TPL.get(random.nextInt(DATA_TPL.size()));
-                stmts.add(new DataDeclNode(tpl.name(), tpl.params(),
+                stmts.add(new EnumDeclNode(tpl.name(), tpl.params(),
                     tpl.ctors().stream().map(c -> new ConstructorDef(c.name(), c.argTypes())).toList(), 0, 0));
                 // Generate a case that might miss some constructors
                 var ct = tpl.ctors().get(random.nextInt(tpl.ctors().size()));
@@ -253,7 +253,7 @@ class TypeSoundnessTests {
             boolean hasData = random.nextDouble() < 0.3 && !DATA_TPL.isEmpty();
             DataTemplate tpl = hasData ? DATA_TPL.get(random.nextInt(DATA_TPL.size())) : null;
             if (hasData) {
-                stmts.add(new DataDeclNode(tpl.name(), tpl.params(),
+                stmts.add(new EnumDeclNode(tpl.name(), tpl.params(),
                     tpl.ctors().stream().map(c -> new ConstructorDef(c.name(), c.argTypes())).toList(),
                     0, 0));
             }
@@ -354,37 +354,62 @@ class TypeSoundnessTests {
             return sb.append('\n').toString();
         }
         if (node instanceof LetStatementNode l) {
-            String rec = l.isRec ? "rec " : "";
-            String ann = (l.declaredType != null) ? " : " + l.declaredType : "";
-            return "let " + rec + l.name + ann + " = " + stringify(l.value);
-        }
-        if (node instanceof DataDeclNode d) {
-            var sb = new StringBuilder("data ").append(d.name);
-            for (var p : d.params) sb.append(' ').append(p);
-            sb.append(" = ");
-            for (int i = 0; i < d.constructors.size(); i++) {
-                if (i > 0) sb.append(" | ");
-                var c = d.constructors.get(i);
-                sb.append(c.name());
-                for (var a : c.argTypes()) sb.append(' ').append(a);
+            String ann = (l.declaredType != null) ? ": " + l.declaredType : "";
+            if (l.isRec && l.value instanceof LambdaNode lam) {
+                String paramAnn = lam.declaredType != null ? ": " + lam.declaredType : "";
+                return "def " + l.name + "(" + lam.param + paramAnn + ")" + ann + " = " + stringify(lam.body);
             }
+            return "val " + l.name + ann + " = " + stringify(l.value);
+        }
+        if (node instanceof EnumDeclNode d) {
+            var sb = new StringBuilder("enum ").append(d.name);
+            if (!d.params.isEmpty()) {
+                sb.append('[');
+                for (int i = 0; i < d.params.size(); i++) {
+                    if (i > 0) sb.append(", ");
+                    sb.append(d.params.get(i));
+                }
+                sb.append(']');
+            }
+            sb.append(" { ");
+            for (int i = 0; i < d.constructors.size(); i++) {
+                if (i > 0) sb.append("; ");
+                var c = d.constructors.get(i);
+                sb.append("case ").append(c.name());
+                if (!c.argTypes().isEmpty()) {
+                    sb.append('(');
+                    for (int j = 0; j < c.argTypes().size(); j++) {
+                        if (j > 0) sb.append(", ");
+                        sb.append("x").append(j).append(": ").append(c.argTypes().get(j));
+                    }
+                    sb.append(')');
+                }
+            }
+            sb.append(" }");
             return sb.toString();
         }
         if (node instanceof LambdaNode lam) {
-            return "\\" + lam.param + " -> " + stringify(lam.body);
+            String ann = lam.declaredType != null ? ": " + lam.declaredType : "";
+            return "(" + lam.param + ann + ") => " + stringify(lam.body);
         }
         if (node instanceof ApplicationNode app) {
             var fn = stringify(app.function);
             var a = stringify(app.argument);
-            // parsePrimary() doesn't handle IF/Lambda/Case directly;
-            // wrap in parens so parsePrimary's (expr) mechanism handles it
             if (needsParen(app.function)) fn = "(" + fn + ")";
             if (needsParen(app.argument)) a = "(" + a + ")";
-            return "(" + fn + " " + a + ")";
+            return fn + "(" + a + ")";
         }
         if (node instanceof IfNode i) {
-            return "if " + stringify(i.condition) + " then " + stringify(i.thenBranch)
-                + " else " + stringify(i.elseBranch);
+            var sb = new StringBuilder("if (").append(stringify(i.condition)).append(") ")
+                .append(stringify(i.thenBranch));
+            if (i.elseBranch != null) {
+                sb.append(" else ").append(stringify(i.elseBranch));
+            }
+            return sb.toString();
+        }
+        if (node instanceof UnitLiteralNode) return "()";
+        if (node instanceof AscriptionNode asc) {
+            return "(" + stringify(asc.expr) + ": " + asc.declaredType + ")";
         }
         if (node instanceof LiteralNode lit) return lit.value;
         if (node instanceof BoolNode b) return String.valueOf(b.value);
@@ -399,44 +424,64 @@ class TypeSoundnessTests {
         }
         if (node instanceof UnaryExprNode un) {
             var op = stringify(un.operand);
-            if (needsParen(un.operand)) op = "(" + op + ")";
-            return "!" + op;
+            if (needsParen(un.operand) || un.operand instanceof ApplicationNode) op = "(" + op + ")";
+            return un.operator + op;
         }
         if (node instanceof CaseNode c) {
-            var sb = new StringBuilder("case ").append(stringify(c.expr)).append(" of ");
+            var sb = new StringBuilder(stringify(c.expr)).append(" match {");
             for (int i = 0; i < c.branches.size(); i++) {
-                if (i > 0) sb.append(" | ");
                 var br = c.branches.get(i);
-                sb.append(br.constructor());
-                for (var b : br.bindings()) sb.append(' ').append(b.name());
-                sb.append(" -> ");
+                if (br.constructor() != null) {
+                    sb.append(" case ").append(br.constructor());
+                    if (!br.bindings().isEmpty()) {
+                        sb.append('(');
+                        for (int j = 0; j < br.bindings().size(); j++) {
+                            if (j > 0) sb.append(", ");
+                            sb.append(br.bindings().get(j).name());
+                        }
+                        sb.append(')');
+                    }
+                } else if (br.literalPattern() != null) {
+                    sb.append(" case ").append(stringify(br.literalPattern()));
+                } else {
+                    sb.append(" case _");
+                }
+                sb.append(" => ");
                 var body = stringify(br.body());
-                // If the branch body transitively contains a CaseNode,
-                // wrap in parens to prevent | separator leakage to this case
                 if (containsCase(br.body()))
                     body = "(" + body + ")";
                 sb.append(body);
+                if (i < c.branches.size() - 1) sb.append(";");
             }
+            sb.append(" }");
+            return sb.toString();
+        }
+        if (node instanceof BlockNode b) {
+            var sb = new StringBuilder("{");
+            for (int i = 0; i < b.statements.size(); i++) {
+                sb.append(" ").append(stringify(b.statements.get(i)));
+                if (i < b.statements.size() - 1) sb.append(";");
+            }
+            sb.append(" }");
             return sb.toString();
         }
         return "0";
     }
 
-    // Does an expression transitively contain a CaseNode?
-    // Used to determine if we must parenthesize a case branch body
-    // to prevent inner | tokens from leaking to the outer case parser.
     private static boolean containsCase(ExpressionNode e) {
         if (e instanceof CaseNode) return true;
         if (e instanceof LambdaNode lam) return containsCase(lam.body);
-        if (e instanceof IfNode i) return containsCase(i.condition) || containsCase(i.thenBranch) || containsCase(i.elseBranch);
+        if (e instanceof IfNode i) return containsCase(i.condition) || containsCase(i.thenBranch) || (i.elseBranch != null && containsCase(i.elseBranch));
         if (e instanceof ApplicationNode app) return containsCase(app.function) || containsCase(app.argument);
         if (e instanceof BinaryExprNode bin) return containsCase(bin.left) || containsCase(bin.right);
         if (e instanceof UnaryExprNode un) return containsCase(un.operand);
+        if (e instanceof AscriptionNode asc) return containsCase(asc.expr);
+        if (e instanceof BlockNode b) { for (var s : b.statements) if (s instanceof ExpressionNode ex && containsCase(ex)) return true; return false; }
         return false;
     }
 
     private static boolean needsParen(ExpressionNode e) {
-        return e instanceof IfNode || e instanceof LambdaNode || e instanceof CaseNode;
+        return e instanceof IfNode || e instanceof LambdaNode || e instanceof CaseNode || e instanceof BlockNode || e instanceof AscriptionNode;
     }
 
     private static String escapeStr(String s) {
@@ -462,16 +507,21 @@ class TypeSoundnessTests {
         if (a instanceof LetStatementNode l1) {
             var l2 = (LetStatementNode) b;
             return l1.name.equals(l2.name) && l1.isRec == l2.isRec
+                && (l1.declaredType == l2.declaredType
+                    || (l1.declaredType != null && l1.declaredType.equals(l2.declaredType)))
                 && astEquals(l1.value, l2.value);
         }
-        if (a instanceof DataDeclNode d1) {
-            var d2 = (DataDeclNode) b;
+        if (a instanceof EnumDeclNode d1) {
+            var d2 = (EnumDeclNode) b;
             return d1.name.equals(d2.name) && d1.params.equals(d2.params)
                 && d1.constructors.equals(d2.constructors);
         }
         if (a instanceof LambdaNode lam1) {
             var lam2 = (LambdaNode) b;
-            return lam1.param.equals(lam2.param) && astEquals(lam1.body, lam2.body);
+            return lam1.param.equals(lam2.param)
+                && (lam1.declaredType == lam2.declaredType
+                    || (lam1.declaredType != null && lam1.declaredType.equals(lam2.declaredType)))
+                && astEquals(lam1.body, lam2.body);
         }
         if (a instanceof ApplicationNode app1) {
             var app2 = (ApplicationNode) b;
@@ -480,12 +530,19 @@ class TypeSoundnessTests {
         }
         if (a instanceof IfNode i1) {
             var i2 = (IfNode) b;
-            return astEquals(i1.condition, i2.condition)
-                && astEquals(i1.thenBranch, i2.thenBranch)
-                && astEquals(i1.elseBranch, i2.elseBranch);
+            if (!astEquals(i1.condition, i2.condition)) return false;
+            if (!astEquals(i1.thenBranch, i2.thenBranch)) return false;
+            if (i1.elseBranch == null && i2.elseBranch == null) return true;
+            if (i1.elseBranch == null || i2.elseBranch == null) return false;
+            return astEquals(i1.elseBranch, i2.elseBranch);
         }
         if (a instanceof LiteralNode lit1) return lit1.value.equals(((LiteralNode) b).value);
         if (a instanceof BoolNode b1) return b1.value == ((BoolNode) b).value;
+        if (a instanceof UnitLiteralNode) return b instanceof UnitLiteralNode;
+        if (a instanceof AscriptionNode asc1) {
+            if (!(b instanceof AscriptionNode asc2)) return false;
+            return astEquals(asc1.expr, asc2.expr) && asc1.declaredType.toString().equals(asc2.declaredType.toString());
+        }
         if (a instanceof StringLiteralNode s1) return s1.value.equals(((StringLiteralNode) b).value);
         if (a instanceof IdentifierNode id1) return id1.name.equals(((IdentifierNode) b).name);
         if (a instanceof BinaryExprNode bin1) {
@@ -503,6 +560,13 @@ class TypeSoundnessTests {
             if (c1.branches.size() != c2.branches.size()) return false;
             for (int i = 0; i < c1.branches.size(); i++)
                 if (!branchEquals(c1.branches.get(i), c2.branches.get(i))) return false;
+            return true;
+        }
+        if (a instanceof BlockNode bl1) {
+            var bl2 = (BlockNode) b;
+            if (bl1.statements.size() != bl2.statements.size()) return false;
+            for (int i = 0; i < bl1.statements.size(); i++)
+                if (!astEquals(bl1.statements.get(i), bl2.statements.get(i))) return false;
             return true;
         }
         return false;

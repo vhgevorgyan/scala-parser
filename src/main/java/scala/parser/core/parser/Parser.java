@@ -14,6 +14,7 @@ public class Parser {
 
     private final List<Token> tokens;
     private int pos = 0;
+    private int lastLine = 0;
     private final List<ParserError> errors = new ArrayList<>();
 
     public Parser(List<Token> tokens) {
@@ -36,7 +37,7 @@ public class Parser {
 
     private boolean isAtEnd() { return peek().type == TokenType.EOF; }
     private Token peek() { return tokens.get(pos); }
-    private Token advance() { if (!isAtEnd()) pos++; return previous(); }
+    private Token advance() { if (!isAtEnd()) { lastLine = peek().line; pos++; } return previous(); }
     private Token previous() { return tokens.get(pos - 1); }
 
     private boolean match(TokenType type) {
@@ -64,7 +65,7 @@ public class Parser {
     private void synchronize() {
         while (!isAtEnd()) {
             TokenType t = peek().type;
-            if (t == TokenType.LET || t == TokenType.DATA || t == TokenType.IF) return;
+            if (t == TokenType.VAL || t == TokenType.DEF || t == TokenType.ENUM || t == TokenType.TYPE || t == TokenType.IF) return;
             advance();
         }
     }
@@ -75,47 +76,101 @@ public class Parser {
     private ASTNode parseStatement() {
         if (match(TokenType.SEMICOLON)) return new LiteralNode("0", -1, -1);
 
-        if (match(TokenType.DATA)) return parseDataDecl();
+        if (match(TokenType.TYPE)) return parseTypeAlias();
 
-        if (match(TokenType.LET)) {
-            boolean isRec = match(TokenType.REC);
-            return parseLetStatement(isRec);
-        }
+        if (match(TokenType.ENUM)) return parseEnumDecl();
+
+        if (match(TokenType.VAL)) return parseValDef(false);
+
+        if (match(TokenType.DEF)) return parseValDef(true);
 
         return parseExpression();
     }
 
-    private ASTNode parseDataDecl() {
-        Token name = expect(TokenType.IDENT, "Expected type name after 'data'");
+    private ASTNode parseTypeAlias() {
+        Token name = expect(TokenType.IDENT, "Expected type alias name after 'type'");
+        expect(TokenType.EQUAL, "Expected '=' after type alias name");
+        Type t = parseType();
+        return new TypeAliasNode(name.text, t, name.line, name.column);
+    }
+
+    private ASTNode parseEnumDecl() {
+        Token name = expect(TokenType.IDENT, "Expected type name after 'enum'");
         if (name.type != TokenType.IDENT) { synchronize(); return new LiteralNode("0", name.line, name.column); }
 
         List<String> params = new ArrayList<>();
-        while (peek().type == TokenType.IDENT && !peek().text.equals("=")) {
-            params.add(advance().text);
+        if (match(TokenType.LBRACKET)) {
+            do {
+                Token p = expect(TokenType.IDENT, "Expected type parameter name");
+                if (p.type == TokenType.IDENT) params.add(p.text);
+            } while (match(TokenType.COMMA));
+            expect(TokenType.RBRACKET, "Expected ']' after type parameters");
         }
 
-        expect(TokenType.EQUAL, "Expected '=' after type name");
+        expect(TokenType.LBRACE, "Expected '{' after enum name");
 
-        List<DataDeclNode.ConstructorDef> constructors = new ArrayList<>();
-        do {
+        List<EnumDeclNode.ConstructorDef> constructors = new ArrayList<>();
+        while (peek().type != TokenType.RBRACE && !isAtEnd()) {
+            if (match(TokenType.SEMICOLON)) continue;
+            expect(TokenType.CASE, "Expected 'case' in enum body");
             Token ctor = expect(TokenType.IDENT, "Expected constructor name");
             if (ctor.type != TokenType.IDENT) { synchronize(); return new LiteralNode("0", ctor.line, ctor.column); }
 
             List<String> argTypes = new ArrayList<>();
-            while (peek().type == TokenType.IDENT) {
-                argTypes.add(advance().text);
+            if (match(TokenType.LPAREN)) {
+                do {
+                    expect(TokenType.IDENT, "Expected field name"); // field name, ignored
+                    if (match(TokenType.COLON)) {
+                        argTypes.add(parseType().toString()); // parse type, stringify
+                    }
+                } while (match(TokenType.COMMA));
+                expect(TokenType.RPAREN, "Expected ')' after constructor args");
             }
 
-            constructors.add(new DataDeclNode.ConstructorDef(ctor.text, argTypes));
-        } while (match(TokenType.PIPE));
+            constructors.add(new EnumDeclNode.ConstructorDef(ctor.text, argTypes));
+        }
 
-        return new DataDeclNode(name.text, params, constructors, name.line, name.column);
+        expect(TokenType.RBRACE, "Expected '}' after enum body");
+        return new EnumDeclNode(name.text, params, constructors, name.line, name.column);
     }
 
-    private ASTNode parseLetStatement(boolean isRec) {
-        Token name = expect(TokenType.IDENT, "Expected identifier after 'let'");
+    private ASTNode parseValDef(boolean isDef) {
+        Token name = expect(TokenType.IDENT, "Expected identifier after '" + (isDef ? "def" : "val") + "'");
         if (name.type != TokenType.IDENT) { synchronize(); return new LiteralNode("0", name.line, name.column); }
 
+        // Check for function parameters: def f(x: Type, y: Type): RetType = body
+        if (isDef && match(TokenType.LPAREN)) {
+            List<String> paramNames = new ArrayList<>();
+            List<Type> paramTypes = new ArrayList<>();
+            int paramLine = name.line;
+            int paramCol = name.column;
+            do {
+                Token param = expect(TokenType.IDENT, "Expected parameter name");
+                Type paramType = null;
+                if (match(TokenType.COLON)) {
+                    paramType = parseType();
+                }
+                paramNames.add(param.text);
+                paramTypes.add(paramType);
+            } while (match(TokenType.COMMA));
+            expect(TokenType.RPAREN, "Expected ')' after parameters");
+
+            Type retType = null;
+            if (match(TokenType.COLON)) {
+                retType = parseType();
+            }
+
+            expect(TokenType.EQUAL, "Expected '='");
+            ExpressionNode body = parseExpression();
+
+            // Build nested lambdas from last to first parameter
+            for (int i = paramNames.size() - 1; i >= 0; i--) {
+                body = new LambdaNode(paramNames.get(i), body, paramTypes.get(i), paramLine, paramCol);
+            }
+            return new LetStatementNode(name.text, body, true, retType, name.line, name.column);
+        }
+
+        // val x = expr  or  def x = expr (no params)
         Type declaredType = null;
         if (match(TokenType.COLON)) {
             declaredType = parseType();
@@ -125,7 +180,7 @@ public class Parser {
 
         ExpressionNode value = parseExpression();
 
-        return new LetStatementNode(name.text, value, isRec, declaredType, name.line, name.column);
+        return new LetStatementNode(name.text, value, isDef, declaredType, name.line, name.column);
     }
 
     // ---------------------------------------------------------
@@ -148,14 +203,22 @@ public class Parser {
         if (match(TokenType.IDENT)) {
             String text = previous().text;
             return switch (text) {
-                case "Number" -> new TypeNumber();
-                case "Bool" -> new TypeBool();
+                case "Int" -> new TypeNumber();
+                case "Boolean" -> new TypeBool();
                 case "String" -> new TypeString();
+                case "Unit" -> new TypeUnit();
                 default -> new TypeConstructor(text, List.of());
             };
         }
         if (match(TokenType.LPAREN)) {
             Type t = parseType();
+            if (match(TokenType.COMMA)) {
+                List<Type> types = new ArrayList<>();
+                types.add(t);
+                do { types.add(parseType()); } while (match(TokenType.COMMA));
+                expect(TokenType.RPAREN, "Expected ')' after tuple type");
+                return new TypeTuple(types);
+            }
             expect(TokenType.RPAREN, "Expected ')' after type");
             return t;
         }
@@ -168,53 +231,108 @@ public class Parser {
     // Expressions
     // ---------------------------------------------------------
     private ExpressionNode parseExpression() {
-        if (match(TokenType.BACKSLASH)) return parseLambda();
-
         if (match(TokenType.IF)) {
-            ExpressionNode cond = parseExpression();
-            expect(TokenType.THEN, "Expected 'then'");
-            ExpressionNode thenBranch = parseExpression();
-            expect(TokenType.ELSE, "Expected 'else'");
-            ExpressionNode elseBranch = parseExpression();
-            return new IfNode(cond, thenBranch, elseBranch);
+            return parseIf();
         }
 
-        if (match(TokenType.CASE)) return parseCase();
+        ExpressionNode expr = parseLogicalOr();
 
-        return parseLogicalOr();
+        if (match(TokenType.MATCH)) {
+            return parseMatchBody(expr);
+        }
+
+        // Range: expr .. expr
+        if (match(TokenType.DOTDOT)) {
+            ExpressionNode right = parseLogicalOr();
+            expr = new BinaryExprNode(expr, "..", right, expr.line, expr.column);
+            if (match(TokenType.COLON)) {
+                Type t = parseType();
+                return new AscriptionNode(expr, t, expr.line, expr.column);
+            }
+            return expr;
+        }
+
+        // Type ascription: expr : Type
+        if (match(TokenType.COLON)) {
+            Type t = parseType();
+            return new AscriptionNode(expr, t, expr.line, expr.column);
+        }
+
+        return expr;
     }
 
-    private ExpressionNode parseCase() {
-        ExpressionNode expr = parseExpression();
-        expect(TokenType.OF, "Expected 'of' after case expression");
+    private ExpressionNode parseIf() {
+        expect(TokenType.LPAREN, "Expected '(' after 'if'");
+        ExpressionNode cond = parseExpression();
+        expect(TokenType.RPAREN, "Expected ')' after if condition");
+
+        ExpressionNode thenBranch = parseExpression();
+        ExpressionNode elseBranch = null;
+        if (match(TokenType.ELSE)) {
+            elseBranch = parseExpression();
+        }
+        return new IfNode(cond, thenBranch, elseBranch);
+    }
+
+    private ExpressionNode parseMatchBody(ExpressionNode expr) {
+        int line = expr.line;
+        int col = expr.column;
+        expect(TokenType.LBRACE, "Expected '{' after 'match'");
 
         List<CaseNode.CaseBranch> branches = new ArrayList<>();
-        do {
-            Token ctor = expect(TokenType.IDENT, "Expected constructor name in case branch");
-            if (ctor.type != TokenType.IDENT) { synchronize(); return new LiteralNode("0", ctor.line, ctor.column); }
+        while (peek().type != TokenType.RBRACE && !isAtEnd()) {
+            if (match(TokenType.SEMICOLON)) continue;
+            expect(TokenType.CASE, "Expected 'case' in match branch");
 
-            List<CaseNode.Binding> bindings = new ArrayList<>();
-            while (peek().type == TokenType.IDENT && !peek().text.equals("->")) {
-                Token t = advance();
-                bindings.add(new CaseNode.Binding(t.text, t.line, t.column));
+            // Wildcard pattern: case _ =>
+            if (match(TokenType.UNDERSCORE)) {
+                expect(TokenType.ARROW, "Expected '=>' after wildcard pattern");
+                ExpressionNode body = parseExpression();
+                branches.add(new CaseNode.CaseBranch(null, List.of(), body, null));
+                continue;
             }
 
-            expect(TokenType.ARROW, "Expected '->' after constructor pattern");
+            // Literal pattern: case 0 =>  or  case true =>
+            if (peek().type == TokenType.NUMBER || peek().type == TokenType.TRUE || peek().type == TokenType.FALSE) {
+                ExpressionNode literal = parsePrimary();
+                expect(TokenType.ARROW, "Expected '=>' after literal pattern");
+                ExpressionNode body = parseExpression();
+                branches.add(new CaseNode.CaseBranch(null, List.of(), body, literal));
+                continue;
+            }
+
+            Token ctor = expect(TokenType.IDENT, "Expected constructor name in match branch");
+            if (ctor.type != TokenType.IDENT) { synchronize(); return new LiteralNode("0", ctor.line, ctor.column); }
+
+            // Infix pattern: x :: xs =>  desugars to  ::(x, xs)
+            if (peek().type == TokenType.IDENT && peek().text.equals("::")) {
+                advance(); // consume ::
+                Token right = expect(TokenType.IDENT, "Expected binding name after '::'");
+                List<CaseNode.Binding> bindings = List.of(
+                    new CaseNode.Binding(ctor.text, ctor.line, ctor.column),
+                    new CaseNode.Binding(right.text, right.line, right.column));
+                expect(TokenType.ARROW, "Expected '=>' after pattern");
+                ExpressionNode body = parseExpression();
+                branches.add(new CaseNode.CaseBranch("::", bindings, body));
+                continue;
+            }
+
+            List<CaseNode.Binding> bindings = new ArrayList<>();
+            if (match(TokenType.LPAREN)) {
+                do {
+                    Token t = expect(TokenType.IDENT, "Expected binding name");
+                    bindings.add(new CaseNode.Binding(t.text, t.line, t.column));
+                } while (match(TokenType.COMMA));
+                expect(TokenType.RPAREN, "Expected ')' after pattern bindings");
+            }
+
+            expect(TokenType.ARROW, "Expected '=>' after match pattern");
             ExpressionNode body = parseExpression();
             branches.add(new CaseNode.CaseBranch(ctor.text, bindings, body));
-        } while (match(TokenType.PIPE));
+        }
 
-        return new CaseNode(expr, branches, expr.line, expr.column);
-    }
-
-    private ExpressionNode parseLambda() {
-        Token param = expect(TokenType.IDENT, "Expected parameter name after '\\'");
-        if (param.type != TokenType.IDENT) { synchronize(); return new LiteralNode("0", param.line, param.column); }
-
-        Token arrow = expect(TokenType.ARROW, "Expected '->' after lambda parameter");
-        if (arrow.type != TokenType.ARROW) { synchronize(); return new LiteralNode("0", param.line, param.column); }
-
-        return new LambdaNode(param.text, parseExpression(), param.line, param.column);
+        expect(TokenType.RBRACE, "Expected '}' after match body");
+        return new CaseNode(expr, branches, line, col);
     }
 
     private ExpressionNode parseLogicalOr() {
@@ -275,9 +393,7 @@ public class Parser {
         ExpressionNode expr = parseUnary();
         while (true) {
             TokenType t = peek().type;
-            if (t == TokenType.IDENT || t == TokenType.NUMBER || t == TokenType.STRING
-                    || t == TokenType.LPAREN || t == TokenType.BACKSLASH
-                    || t == TokenType.TRUE || t == TokenType.FALSE || t == TokenType.NOT) {
+            if (t == TokenType.LPAREN || t == TokenType.LBRACE) {
                 expr = new ApplicationNode(expr, parseUnary(), expr.line, expr.column);
             } else break;
         }
@@ -286,6 +402,10 @@ public class Parser {
 
     private ExpressionNode parseUnary() {
         if (match(TokenType.NOT)) {
+            Token op = previous();
+            return new UnaryExprNode(op.text, parseUnary(), op.line, op.column);
+        }
+        if (match(TokenType.MINUS)) {
             Token op = previous();
             return new UnaryExprNode(op.text, parseUnary(), op.line, op.column);
         }
@@ -302,14 +422,109 @@ public class Parser {
         if (match(TokenType.TRUE)) return new BoolNode(previous().line, previous().column, true);
         if (match(TokenType.FALSE)) return new BoolNode(previous().line, previous().column, false);
 
-        if (match(TokenType.LPAREN)) {
-            ExpressionNode expr = parseExpression();
+        if (match(TokenType.LBRACE)) return parseBlock();
+
+        if (match(TokenType.LBRACKET)) {
+            return parseListLiteral(token);
+        }
+
+        if (peek().type == TokenType.LPAREN) {
+            if (isLambdaStart()) {
+                advance(); // consume (
+                return parseLambda();
+            }
+            Token lparen = advance(); // consume (
+            if (peek().type == TokenType.RPAREN) {
+                advance();
+                return new UnitLiteralNode(lparen.line, lparen.column);
+            }
+            ExpressionNode first = parseExpression();
+            if (match(TokenType.COMMA)) {
+                List<ExpressionNode> exprs = new ArrayList<>();
+                exprs.add(first);
+                do { exprs.add(parseExpression()); } while (match(TokenType.COMMA));
+                expect(TokenType.RPAREN, "Expected ')' after tuple");
+                return new TupleNode(exprs, lparen.line, lparen.column);
+            }
             expect(TokenType.RPAREN, "Expected ')' after expression");
-            return expr;
+            return first;
         }
 
         error("Unexpected token: " + token.text, token);
         advance();
         return new LiteralNode("0", token.line, token.column);
+    }
+
+    private boolean isLambdaStart() {
+        if (peek().type != TokenType.LPAREN) return false;
+        int saved = pos;
+        advance(); // skip (
+        boolean result;
+        if (peek().type != TokenType.IDENT) { pos = saved; return false; }
+        advance(); // skip ident
+        if (peek().type == TokenType.COLON) {
+            advance(); // skip :
+            int depth = 1;
+            while (!isAtEnd() && depth > 0) {
+                TokenType t = peek().type;
+                if (t == TokenType.LPAREN) depth++;
+                else if (t == TokenType.RPAREN) depth--;
+                if (depth > 0) advance();
+            }
+            if (isAtEnd()) { pos = saved; return false; }
+            advance(); // skip )
+            result = peek().type == TokenType.ARROW;
+        } else if (peek().type == TokenType.RPAREN) {
+            advance(); // skip )
+            result = peek().type == TokenType.ARROW;
+        } else {
+            result = false;
+        }
+        pos = saved;
+        return result;
+    }
+
+    private ExpressionNode parseLambda() {
+        // LPAREN already consumed by caller
+        Token param = expect(TokenType.IDENT, "Expected parameter name");
+        Type declaredType = null;
+        if (match(TokenType.COLON)) {
+            declaredType = parseType();
+        }
+        expect(TokenType.RPAREN, "Expected ')'");
+        expect(TokenType.ARROW, "Expected '=>'");
+        ExpressionNode body = parseExpression();
+        return new LambdaNode(param.text, body, declaredType, param.line, param.column);
+    }
+
+    private ExpressionNode parseBlock() {
+        Token start = previous();
+        List<ASTNode> stmts = new ArrayList<>();
+        while (!isAtEnd() && peek().type != TokenType.RBRACE) {
+            if (match(TokenType.SEMICOLON)) continue;
+            stmts.add(parseStatement());
+        }
+        expect(TokenType.RBRACE, "Expected '}'");
+        return new BlockNode(stmts, start.line, start.column);
+    }
+
+    private ExpressionNode parseListLiteral(Token start) {
+        List<ExpressionNode> elements = new ArrayList<>();
+        if (peek().type != TokenType.RBRACKET) {
+            do {
+                elements.add(parseExpression());
+            } while (match(TokenType.COMMA));
+        }
+        expect(TokenType.RBRACKET, "Expected ']' at end of list literal");
+
+        // Build nested Cons calls from right to left
+        ExpressionNode result = new IdentifierNode("Nil", start.line, start.column);
+        for (int i = elements.size() - 1; i >= 0; i--) {
+            result = new ApplicationNode(
+                new ApplicationNode(new IdentifierNode("Cons", start.line, start.column),
+                    elements.get(i), start.line, start.column),
+                result, start.line, start.column);
+        }
+        return result;
     }
 }

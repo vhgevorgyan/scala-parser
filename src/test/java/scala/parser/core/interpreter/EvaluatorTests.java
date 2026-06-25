@@ -102,132 +102,131 @@ class EvaluatorTests {
 
     @Test
     void ifTrue() {
-        Value v = eval("if true then 1 else 2");
+        Value v = eval("if (true) 1 else 2");
         assertEquals(1, ((NumberValue) v).value);
     }
 
     @Test
     void ifFalse() {
-        Value v = eval("if false then 1 else 2");
+        Value v = eval("if (false) 1 else 2");
         assertEquals(2, ((NumberValue) v).value);
     }
 
     @Test
     void ifBoolResult() {
-        Value v = eval("if true then true else false");
+        Value v = eval("if (true) true else false");
         assertTrue(((BoolValue) v).value);
     }
 
     @Test
     void lambdaIdentity() {
-        Value v = eval("(\\x -> x) 42");
+        Value v = eval("((x: Int) => x)(42)");
         assertEquals(42, ((NumberValue) v).value);
     }
 
     @Test
     void lambdaIncrement() {
-        Value v = eval("(\\x -> x + 1) 41");
+        Value v = eval("((x: Int) => x + 1)(41)");
         assertEquals(42, ((NumberValue) v).value);
     }
 
     @Test
     void lambdaClosure() {
-        Value v = eval("let add = \\x -> \\y -> x + y\nlet z = add 3 4");
+        Value v = eval("val add = (x: Int) => (y: Int) => x + y\nval z = add(3)(4)");
         assertEquals(7, ((NumberValue) v).value);
     }
 
     @Test
-    void letBinding() {
-        Value v = eval("let x = 42");
+    void valBinding() {
+        Value v = eval("val x = 42");
         assertEquals(42, ((NumberValue) v).value);
     }
 
     @Test
-    void letUsedMultiple() {
-        Value v = eval("let x = 5\nlet y = x + x");
+    void valUsedMultiple() {
+        Value v = eval("val x = 5\nval y = x + x");
         assertEquals(10, ((NumberValue) v).value);
     }
 
     @Test
-    void letLambda() {
-        Value v = eval("let f = \\x -> x * 2\nlet y = f 7");
+    void valLambda() {
+        Value v = eval("val f = (x: Int) => x * 2\nval y = f(7)");
         assertEquals(14, ((NumberValue) v).value);
     }
 
     @Test
-    void letChain() {
-        Value v = eval("let a = 1\nlet b = 2\nlet c = a + b");
+    void valChain() {
+        Value v = eval("val a = 1\nval b = 2\nval c = a + b");
         assertEquals(3, ((NumberValue) v).value);
     }
 
     @Test
     void applicationLeftAssoc() {
-        // ((\\x -> \\y -> x) 1) 2
-        Value v = eval("(\\x -> \\y -> x) 1 2");
+        Value v = eval("((x: Int) => (y: Int) => x)(1)(2)");
         assertEquals(1, ((NumberValue) v).value);
     }
 
     @Test
     void builtinSucc() {
-        Value v = eval("succ 41");
+        Value v = eval("succ(41)");
         assertEquals(42, ((NumberValue) v).value);
     }
 
     @Test
     void builtinPred() {
-        Value v = eval("pred 42");
+        Value v = eval("pred(42)");
         assertEquals(41, ((NumberValue) v).value);
     }
 
     @Test
     void builtinIszeroTrue() {
-        assertTrue(((BoolValue) eval("iszero 0")).value);
+        assertTrue(((BoolValue) eval("iszero(0)")).value);
     }
 
     @Test
     void builtinIszeroFalse() {
-        assertFalse(((BoolValue) eval("iszero 1")).value);
+        assertFalse(((BoolValue) eval("iszero(1)")).value);
     }
 
     @Test
     void builtinCombined() {
-        Value v = eval("succ (pred 42)");
+        Value v = eval("succ(pred(42))");
         assertEquals(42, ((NumberValue) v).value);
     }
 
     @Test
     void builtinInLambda() {
-        Value v = eval("(\\x -> succ x) 41");
+        Value v = eval("((x: Int) => succ(x))(41)");
         assertEquals(42, ((NumberValue) v).value);
     }
 
     @Test
     void nestedApplication() {
-        Value v = eval("(\\f -> \\x -> f (f x)) (\\y -> y + 1) 0");
+        Value v = eval("((f: Int => Int) => (x: Int) => f(f(x)))((y: Int) => y + 1)(0)");
         assertEquals(2, ((NumberValue) v).value);
     }
 
     @Test
-    void closureCapturesLet() {
-        Value v = eval("let x = 10\nlet f = \\y -> x + y\nlet r = f 5");
+    void closureCapturesVal() {
+        Value v = eval("val x = 10\nval f = (y: Int) => x + y\nval r = f(5)");
         assertEquals(15, ((NumberValue) v).value);
     }
 
     @Test
-    void letRecFactorial() {
-        Value v = eval("let rec fact = \\n -> if n == 0 then 1 else n * fact (n - 1)\nlet r = fact 5");
+    void defFactorial() {
+        Value v = eval("def fact(n: Int): Int = if (n == 0) 1 else n * fact(n - 1)\nval r = fact(5)");
         assertEquals(120, ((NumberValue) v).value);
     }
 
     @Test
-    void letRecFibonacci() {
-        Value v = eval("let rec fib = \\n -> if n == 0 then 0 else if n == 1 then 1 else fib (n - 1) + fib (n - 2)\nlet r = fib 10");
+    void defFibonacci() {
+        Value v = eval("def fib(n: Int): Int = if (n == 0) 0 else if (n == 1) 1 else fib(n - 1) + fib(n - 2)\nval r = fib(10)");
         assertEquals(55, ((NumberValue) v).value);
     }
 
     @Test
-    void letRecSimple() {
-        Value v = eval("let rec x = 42\nlet r = x");
+    void defSimple() {
+        Value v = eval("def x = 42\nval r = x");
         assertEquals(42, ((NumberValue) v).value);
     }
 
@@ -247,6 +246,24 @@ class EvaluatorTests {
     void doubleNot() {
         Value v = eval("!!true");
         assertTrue(((BoolValue) v).value);
+    }
+
+    @Test
+    void unaryMinusLiteral() {
+        Value v = eval("-5");
+        assertEquals(-5, ((NumberValue) v).value);
+    }
+
+    @Test
+    void unaryMinusExpr() {
+        Value v = eval("-(3 + 4)");
+        assertEquals(-7, ((NumberValue) v).value);
+    }
+
+    @Test
+    void doubleMinus() {
+        Value v = eval("--5");
+        assertEquals(5, ((NumberValue) v).value);
     }
 
     @Test
@@ -288,8 +305,8 @@ class EvaluatorTests {
     }
 
     @Test
-    void letString() {
-        Value v = eval("let s = \"test\"\nlet r = s");
+    void valString() {
+        Value v = eval("val s = \"test\"\nval r = s");
         assertInstanceOf(StringValue.class, v);
         assertEquals("test", ((StringValue) v).value);
     }
@@ -302,19 +319,19 @@ class EvaluatorTests {
 
     @Test
     void builtinPrint() {
-        Value v = eval("print 42");
+        Value v = eval("print(42)");
         assertEquals(42, ((NumberValue) v).value);
     }
 
     @Test
     void semicolonSequencing() {
-        Value v = eval("let x = 1; let y = 2; let z = 3");
+        Value v = eval("val x = 1; val y = 2; val z = 3");
         assertEquals(3, ((NumberValue) v).value);
     }
 
     @Test
     void zeroArgConstructor() {
-        Value v = eval("data Bool = True | False\nlet b = True");
+        Value v = eval("enum Bool { case True; case False }\nval b = True");
         assertInstanceOf(ConstructorValue.class, v);
         ConstructorValue cv = (ConstructorValue) v;
         assertEquals("True", cv.name);
@@ -322,7 +339,7 @@ class EvaluatorTests {
 
     @Test
     void oneArgConstructor() {
-        Value v = eval("data Maybe a = Nothing | Just a\nlet x = Just 42");
+        Value v = eval("enum Maybe[A] { case Nothing; case Just(x: A) }\nval x = Just(42)");
         assertInstanceOf(ConstructorValue.class, v);
         ConstructorValue cv = (ConstructorValue) v;
         assertEquals("Just", cv.name);
@@ -332,7 +349,7 @@ class EvaluatorTests {
 
     @Test
     void multiArgConstructor() {
-        Value v = eval("data Pair a b = Pair a b\nlet p = Pair 1 true");
+        Value v = eval("enum Pair[A, B] { case Pair(x: A, y: B) }\nval p = Pair(1)(true)");
         assertInstanceOf(ConstructorValue.class, v);
         ConstructorValue cv = (ConstructorValue) v;
         assertEquals("Pair", cv.name);
@@ -343,31 +360,31 @@ class EvaluatorTests {
 
     @Test
     void caseExprSimple() {
-        Value v = eval("data Maybe a = Nothing | Just a\nlet x = Just 42\ncase x of Nothing -> 0 | Just y -> y");
+        Value v = eval("enum Maybe[A] { case Nothing; case Just(x: A) }\nval x = Just(42)\nx match { case Nothing => 0; case Just(y) => y }");
         assertEquals(42, ((NumberValue) v).value);
     }
 
     @Test
     void caseExprNothing() {
-        Value v = eval("data Maybe a = Nothing | Just a\nlet x = Nothing\ncase x of Nothing -> 0 | Just y -> 1");
+        Value v = eval("enum Maybe[A] { case Nothing; case Just(x: A) }\nval x = Nothing\nx match { case Nothing => 0; case Just(y) => 1 }");
         assertEquals(0, ((NumberValue) v).value);
     }
 
     @Test
     void caseExprBoolConstructors() {
-        Value v = eval("data Bool = True | False\nlet b = True\ncase b of True -> 1 | False -> 0");
+        Value v = eval("enum Bool { case True; case False }\nval b = True\nb match { case True => 1; case False => 0 }");
         assertEquals(1, ((NumberValue) v).value);
     }
 
     @Test
     void caseExprMultiBinding() {
-        Value v = eval("data Pair a b = Pair a b\nlet p = Pair 3 4\ncase p of Pair x y -> x + y");
+        Value v = eval("enum Pair[A, B] { case Pair(x: A, y: B) }\nval p = Pair(3)(4)\np match { case Pair(x, y) => x + y }");
         assertEquals(7, ((NumberValue) v).value);
     }
 
     @Test
     void nestedConstructorInCase() {
-        Value v = eval("data Maybe a = Nothing | Just a\nlet x = Just (Just 42)\ncase x of Nothing -> 0 | Just y -> case y of Nothing -> 0 | Just z -> z");
+        Value v = eval("enum Maybe[A] { case Nothing; case Just(x: A) }\nval x = Just(Just(42))\nx match { case Nothing => 0; case Just(y) => y match { case Nothing => 0; case Just(z) => z } }");
         assertEquals(42, ((NumberValue) v).value);
     }
 }

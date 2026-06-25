@@ -2,8 +2,9 @@ package scala.parser.core.lexer;
 
 public enum TokenType {
     // Keywords
-    LET, REC,
-    DATA, CASE, OF,
+    VAL, DEF,
+    ENUM, CASE, MATCH,
+    TYPE,
     // Identifiers & literals
     IDENT,
     NUMBER,
@@ -14,15 +15,18 @@ public enum TokenType {
     COLON,
     // Logical
     AND, OR, NOT,
-    // Parentheses
-    LPAREN,
-    RPAREN,
+    // Parentheses, braces & brackets
+    LPAREN, RPAREN,
+    LBRACE, RBRACE,
+    LBRACKET, RBRACKET,
     PIPE,
-    EOF,
-    BACKSLASH,
     ARROW,
+    EOF,
     TRUE, FALSE,
-    IF, THEN, ELSE,
+    IF, ELSE,
     EQ, NEQ, LT, GT, LE, GE,
     SEMICOLON,
+    COMMA,
+    UNDERSCORE,
+    DOTDOT,
 }

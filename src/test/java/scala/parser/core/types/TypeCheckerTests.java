@@ -60,67 +60,67 @@ class TypeCheckerTests {
 
     @Test
     void ifConditionMustBeBool() {
-        EvaluationResult r = analyze("if 1 then 2 else 3");
+        EvaluationResult r = analyze("if (1) 2 else 3");
         assertFalse(r.parserResult().errors.isEmpty());
     }
 
     @Test
     void ifBranchesSameType() {
-        EvaluationResult r = analyze("if true then 1 else false");
+        EvaluationResult r = analyze("if (true) 1 else false");
         assertFalse(r.parserResult().errors.isEmpty());
     }
 
     @Test
     void ifReturnType() {
-        EvaluationResult r = analyze("if true then 1 else 2");
+        EvaluationResult r = analyze("if (true) 1 else 2");
         assertTrue(r.parserResult().errors.isEmpty());
     }
 
     @Test
     void lambdaIdentity() {
-        EvaluationResult r = analyze("\\x -> x");
+        EvaluationResult r = analyze("(x: Int) => x");
         assertTrue(r.parserResult().errors.isEmpty());
     }
 
     @Test
     void lambdaApplied() {
-        EvaluationResult r = analyze("(\\x -> x + 1) 5");
+        EvaluationResult r = analyze("((x: Int) => x + 1)(5)");
         assertTrue(r.parserResult().errors.isEmpty());
     }
 
     @Test
     void typeMismatchApplication() {
-        EvaluationResult r = analyze("(\\x -> x + 1) true");
+        EvaluationResult r = analyze("((x: Int) => x + 1)(true)");
         assertFalse(r.parserResult().errors.isEmpty());
     }
 
     @Test
-    void letSimple() {
-        EvaluationResult r = analyze("let x = 42\nlet y = x");
+    void valSimple() {
+        EvaluationResult r = analyze("val x = 42\nval y = x");
         assertTrue(r.parserResult().errors.isEmpty());
     }
 
     @Test
-    void letPolymorphicIdentity() {
-        EvaluationResult r = analyze("let id = \\x -> x\nlet a = id 42\nlet b = id true");
+    void valPolymorphicIdentity() {
+        EvaluationResult r = analyze("val id = (x) => x\nval a = id(42)\nval b = id(true)");
         assertTrue(r.parserResult().errors.isEmpty());
     }
 
     @Test
-    void letPolymorphicApplied() {
-        EvaluationResult r = analyze("let id = \\x -> x\nlet k = id id\nlet r = k 42");
+    void valPolymorphicApplied() {
+        EvaluationResult r = analyze("val id = (x) => x\nval k = id(id)\nval r = k(42)");
         assertTrue(r.parserResult().errors.isEmpty());
     }
 
     @Test
     void higherOrderFunction() {
-        EvaluationResult r = analyze("\\f -> \\x -> f x");
+        EvaluationResult r = analyze("(f: Int => Int) => (x) => f(x)");
         assertTrue(r.parserResult().errors.isEmpty());
     }
 
     @Test
     void nestedLambdas() {
-        EvaluationResult r = analyze("\\x -> \\y -> x + y");
+        EvaluationResult r = analyze("(x: Int) => (y: Int) => x + y");
         assertTrue(r.parserResult().errors.isEmpty());
     }
 
@@ -133,109 +133,109 @@ class TypeCheckerTests {
 
     @Test
     void builtinSucc() {
-        EvaluationResult r = analyze("succ 5");
+        EvaluationResult r = analyze("succ(5)");
         assertTrue(r.parserResult().errors.isEmpty());
     }
 
     @Test
     void builtinPred() {
-        EvaluationResult r = analyze("pred 5");
+        EvaluationResult r = analyze("pred(5)");
         assertTrue(r.parserResult().errors.isEmpty());
     }
 
     @Test
     void builtinIszero() {
-        EvaluationResult r = analyze("iszero 0");
+        EvaluationResult r = analyze("iszero(0)");
         assertTrue(r.parserResult().errors.isEmpty());
     }
 
     @Test
     void builtinPrint() {
-        EvaluationResult r = analyze("print 42");
+        EvaluationResult r = analyze("print(42)");
         assertTrue(r.parserResult().errors.isEmpty());
     }
 
     @Test
     void builtinWrongArgType() {
-        EvaluationResult r = analyze("succ true");
+        EvaluationResult r = analyze("succ(true)");
         assertFalse(r.parserResult().errors.isEmpty());
     }
 
     @Test
     void applicationChain() {
-        EvaluationResult r = analyze("let x = 5\nlet y = succ x\nlet z = pred y");
+        EvaluationResult r = analyze("val x = 5\nval y = succ(x)\nval z = pred(y)");
         assertTrue(r.parserResult().errors.isEmpty());
     }
 
     @Test
-    void multipleLetPolymorphic() {
-        EvaluationResult r = analyze("let id = \\x -> x\nlet c = id true\nlet n = id 42\nlet res = c");
+    void multipleValPolymorphic() {
+        EvaluationResult r = analyze("val id = (x) => x\nval c = id(true)\nval n = id(42)\nval res = c");
         assertTrue(r.parserResult().errors.isEmpty());
     }
 
     @Test
-    void letRec() {
-        EvaluationResult r = analyze("let rec fact = \\n -> if n == 0 then 1 else n * fact (n - 1)");
+    void defRec() {
+        EvaluationResult r = analyze("def fact(n: Int): Int = if (n == 0) 1 else n * fact(n - 1)");
         assertTrue(r.parserResult().errors.isEmpty());
     }
 
     @Test
-    void letRecTypeError() {
-        EvaluationResult r = analyze("let rec f = \\x -> if f then 1 else 2");
+    void defRecTypeError() {
+        EvaluationResult r = analyze("def f(x: Boolean): Int = if (f) 1 else 2");
         assertFalse(r.parserResult().errors.isEmpty());
     }
 
     @Test
     void typeAnnotationCorrect() {
-        EvaluationResult r = analyze("let x : Number = 42");
+        EvaluationResult r = analyze("val x: Int = 42");
         assertTrue(r.parserResult().errors.isEmpty());
     }
 
     @Test
     void typeAnnotationMismatch() {
-        EvaluationResult r = analyze("let x : Number = true");
+        EvaluationResult r = analyze("val x: Int = true");
         assertFalse(r.parserResult().errors.isEmpty());
     }
 
     @Test
     void typeAnnotationBool() {
-        EvaluationResult r = analyze("let b : Bool = true");
+        EvaluationResult r = analyze("val b: Boolean = true");
         assertTrue(r.parserResult().errors.isEmpty());
     }
 
     @Test
     void dataDeclSimple() {
-        EvaluationResult r = analyze("data Maybe a = Nothing | Just a");
+        EvaluationResult r = analyze("enum Maybe[A] { case Nothing; case Just(x: A) }");
         assertTrue(r.parserResult().errors.isEmpty());
     }
 
     @Test
     void dataDeclWithConstructorUsage() {
-        EvaluationResult r = analyze("data Maybe a = Nothing | Just a\nlet x = Just 42");
+        EvaluationResult r = analyze("enum Maybe[A] { case Nothing; case Just(x: A) }\nval x = Just(42)");
         assertTrue(r.parserResult().errors.isEmpty());
     }
 
     @Test
     void dataDeclZeroArgConstructor() {
-        EvaluationResult r = analyze("data Bool = True | False\nlet b = True");
+        EvaluationResult r = analyze("enum Bool { case True; case False }\nval b = True");
         assertTrue(r.parserResult().errors.isEmpty());
     }
 
     @Test
     void caseExprTypeCheck() {
-        EvaluationResult r = analyze("data Maybe a = Nothing | Just a\nlet x = Just 42\ncase x of Nothing -> 0 | Just y -> y");
+        EvaluationResult r = analyze("enum Maybe[A] { case Nothing; case Just(x: A) }\nval x = Just(42)\nx match { case Nothing => 0; case Just(y) => y }");
         assertTrue(r.parserResult().errors.isEmpty());
     }
 
     @Test
     void caseExprResultType() {
-        EvaluationResult r = analyze("data Maybe a = Nothing | Just a\nlet x = Nothing\ncase x of Nothing -> 0 | Just y -> 1");
+        EvaluationResult r = analyze("enum Maybe[A] { case Nothing; case Just(x: A) }\nval x = Nothing\nx match { case Nothing => 0; case Just(y) => 1 }");
         assertTrue(r.parserResult().errors.isEmpty());
     }
 
     @Test
     void caseBranchTypesMustMatch() {
-        EvaluationResult r = analyze("data Maybe a = Nothing | Just a\nlet x = Just true\ncase x of Nothing -> 0 | Just y -> false");
+        EvaluationResult r = analyze("enum Maybe[A] { case Nothing; case Just(x: A) }\nval x = Just(true)\nx match { case Nothing => 0; case Just(y) => false }");
         assertFalse(r.parserResult().errors.isEmpty());
     }
 
@@ -248,6 +248,18 @@ class TypeCheckerTests {
     @Test
     void logicalNotNonBool() {
         EvaluationResult r = analyze("!42");
+        assertFalse(r.parserResult().errors.isEmpty());
+    }
+
+    @Test
+    void unaryMinus() {
+        EvaluationResult r = analyze("-5");
+        assertTrue(r.parserResult().errors.isEmpty());
+    }
+
+    @Test
+    void unaryMinusNonNumber() {
+        EvaluationResult r = analyze("-true");
         assertFalse(r.parserResult().errors.isEmpty());
     }
 
@@ -277,19 +289,19 @@ class TypeCheckerTests {
 
     @Test
     void stringLiteralType() {
-        EvaluationResult r = analyze("let s = \"hello\"");
+        EvaluationResult r = analyze("val s = \"hello\"");
         assertTrue(r.parserResult().errors.isEmpty());
     }
 
     @Test
-    void unaryNotInLet() {
-        EvaluationResult r = analyze("let x = true\nlet y = !x");
+    void unaryNotInVal() {
+        EvaluationResult r = analyze("val x = true\nval y = !x");
         assertTrue(r.parserResult().errors.isEmpty());
     }
 
     @Test
     void logicalChain() {
-        EvaluationResult r = analyze("let a = true\nlet b = false\nlet c = a && b || !a");
+        EvaluationResult r = analyze("val a = true\nval b = false\nval c = a && b || !a");
         assertTrue(r.parserResult().errors.isEmpty());
     }
 }

@@ -15,11 +15,11 @@ public class Benchmarks {
         // Test programs of increasing complexity
         String[] programs = {
             "small",       "42",
-            "medium",      "let x = 42\nlet y = x + 1\nlet z = y * 2\nz + x",
+            "medium",      "val x = 42\nval y = x + 1\nval z = y * 2\nz + x",
             "large",       generateLarge(50),
             "xlarge",      generateLarge(200),
-            "recursive",   "let rec fact = \\n -> if iszero n then 1 else n * fact (pred n)\nfact 5",
-            "data_types",  "data Maybe a = Nothing | Just a\ncase Just 42 of Nothing -> 0; Just x -> x"
+            "recursive",   "def fact(n: Int): Int = if (iszero(n)) 1 else n * fact(pred(n))\nfact(5)",
+            "data_types",  "enum Maybe[A] { case Nothing; case Just(x: A) }\nJust(42) match { case Nothing => 0; case Just(x) => x }"
         };
 
         for (int i = 0; i < programs.length; i += 2) {
@@ -113,7 +113,7 @@ public class Benchmarks {
     private static String generateLarge(int n) {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < n; i++) {
-            sb.append("let x").append(i).append(" = ").append(i).append("\n");
+            sb.append("val x").append(i).append(" = ").append(i).append("\n");
         }
         sb.append("x").append(n - 1);
         return sb.toString();

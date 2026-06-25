@@ -14,6 +14,18 @@ import scala.parser.core.interpreter.Value;
 
 public class CompilerPipeline {
 
+    private int maxDepth = 1000;
+
+    public CompilerPipeline() {}
+
+    public CompilerPipeline(int maxDepth) {
+        this.maxDepth = maxDepth;
+    }
+
+    public void setMaxDepth(int maxDepth) {
+        this.maxDepth = maxDepth;
+    }
+
     public EvaluationResult analyze(String text) {
         Tokenizer tokenizer = new Tokenizer(text);
         List<Token> tokens = tokenizer.tokenize();
@@ -26,7 +38,7 @@ public class CompilerPipeline {
         Value value = null;
         if (result.errors.isEmpty()) {
             try {
-                Evaluator evaluator = new Evaluator();
+                Evaluator evaluator = new Evaluator(maxDepth);
                 value = evaluator.evalProgram(result.ast);
             } catch (RuntimeException e) {
                 result.errors.add(new ParserError("Runtime error: " + e.getMessage(), 0, 0));

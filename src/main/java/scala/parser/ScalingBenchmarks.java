@@ -107,22 +107,22 @@ public class ScalingBenchmarks {
     /** n let-bindings: let x0 = 0; let x1 = x0 + 1; ... */
     private static String generateArith(int n) {
         var sb = new StringBuilder();
-        sb.append("let x0 = 0;\n");
+        sb.append("val x0 = 0\n");
         for (int i = 1; i < n; i++) {
-            sb.append("let x").append(i).append(" = x").append(i - 1).append(" + 1;\n");
+            sb.append("val x").append(i).append(" = x").append(i - 1).append(" + 1\n");
         }
         sb.append("x").append(n - 1);
         return sb.toString();
     }
 
-    /** n data declarations with case expressions */
+    /** n enum declarations with case expressions */
     private static String generateAdt(int n) {
         var sb = new StringBuilder();
-        sb.append("data MyBool = MyTrue | MyFalse;\n");
-        sb.append("let id = \\b. b;\n");
+        sb.append("enum MyBool { case MyTrue; case MyFalse }\n");
+        sb.append("val id = (b: Int) => b\n");
         for (int i = 0; i < n; i++) {
             String ct = (i % 2 == 0) ? "MyTrue" : "MyFalse";
-            sb.append("case ").append(ct).append(" of { MyTrue -> 0 | MyFalse -> 1 };\n");
+            sb.append(ct).append(" match { case MyTrue => 0; case MyFalse => 1 }\n");
         }
         sb.append("0");
         return sb.toString();
@@ -131,9 +131,10 @@ public class ScalingBenchmarks {
     /** n recursive function calls */
     private static String generateRecursive(int n) {
         var sb = new StringBuilder();
-        sb.append("let rec f = \\n. if iszero n then 0 else f (pred n);\n");
-        sb.append("f ");
+        sb.append("def f(n: Int): Int = if (iszero(n)) 0 else f(pred(n))\n");
+        sb.append("f(");
         sb.append(n / 2);
+        sb.append(")");
         return sb.toString();
     }
 }

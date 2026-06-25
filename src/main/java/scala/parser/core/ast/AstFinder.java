@@ -29,8 +29,10 @@ public class AstFinder {
                 if (cond != null) return cond;
                 ASTNode thenB = findRecursive(i.thenBranch, line, column);
                 if (thenB != null) return thenB;
-                ASTNode elseB = findRecursive(i.elseBranch, line, column);
-                if (elseB != null) return elseB;
+                if (i.elseBranch != null) {
+                    ASTNode elseB = findRecursive(i.elseBranch, line, column);
+                    if (elseB != null) return elseB;
+                }
             }
 
             if (node instanceof ApplicationNode app) {
@@ -62,6 +64,29 @@ public class AstFinder {
                     ASTNode body = findRecursive(br.body(), line, column);
                     if (body != null) return body;
                 }
+            }
+
+            if (node instanceof BlockNode block) {
+                for (ASTNode s : block.statements) {
+                    ASTNode found = findRecursive(s, line, column);
+                    if (found != null) return found;
+                }
+            }
+
+            if (node instanceof AscriptionNode asc) {
+                ASTNode inner = findRecursive(asc.expr, line, column);
+                if (inner != null) return inner;
+            }
+
+            if (node instanceof TupleNode tup) {
+                for (ExpressionNode elem : tup.elements) {
+                    ASTNode found = findRecursive(elem, line, column);
+                    if (found != null) return found;
+                }
+            }
+
+            if (node instanceof TypeAliasNode) {
+                return node;
             }
 
             return node;

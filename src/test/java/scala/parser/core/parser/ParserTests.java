@@ -71,7 +71,7 @@ class ParserTests {
 
     @Test
     void lambda() {
-        ParserResult r = parse("\\x -> x");
+        ParserResult r = parse("(x: Int) => x");
         assertTrue(r.errors.isEmpty());
         LambdaNode lam = (LambdaNode) r.ast.statements.get(0);
         assertEquals("x", lam.param);
@@ -81,7 +81,7 @@ class ParserTests {
 
     @Test
     void lambdaWithBody() {
-        ParserResult r = parse("\\x -> x + 1");
+        ParserResult r = parse("(x: Int) => x + 1");
         assertTrue(r.errors.isEmpty());
         LambdaNode lam = (LambdaNode) r.ast.statements.get(0);
         assertEquals("x", lam.param);
@@ -90,7 +90,7 @@ class ParserTests {
 
     @Test
     void functionApplication() {
-        ParserResult r = parse("f x");
+        ParserResult r = parse("f(x)");
         assertTrue(r.errors.isEmpty());
         ApplicationNode app = (ApplicationNode) r.ast.statements.get(0);
         assertInstanceOf(IdentifierNode.class, app.function);
@@ -101,7 +101,7 @@ class ParserTests {
 
     @Test
     void multipleApplications() {
-        ParserResult r = parse("f x y");
+        ParserResult r = parse("f(x)(y)");
         assertTrue(r.errors.isEmpty());
         // ((f x) y)
         ApplicationNode outer = (ApplicationNode) r.ast.statements.get(0);
@@ -114,7 +114,7 @@ class ParserTests {
 
     @Test
     void ifExpr() {
-        ParserResult r = parse("if true then 1 else 2");
+        ParserResult r = parse("if (true) 1 else 2");
         assertTrue(r.errors.isEmpty());
         IfNode ifn = (IfNode) r.ast.statements.get(0);
         assertInstanceOf(BoolNode.class, ifn.condition);
@@ -125,8 +125,8 @@ class ParserTests {
     }
 
     @Test
-    void letStatement() {
-        ParserResult r = parse("let x = 42");
+    void valStatement() {
+        ParserResult r = parse("val x = 42");
         assertTrue(r.errors.isEmpty());
         LetStatementNode let = (LetStatementNode) r.ast.statements.get(0);
         assertEquals("x", let.name);
@@ -135,8 +135,8 @@ class ParserTests {
     }
 
     @Test
-    void letWithExpression() {
-        ParserResult r = parse("let add = \\x -> \\y -> x + y");
+    void valWithLambda() {
+        ParserResult r = parse("val add = (x: Int) => (y: Int) => x + y");
         assertTrue(r.errors.isEmpty());
         LetStatementNode let = (LetStatementNode) r.ast.statements.get(0);
         assertEquals("add", let.name);
@@ -157,7 +157,7 @@ class ParserTests {
 
     @Test
     void lambdaInApplication() {
-        ParserResult r = parse("(\\x -> x + 1) 5");
+        ParserResult r = parse("((x: Int) => x + 1)(5)");
         assertTrue(r.errors.isEmpty());
         ApplicationNode app = (ApplicationNode) r.ast.statements.get(0);
         assertInstanceOf(LambdaNode.class, app.function);
@@ -178,7 +178,7 @@ class ParserTests {
 
     @Test
     void multipleStatements() {
-        ParserResult r = parse("let x = 1\nlet y = x");
+        ParserResult r = parse("val x = 1\nval y = x");
         assertTrue(r.errors.isEmpty());
         assertEquals(2, r.ast.statements.size());
         assertInstanceOf(LetStatementNode.class, r.ast.statements.get(0));
@@ -189,25 +189,27 @@ class ParserTests {
 
     @Test
     void unexpectedTokenError() {
-        ParserResult r = parse("let = 5");
+        ParserResult r = parse("val = 5");
         assertFalse(r.errors.isEmpty());
     }
 
     @Test
     void missingArrowInLambda() {
-        ParserResult r = parse("\\x x");
-        assertFalse(r.errors.isEmpty());
+        ParserResult r = parse("(x: Int) x");
+        // Now parses as parenthesized ascription (x: Int) followed by x — syntactically valid
+        assertTrue(r.errors.isEmpty());
     }
 
     @Test
     void emptyParens() {
         ParserResult r = parse("()");
-        assertFalse(r.errors.isEmpty());
+        // () is now a valid unit literal
+        assertTrue(r.errors.isEmpty());
     }
 
     @Test
-    void letRec() {
-        ParserResult r = parse("let rec fact = \\n -> if n == 0 then 1 else n * fact (n - 1)");
+    void defFunction() {
+        ParserResult r = parse("def fact(n: Int): Int = if (n == 0) 1 else n * fact(n - 1)");
         assertTrue(r.errors.isEmpty());
         LetStatementNode let = (LetStatementNode) r.ast.statements.get(0);
         assertEquals("fact", let.name);
@@ -217,7 +219,7 @@ class ParserTests {
 
     @Test
     void typeAnnotation() {
-        ParserResult r = parse("let x : Number = 42");
+        ParserResult r = parse("val x: Int = 42");
         assertTrue(r.errors.isEmpty());
         LetStatementNode let = (LetStatementNode) r.ast.statements.get(0);
         assertEquals("x", let.name);
@@ -226,32 +228,32 @@ class ParserTests {
 
     @Test
     void dataDecl() {
-        ParserResult r = parse("data Maybe a = Nothing | Just a");
+        ParserResult r = parse("enum Maybe[A] { case Nothing; case Just(x: A) }");
         assertTrue(r.errors.isEmpty());
-        DataDeclNode data = (DataDeclNode) r.ast.statements.get(0);
-        assertEquals("Maybe", data.name);
-        assertEquals(1, data.params.size());
-        assertEquals("a", data.params.get(0));
-        assertEquals(2, data.constructors.size());
-        assertEquals("Nothing", data.constructors.get(0).name());
-        assertTrue(data.constructors.get(0).argTypes().isEmpty());
-        assertEquals("Just", data.constructors.get(1).name());
-        assertEquals(1, data.constructors.get(1).argTypes().size());
+        EnumDeclNode en = (EnumDeclNode) r.ast.statements.get(0);
+        assertEquals("Maybe", en.name);
+        assertEquals(1, en.params.size());
+        assertEquals("A", en.params.get(0));
+        assertEquals(2, en.constructors.size());
+        assertEquals("Nothing", en.constructors.get(0).name());
+        assertTrue(en.constructors.get(0).argTypes().isEmpty());
+        assertEquals("Just", en.constructors.get(1).name());
+        assertEquals(1, en.constructors.get(1).argTypes().size());
     }
 
     @Test
     void dataDeclNoParams() {
-        ParserResult r = parse("data Bool = True | False");
+        ParserResult r = parse("enum Bool { case True; case False }");
         assertTrue(r.errors.isEmpty());
-        DataDeclNode data = (DataDeclNode) r.ast.statements.get(0);
-        assertEquals("Bool", data.name);
-        assertTrue(data.params.isEmpty());
-        assertEquals(2, data.constructors.size());
+        EnumDeclNode en = (EnumDeclNode) r.ast.statements.get(0);
+        assertEquals("Bool", en.name);
+        assertTrue(en.params.isEmpty());
+        assertEquals(2, en.constructors.size());
     }
 
     @Test
     void caseExpr() {
-        ParserResult r = parse("case x of Nothing -> 0 | Just y -> y");
+        ParserResult r = parse("x match { case Nothing => 0; case Just(y) => y }");
         assertTrue(r.errors.isEmpty());
         CaseNode caseNode = (CaseNode) r.ast.statements.get(0);
         assertInstanceOf(IdentifierNode.class, caseNode.expr);
@@ -265,7 +267,7 @@ class ParserTests {
 
     @Test
     void caseMultiBindings() {
-        ParserResult r = parse("case p of Pair x y -> x");
+        ParserResult r = parse("p match { case Pair(x, y) => x }");
         assertTrue(r.errors.isEmpty());
         CaseNode caseNode = (CaseNode) r.ast.statements.get(0);
         assertEquals(1, caseNode.branches.size());
@@ -277,7 +279,7 @@ class ParserTests {
 
     @Test
     void semicolonsSkipBetweenStatements() {
-        ParserResult r = parse("let x = 1; let y = 2");
+        ParserResult r = parse("val x = 1; val y = 2");
         assertTrue(r.errors.isEmpty());
         assertEquals(3, r.ast.statements.size());
         assertInstanceOf(LetStatementNode.class, r.ast.statements.get(0));
@@ -294,6 +296,24 @@ class ParserTests {
     }
 
     @Test
+    void unaryMinus() {
+        ParserResult r = parse("-5");
+        assertTrue(r.errors.isEmpty());
+        UnaryExprNode unary = (UnaryExprNode) r.ast.statements.get(0);
+        assertEquals("-", unary.operator);
+        assertInstanceOf(LiteralNode.class, unary.operand);
+        assertEquals("5", ((LiteralNode)unary.operand).value);
+    }
+
+    @Test
+    void unaryMinusExpr() {
+        ParserResult r = parse("-(x + 1)");
+        assertTrue(r.errors.isEmpty());
+        UnaryExprNode unary = (UnaryExprNode) r.ast.statements.get(0);
+        assertEquals("-", unary.operator);
+    }
+
+    @Test
     void logicalAndOr() {
         ParserResult r = parse("true && false || true");
         assertTrue(r.errors.isEmpty());
@@ -301,7 +321,7 @@ class ParserTests {
 
     @Test
     void stringLiteral() {
-        ParserResult r = parse("let s = \"hello\"");
+        ParserResult r = parse("val s = \"hello\"");
         assertTrue(r.errors.isEmpty());
         LetStatementNode let = (LetStatementNode) r.ast.statements.get(0);
         assertInstanceOf(StringLiteralNode.class, let.value);
@@ -310,8 +330,8 @@ class ParserTests {
     }
 
     @Test
-    void recKeyword() {
-        ParserResult r = parse("let rec x = 42");
+    void defNoParams() {
+        ParserResult r = parse("def x = 42");
         assertTrue(r.errors.isEmpty());
         LetStatementNode let = (LetStatementNode) r.ast.statements.get(0);
         assertTrue(let.isRec);
@@ -319,7 +339,7 @@ class ParserTests {
 
     @Test
     void dataAndConstructorUsage() {
-        ParserResult r = parse("data Maybe a = Nothing | Just a\nlet x = Just 42");
+        ParserResult r = parse("enum Maybe[A] { case Nothing; case Just(x: A) }\nval x = Just(42)");
         assertTrue(r.errors.isEmpty());
         assertEquals(2, r.ast.statements.size());
     }

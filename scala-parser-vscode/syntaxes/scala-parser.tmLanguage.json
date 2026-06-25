@@ -17,7 +17,7 @@
       ]
     },
     "keywords": {
-      "match": "\\b(let|rec|data|case|of|if|then|else|true|false|succ|pred|iszero|print)\\b",
+      "match": "\\b(val|def|enum|match|case|if|else|true|false|succ|pred|iszero|print)\\b",
       "name": "keyword.control.scala-parser"
     },
     "numbers": {
@@ -30,7 +30,7 @@
       "name": "string.quoted.double.scala-parser"
     },
     "operators": {
-      "match": "->|\\\\|&&|\\|\\||[!<>!=]=?|[+\\-*/=()|]",
+      "match": "=>|&&|\\|\\||[!<>!=]=?|[+\\-*/=()|{}\\[\\],]",
       "name": "keyword.operator.scala-parser"
     },
     "identifiers": {

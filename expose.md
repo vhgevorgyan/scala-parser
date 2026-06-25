@@ -17,45 +17,68 @@ Ziel ist es, den gesamten Pipeline-Weg von der Eingabezeile über lexikalische A
 
 ## 2. Sprachdesign
 
-Die Sprache ist ein rein funktionaler Kern, angelehnt an Haskell/ML, jedoch mit minimaler Syntax:
+Die Sprache ist eine **an Scala 3 angelehnte, funktionale Minimalsprache** mit HM-Typinferenz:
 
 ```
--- Primitive Typen: Number, Bool, String
-let x = 42
+-- Primitive Typen: Int, Boolean, String, Unit
+val x = 42
+val u: Unit = ()
 
 -- Lambda:
-\x -> x + 1
+(x: Int) => x + 1
 
 -- Applikation:
-f x
+f(x)
+
+-- Unäres Minus:
+-x
 
 -- Boolsche Operatoren: &&, ||, !
 -- Vergleiche: ==, !=, <, >, <=, >=
 -- Arithmetik: +, -, *, /
 
--- Fallunterscheidung:
-if x > 0 then x else -x
+-- Fallunterscheidung (else optional):
+if (x > 0) x else -x
 
--- Rekursion:
-let rec fact = \n ->
-  if n == 0 then 1
-  else n * fact (n - 1)
+-- Rekursion (def, mit mehreren Parametern):
+def add(x: Int, y: Int): Int = x + y
+def fact(n: Int): Int =
+  if (n == 0) 1 else n * fact(n - 1)
 
--- Algebraische Datentypen:
-data Maybe a = Nothing | Just a
+-- Typannotation:
+val x: Int = 42
 
--- Pattern Matching:
-case x of Nothing -> 0 | Just y -> y
+-- Type Ascription:
+(x + 1: Int)
 
--- Typannotation (wird aktuell nicht validiert — siehe Abschnitt 4.3):
-let id : Number -> Number = \x -> x
+-- Block-Ausdruck:
+val r = { val a = 1; a + 1 }
+
+-- Algebraischer Datentyp (Scala 3 enum):
+enum Maybe[A] {
+  case Nothing
+  case Just(x: A)
+}
+
+-- Pattern Matching (match):
+x match {
+  case Nothing => 0
+  case Just(y)  => y
+}
+
+-- Literal-Patterns und Wildcard:
+x match {
+  case 0 => "zero"
+  case 1 => "one"
+  case _ => "many"
+}
 ```
 
 **Besonderheiten:**
-- Keine Seiteneffekte (rein funktional)
+- Keine Seiteneffekte (rein funktional, außer `print`)
 - Polymorphe let-Bindungen (let-Polymorphismus nach Hindley-Milner)
 - Currying (alle Funktionen sind einstellig)
-- Pattern Matching mit Konstruktoren
+- Pattern Matching mit Konstruktoren, Literalen und Wildcard
 
 ---
 
@@ -64,7 +87,7 @@ let id : Number -> Number = \x -> x
 ### 3.1 Lexer (Tokenisierung)
 
 Zeichenweises Scannen mit fehlertoleranter Behandlung:
-- Erkennung von Keywords, Identifiern, Zahlen, Strings, Operatoren
+- Erkennung von Keywords (`val`, `def`, `enum`, `match`, `case`, `if`, `else`, `true`, `false`), Identifiern, Zahlen, Strings, Operatoren (`=>`, `==`, `!=`, `<=`, `>=`, `&&`, `||`)
 - Kommentare `//` und `/* */`
 - Unbekannte Zeichen werden übersprungen (kein Abbruch)
 
@@ -73,8 +96,11 @@ Zeichenweises Scannen mit fehlertoleranter Behandlung:
 Recursive-Descent-Parser mit Operator-Präzedenz (14 Stufen):
 - Aufbau eines AST (Abstract Syntax Tree)
 - Fehlerrecovery (Synchronisation bei Syntaxfehlern)
-- Lookahead für `let rec` vs `let`
-- Parsen von Typannotationen
+- `parseValDef()`: `val x = expr` / `val x: Type = expr` / `def f(x: Type, ...): RetType = body` (mehrere Parameter mit Komma)
+- `parseMatchBody()`: `{ case P => body; ... }` (Konstruktor-, Literal- und Wildcard-Patterns)
+- `isLambdaStart()`: Lookahead erkennt `(x: Type) =>` vor Klammerausdruck
+- `parseBlock()`: `{ stmts }` als Block-Ausdruck
+- Applikation via `f(x)`-Syntax (paren-arguments)
 
 ### 3.3 Typinferenz (Hindley-Milner / Algorithmus W)
 
@@ -82,8 +108,10 @@ Herzstück der Arbeit:
 - **Unifikation** mit Occurs-Check
 - **let-Polymorphismus**: `generalize` → `instantiate`
 - **Type Schemes**: `forall a. a -> a`
-- **ADT-Constructor-Registrierung** bei data-Deklarationen
-- **Exhaustiveness-Prüfung** für Pattern Matching
+- **ADT-Constructor-Registrierung** bei enum-Deklarationen
+- **Exhaustiveness-Prüfung** für Pattern Matching (inkl. Wildcard `_`-Abdeckung)
+- **Type Ascription**: `(expr: Type)` für explizite Typannotation in Ausdrücken
+- **Unit-Typ**: `Unit` als vollwertiger Typ mit `()`-Literal
 - Fehlermeldungen mit Quelltext-Position und beteiligten Typen
 
 ### 3.4 Evaluator (Interpretation)
@@ -134,12 +162,12 @@ Zufallsgenerierte Programme mit Invarianten:
 |---|---|---|
 | **Soundness** | Type Soundness | Wohlgetypt → kein Laufzeitfehler |
 | **Stabilität** | Determinism | Gleiches Programm → gleicher Typ + Wert |
-| | Weakening | Unused Let ändert Typability nicht |
+| | Weakening | Unused val ändert Typability nicht |
 | **Round-Trip** | Parse Round-Trip | AST → Source → parse → identisch |
 | | Fuzz (5000×) | Wie oben, massiv mehr Iterationen |
 | **Fehlererkennung** | notOnNonBool | `!` auf Number → Fehler erwähnt Bool |
 | | ifCondMustBeBool | If mit Number → Fehler erwähnt Bool |
-| | noDirectSelfRecursion | `let rec f = f` wird abgefangen |
+| | noDirectSelfRecursion | `def f = f` wird abgefangen |
 | | undeclaredVariable | Unbekannte Variable → "Undefined" |
 | | exhaustivenessCheck | Fehlende Konstruktoren → "missing constructor" |
 | **Error Quality** | typeErrorMessagesAreInformative | Fehler >5 Zeichen, nicht leer |
@@ -204,9 +232,9 @@ Systematische Performance-Messung (`ScalingBenchmarks.java`) für Tokenize/Parse
 
 - Typklassen (Typeclasses) nach Haskell-Vorbild
 - Module / Namespaces
-- Laufzeit-Datentypen (tags für ADTs)
 - Optimierung (Tail-Call-Eliminierung)
 - Web-basiertes Playground (via LSP + Monaco Editor)
+- Laufzeit-Datentypen (tags für ADTs)
 
 ---
 

@@ -45,7 +45,7 @@ public class HoverProvider {
         }
 
         if (node instanceof LambdaNode lam) {
-            return "Lambda: \\" + lam.param + " -> ...";
+            return "Lambda: (" + lam.param + (lam.declaredType != null ? ": " + lam.declaredType : "") + ") => ...";
         }
 
         if (node instanceof ApplicationNode app) {
@@ -56,26 +56,26 @@ public class HoverProvider {
             return "Variable declaration: " + let.name;
         }
 
+        if (node instanceof EnumDeclNode en) {
+            String params = en.params.isEmpty() ? "" : "[" + String.join(", ", en.params) + "]";
+            String ctors = en.constructors.stream().map(c ->
+                c.name() + (c.argTypes().isEmpty() ? "" : "(" + String.join(", ", c.argTypes()) + ")")
+            ).reduce((a, b) -> a + "; " + b).orElse("");
+            return "Enum type: " + en.name + params + " { " + ctors + " }";
+        }
+
+        if (node instanceof UnitLiteralNode) {
+            return "Unit literal: ()";
+        }
+
+        if (node instanceof AscriptionNode asc) {
+            return "Type ascription: " + asc.declaredType;
+        }
+
         return null;
     }
 
     private static String typeToString(Type t) {
-        if (t instanceof TypeNumber) return "Number";
-        if (t instanceof TypeBool) return "Bool";
-        if (t instanceof TypeString) return "String";
-        if (t instanceof TypeVar v) return v.name();
-        if (t instanceof TypeFun f) {
-            String from = typeToString(f.from());
-            String to = typeToString(f.to());
-            if (f.from() instanceof TypeFun) from = "(" + from + ")";
-            return from + " -> " + to;
-        }
-        if (t instanceof TypeConstructor c) {
-            if (c.args().isEmpty()) return c.name();
-            StringBuilder sb = new StringBuilder(c.name());
-            for (Type a : c.args()) sb.append(" ").append(typeToString(a));
-            return sb.toString();
-        }
         return t.toString();
     }
 }

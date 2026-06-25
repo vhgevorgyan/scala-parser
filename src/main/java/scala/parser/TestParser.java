@@ -98,17 +98,19 @@ public class TestParser {
             return sb.toString();
         }
         if (node instanceof LetStatementNode l) {
-            return pad + "Let " + l.name + (l.isRec ? " (rec)" : "")
+            return pad + (l.isRec ? "Def " : "Val ") + l.name
+                + (l.declaredType != null ? " : " + l.declaredType : "")
                 + "\n" + astToString(l.value, indent + 1);
         }
-        if (node instanceof DataDeclNode d) {
-            return pad + "DataDecl " + d.name + "(" + String.join(" ", d.params) + ")"
+        if (node instanceof EnumDeclNode d) {
+            return pad + "EnumDecl " + d.name + "(" + String.join(" ", d.params) + ")"
                 + "\n" + pad + "  Constructors: "
                 + d.constructors.stream().map(c -> c.name() + "(" + String.join(" ", c.argTypes()) + ")")
                     .reduce((a, b) -> a + ", " + b).orElse("");
         }
         if (node instanceof LambdaNode lam) {
-            return pad + "Lambda \\" + lam.param
+            return pad + "Lambda (" + lam.param
+                + (lam.declaredType != null ? " : " + lam.declaredType : "") + ")"
                 + "\n" + astToString(lam.body, indent + 1);
         }
         if (node instanceof ApplicationNode app) {
@@ -117,10 +119,12 @@ public class TestParser {
                 + "\n" + astToString(app.argument, indent + 1);
         }
         if (node instanceof IfNode i) {
-            return pad + "If"
-                + "\n" + pad + "  Cond: " + astToString(i.condition, indent + 1)
-                + "\n" + pad + "  Then: " + astToString(i.thenBranch, indent + 1)
-                + "\n" + pad + "  Else: " + astToString(i.elseBranch, indent + 1);
+            var sb = new StringBuilder(pad + "If");
+            sb.append("\n").append(pad).append("  Cond: ").append(astToString(i.condition, indent + 1));
+            sb.append("\n").append(pad).append("  Then: ").append(astToString(i.thenBranch, indent + 1));
+            if (i.elseBranch != null)
+                sb.append("\n").append(pad).append("  Else: ").append(astToString(i.elseBranch, indent + 1));
+            return sb.toString();
         }
         if (node instanceof BinaryExprNode b) {
             return pad + "Binary " + b.operator
@@ -135,14 +139,31 @@ public class TestParser {
             var sb = new StringBuilder(pad + "Case");
             sb.append("\n").append(pad).append("  Expr: ").append(astToString(c.expr, indent + 1));
             for (var br : c.branches) {
-                sb.append("\n").append(pad).append("  Branch ").append(br.constructor()).append(" [");
-                for (var b : br.bindings()) sb.append(" ").append(b.name());
-                sb.append(" ]\n").append(astToString(br.body(), indent + 2));
+                if (br.constructor() != null) {
+                    sb.append("\n").append(pad).append("  Branch ").append(br.constructor()).append(" [");
+                    for (var b : br.bindings()) sb.append(" ").append(b.name());
+                    sb.append(" ]");
+                } else if (br.literalPattern() != null) {
+                    sb.append("\n").append(pad).append("  Branch literal ").append(astToString(br.literalPattern(), 0));
+                } else {
+                    sb.append("\n").append(pad).append("  Branch _");
+                }
+                sb.append("\n").append(astToString(br.body(), indent + 2));
             }
+            return sb.toString();
+        }
+        if (node instanceof BlockNode bn) {
+            var sb = new StringBuilder(pad + "Block");
+            for (var s : bn.statements)
+                sb.append("\n").append(astToString(s, indent + 1));
             return sb.toString();
         }
         if (node instanceof LiteralNode lit) return pad + "Lit(" + lit.value + ")";
         if (node instanceof BoolNode b) return pad + "Bool(" + b.value + ")";
+        if (node instanceof UnitLiteralNode) return pad + "Unit()";
+        if (node instanceof AscriptionNode asc) {
+            return pad + "Ascription(" + asc.declaredType + ")\n" + astToString(asc.expr, indent + 1);
+        }
         if (node instanceof StringLiteralNode s) return pad + "Str(\"" + s.value + "\")";
         if (node instanceof IdentifierNode id) return pad + "Ident(" + id.name + ")";
         return pad + node.getClass().getSimpleName() + "@" + System.identityHashCode(node);

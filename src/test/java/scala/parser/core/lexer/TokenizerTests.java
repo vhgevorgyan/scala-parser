@@ -37,20 +37,21 @@ class TokenizerTests {
 
     @Test
     void keywords() {
-        List<Token> tokens = tokenize("let true false if then else");
-        assertEquals(7, tokens.size());
-        assertEquals(TokenType.LET, tokens.get(0).type);
-        assertEquals(TokenType.TRUE, tokens.get(1).type);
-        assertEquals(TokenType.FALSE, tokens.get(2).type);
-        assertEquals(TokenType.IF, tokens.get(3).type);
-        assertEquals(TokenType.THEN, tokens.get(4).type);
+        List<Token> tokens = tokenize("val def true false if else match");
+        assertEquals(8, tokens.size());
+        assertEquals(TokenType.VAL, tokens.get(0).type);
+        assertEquals(TokenType.DEF, tokens.get(1).type);
+        assertEquals(TokenType.TRUE, tokens.get(2).type);
+        assertEquals(TokenType.FALSE, tokens.get(3).type);
+        assertEquals(TokenType.IF, tokens.get(4).type);
         assertEquals(TokenType.ELSE, tokens.get(5).type);
+        assertEquals(TokenType.MATCH, tokens.get(6).type);
     }
 
     @Test
     void operators() {
-        List<Token> tokens = tokenize("+ - * / == != < > <= >= -> \\ =");
-        assertEquals(14, tokens.size());
+        List<Token> tokens = tokenize("+ - * / == != < > <= >= => =");
+        assertEquals(13, tokens.size());
         assertEquals(TokenType.PLUS, tokens.get(0).type);
         assertEquals(TokenType.MINUS, tokens.get(1).type);
         assertEquals(TokenType.STAR, tokens.get(2).type);
@@ -62,8 +63,7 @@ class TokenizerTests {
         assertEquals(TokenType.LE, tokens.get(8).type);
         assertEquals(TokenType.GE, tokens.get(9).type);
         assertEquals(TokenType.ARROW, tokens.get(10).type);
-        assertEquals(TokenType.BACKSLASH, tokens.get(11).type);
-        assertEquals(TokenType.EQUAL, tokens.get(12).type);
+        assertEquals(TokenType.EQUAL, tokens.get(11).type);
     }
 
     @Test
@@ -76,9 +76,9 @@ class TokenizerTests {
 
     @Test
     void whitespaceHandling() {
-        List<Token> tokens = tokenize("  let   x\t= 42\n");
+        List<Token> tokens = tokenize("  val   x = 42\n");
         assertEquals(5, tokens.size());
-        assertEquals(TokenType.LET, tokens.get(0).type);
+        assertEquals(TokenType.VAL, tokens.get(0).type);
         assertEquals(TokenType.IDENT, tokens.get(1).type);
         assertEquals("x", tokens.get(1).text);
         assertEquals(TokenType.EQUAL, tokens.get(2).type);
@@ -127,21 +127,19 @@ class TokenizerTests {
 
     @Test
     void complexExpression() {
-        List<Token> tokens = tokenize("let f = \\x -> x + 1");
-        assertEquals(10, tokens.size());
-        assertEquals(TokenType.LET, tokens.get(0).type);
+        List<Token> tokens = tokenize("val f = (x: Int) => x + 1");
+        assertEquals(13, tokens.size());
+        assertEquals(TokenType.VAL, tokens.get(0).type);
         assertEquals(TokenType.IDENT, tokens.get(1).type);
         assertEquals("f", tokens.get(1).text);
         assertEquals(TokenType.EQUAL, tokens.get(2).type);
-        assertEquals(TokenType.BACKSLASH, tokens.get(3).type);
+        assertEquals(TokenType.LPAREN, tokens.get(3).type);
         assertEquals(TokenType.IDENT, tokens.get(4).type);
         assertEquals("x", tokens.get(4).text);
-        assertEquals(TokenType.ARROW, tokens.get(5).type);
+        assertEquals(TokenType.COLON, tokens.get(5).type);
         assertEquals(TokenType.IDENT, tokens.get(6).type);
-        assertEquals("x", tokens.get(6).text);
-        assertEquals(TokenType.PLUS, tokens.get(7).type);
-        assertEquals(TokenType.NUMBER, tokens.get(8).type);
-        assertEquals("1", tokens.get(8).text);
-        assertEquals(TokenType.EOF, tokens.get(9).type);
+        assertEquals("Int", tokens.get(6).text);
+        assertEquals(TokenType.RPAREN, tokens.get(7).type);
+        assertEquals(TokenType.ARROW, tokens.get(8).type);
     }
 }

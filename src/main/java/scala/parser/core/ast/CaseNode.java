@@ -14,5 +14,9 @@ public class CaseNode extends ExpressionNode {
     }
 
     public static record Binding(String name, int line, int column) {}
-    public static record CaseBranch(String constructor, List<Binding> bindings, ExpressionNode body) {}
+    public static record CaseBranch(String constructor, List<Binding> bindings, ExpressionNode body, ExpressionNode literalPattern) {
+        public CaseBranch(String constructor, List<Binding> bindings, ExpressionNode body) {
+            this(constructor, bindings, body, null);
+        }
+    }
 }
