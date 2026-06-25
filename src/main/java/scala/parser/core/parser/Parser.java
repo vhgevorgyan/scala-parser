@@ -6,6 +6,8 @@ import java.util.List;
 import scala.parser.core.ParserError;
 import scala.parser.core.ParserResult;
 import scala.parser.core.ast.*;
+import scala.parser.core.config.LanguageConfig;
+import scala.parser.core.config.LanguageFeature;
 import scala.parser.core.lexer.Token;
 import scala.parser.core.lexer.TokenType;
 import scala.parser.core.types.*;
@@ -13,12 +15,24 @@ import scala.parser.core.types.*;
 public class Parser {
 
     private final List<Token> tokens;
+    private final LanguageConfig config;
     private int pos = 0;
     private int lastLine = 0;
     private final List<ParserError> errors = new ArrayList<>();
 
     public Parser(List<Token> tokens) {
+        this(tokens, LanguageConfig.allEnabled());
+    }
+
+    public Parser(List<Token> tokens, LanguageConfig config) {
         this.tokens = tokens;
+        this.config = config;
+    }
+
+    private void requireFeature(LanguageFeature feature, Token token) {
+        if (!config.isEnabled(feature)) {
+            error("Feature '" + feature.name().toLowerCase() + "' is not enabled", token);
+        }
     }
 
     public ParserResult parse() {
@@ -76,13 +90,25 @@ public class Parser {
     private ASTNode parseStatement() {
         if (match(TokenType.SEMICOLON)) return new LiteralNode("0", -1, -1);
 
-        if (match(TokenType.TYPE)) return parseTypeAlias();
+        if (match(TokenType.TYPE)) {
+            requireFeature(LanguageFeature.TYPE_ALIAS, previous());
+            return parseTypeAlias();
+        }
 
-        if (match(TokenType.ENUM)) return parseEnumDecl();
+        if (match(TokenType.ENUM)) {
+            requireFeature(LanguageFeature.ADT, previous());
+            return parseEnumDecl();
+        }
 
-        if (match(TokenType.VAL)) return parseValDef(false);
+        if (match(TokenType.VAL)) {
+            requireFeature(LanguageFeature.LET, previous());
+            return parseValDef(false);
+        }
 
-        if (match(TokenType.DEF)) return parseValDef(true);
+        if (match(TokenType.DEF)) {
+            requireFeature(LanguageFeature.LET, previous());
+            return parseValDef(true);
+        }
 
         return parseExpression();
     }
@@ -213,6 +239,7 @@ public class Parser {
         if (match(TokenType.LPAREN)) {
             Type t = parseType();
             if (match(TokenType.COMMA)) {
+                requireFeature(LanguageFeature.TUPLE, previous());
                 List<Type> types = new ArrayList<>();
                 types.add(t);
                 do { types.add(parseType()); } while (match(TokenType.COMMA));
@@ -232,20 +259,26 @@ public class Parser {
     // ---------------------------------------------------------
     private ExpressionNode parseExpression() {
         if (match(TokenType.IF)) {
+            requireFeature(LanguageFeature.IF_UNIT, previous());
             return parseIf();
         }
 
-        ExpressionNode expr = parseLogicalOr();
+        ExpressionNode expr = config.isEnabled(LanguageFeature.ARITHMETIC)
+            ? parseLogicalOr() : parseApplication();
 
         if (match(TokenType.MATCH)) {
+            requireFeature(LanguageFeature.PATTERN_MATCH, previous());
             return parseMatchBody(expr);
         }
 
         // Range: expr .. expr
         if (match(TokenType.DOTDOT)) {
-            ExpressionNode right = parseLogicalOr();
+            requireFeature(LanguageFeature.RANGE_SUGAR, previous());
+            ExpressionNode right = config.isEnabled(LanguageFeature.ARITHMETIC)
+                ? parseLogicalOr() : parseApplication();
             expr = new BinaryExprNode(expr, "..", right, expr.line, expr.column);
             if (match(TokenType.COLON)) {
+                requireFeature(LanguageFeature.ASCRIPTION, previous());
                 Type t = parseType();
                 return new AscriptionNode(expr, t, expr.line, expr.column);
             }
@@ -254,6 +287,7 @@ public class Parser {
 
         // Type ascription: expr : Type
         if (match(TokenType.COLON)) {
+            requireFeature(LanguageFeature.ASCRIPTION, previous());
             Type t = parseType();
             return new AscriptionNode(expr, t, expr.line, expr.column);
         }
@@ -306,6 +340,7 @@ public class Parser {
 
             // Infix pattern: x :: xs =>  desugars to  ::(x, xs)
             if (peek().type == TokenType.IDENT && peek().text.equals("::")) {
+                requireFeature(LanguageFeature.INFIX_CONS, peek());
                 advance(); // consume ::
                 Token right = expect(TokenType.IDENT, "Expected binding name after '::'");
                 List<CaseNode.Binding> bindings = List.of(
@@ -402,10 +437,12 @@ public class Parser {
 
     private ExpressionNode parseUnary() {
         if (match(TokenType.NOT)) {
+            requireFeature(LanguageFeature.ARITHMETIC, previous());
             Token op = previous();
             return new UnaryExprNode(op.text, parseUnary(), op.line, op.column);
         }
         if (match(TokenType.MINUS)) {
+            requireFeature(LanguageFeature.ARITHMETIC, previous());
             Token op = previous();
             return new UnaryExprNode(op.text, parseUnary(), op.line, op.column);
         }
@@ -425,6 +462,7 @@ public class Parser {
         if (match(TokenType.LBRACE)) return parseBlock();
 
         if (match(TokenType.LBRACKET)) {
+            requireFeature(LanguageFeature.LIST_SUGAR, previous());
             return parseListLiteral(token);
         }
 
@@ -436,10 +474,12 @@ public class Parser {
             Token lparen = advance(); // consume (
             if (peek().type == TokenType.RPAREN) {
                 advance();
+                requireFeature(LanguageFeature.IF_UNIT, lparen);
                 return new UnitLiteralNode(lparen.line, lparen.column);
             }
             ExpressionNode first = parseExpression();
             if (match(TokenType.COMMA)) {
+                requireFeature(LanguageFeature.TUPLE, previous());
                 List<ExpressionNode> exprs = new ArrayList<>();
                 exprs.add(first);
                 do { exprs.add(parseExpression()); } while (match(TokenType.COMMA));

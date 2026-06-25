@@ -4,6 +4,7 @@ import java.util.List;
 
 import scala.parser.core.ParserError;
 import scala.parser.core.ParserResult;
+import scala.parser.core.config.LanguageConfig;
 import scala.parser.core.lexer.Token;
 import scala.parser.core.lexer.Tokenizer;
 import scala.parser.core.parser.Parser;
@@ -15,6 +16,7 @@ import scala.parser.core.interpreter.Value;
 public class CompilerPipeline {
 
     private int maxDepth = 1000;
+    private LanguageConfig config = LanguageConfig.allEnabled();
 
     public CompilerPipeline() {}
 
@@ -22,14 +24,31 @@ public class CompilerPipeline {
         this.maxDepth = maxDepth;
     }
 
+    public CompilerPipeline(LanguageConfig config) {
+        this.config = config;
+    }
+
+    public CompilerPipeline(int maxDepth, LanguageConfig config) {
+        this.maxDepth = maxDepth;
+        this.config = config;
+    }
+
     public void setMaxDepth(int maxDepth) {
         this.maxDepth = maxDepth;
+    }
+
+    public void setConfig(LanguageConfig config) {
+        this.config = config;
+    }
+
+    public LanguageConfig getConfig() {
+        return config;
     }
 
     public EvaluationResult analyze(String text) {
         Tokenizer tokenizer = new Tokenizer(text);
         List<Token> tokens = tokenizer.tokenize();
-        Parser parser = new Parser(tokens);
+        Parser parser = new Parser(tokens, config);
         ParserResult result = parser.parse();
 
         TypeChecker typeChecker = new TypeChecker(result.errors);

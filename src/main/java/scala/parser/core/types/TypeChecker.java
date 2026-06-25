@@ -122,7 +122,9 @@ public class TypeChecker {
         }
 
         if (node instanceof ExpressionNode expr) {
-            inferExpr(env, expr);
+            InferResult result = inferExpr(env, expr);
+            Type type = apply(result.sub, result.type);
+            inferredTypes.put(expr, type);
         }
     }
 
@@ -502,7 +504,7 @@ public class TypeChecker {
         }
 
         if (expr instanceof LambdaNode lam) {
-            Type paramType = lam.declaredType != null ? lam.declaredType : freshVar();
+            Type paramType = lam.declaredType != null ? resolveAliases(lam.declaredType) : freshVar();
             Map<String, TypeScheme> extEnv = new HashMap<>(env);
             extEnv.put(lam.param, new TypeScheme(List.of(), paramType));
             InferResult body = inferExpr(extEnv, lam.body);
