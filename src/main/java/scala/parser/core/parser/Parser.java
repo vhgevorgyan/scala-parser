@@ -429,6 +429,8 @@ public class Parser {
         while (true) {
             TokenType t = peek().type;
             if (t == TokenType.LPAREN || t == TokenType.LBRACE) {
+                // Don't cross line boundaries — a '(' or '{' on a new line starts a new statement
+                if (peek().line > expr.line) break;
                 expr = new ApplicationNode(expr, parseUnary(), expr.line, expr.column);
             } else break;
         }

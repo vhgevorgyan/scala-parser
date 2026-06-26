@@ -19,8 +19,10 @@ public class ScalaMapTest {
 
     private Value eval(String src) {
         EvaluationResult r = analyze(src);
-        assertTrue(r.parserResult().errors.isEmpty(),
-            "errors: " + r.parserResult().errors);
+        String errMsg = r.parserResult().errors.stream()
+            .map(e -> e.line + ":" + e.column + " " + e.message)
+            .collect(java.util.stream.Collectors.joining("; "));
+        assertTrue(r.parserResult().errors.isEmpty(), "errors: " + errMsg);
         return r.value();
     }
 
@@ -382,6 +384,114 @@ public class ScalaMapTest {
     }
 
     // ── 16. Typ-Polymorphismus (let-generalization) ──────────────
+
+    @Test
+    void letPolyTopLevel() {
+        // val id = (x) => x; id(42); id(true)
+        Value v = eval("""
+            val id = (x) => x
+            id(42)
+            id(true)
+            """);
+        assertInstanceOf(BoolValue.class, v);
+        assertTrue(((BoolValue) v).value);
+    }
+
+    @Test
+    void letPolyInBlock() {
+        Value v = eval("""
+            val result = {
+              val id = (x) => x
+              id(42)
+              id(true)
+            }
+            result
+            """);
+        assertInstanceOf(BoolValue.class, v);
+        assertTrue(((BoolValue) v).value);
+    }
+
+    @Test
+    void letPolyBlockBothUses() {
+        Value v = eval("""
+            val result = {
+              val id = (x) => x
+              (id(42), id("hello"))
+            }
+            result
+            """);
+        assertInstanceOf(TupleValue.class, v);
+    }
+
+    @Test
+    void letPolyBlockNested() {
+        Value v = eval("""
+            val r = {
+              val id = (x) => x
+              {
+                id(42)
+                id(true)
+              }
+            }
+            r
+            """);
+        assertInstanceOf(BoolValue.class, v);
+        assertTrue(((BoolValue) v).value);
+    }
+
+    @Test
+    void letPolyBlockWithNonPoly() {
+        Value v = eval("""
+            val r = {
+              val x = 42
+              val id = (y) => y
+              id(x)
+            }
+            r
+            """);
+        assertInstanceOf(NumberValue.class, v);
+        assertEquals(42, ((NumberValue) v).value);
+    }
+
+    @Test
+    void letPolyBlockReturnsId() {
+        // Block returns the polymorphic id itself
+        Value v = eval("""
+            val id = (x) => x
+            val f = { id }
+            f(42)
+            """);
+        assertInstanceOf(NumberValue.class, v);
+        assertEquals(42, ((NumberValue) v).value);
+    }
+
+    @Test
+    void letPolyBlockShadow() {
+        // Shadowing redefines id; the second definition is used
+        Value v = eval("""
+            val r = {
+              val id = (x) => x
+              val id = (y) => y + 1
+              id(41)
+            }
+            r
+            """);
+        assertInstanceOf(NumberValue.class, v);
+        assertEquals(42, ((NumberValue) v).value);
+    }
+
+    @Test
+    void letPolyRecDefInBlock() {
+        Value v = eval("""
+            val result = {
+              def loop(x: Int): Int = if (x ≤ 0) 0 else loop(x - 1)
+              loop(5)
+            }
+            result
+            """);
+        assertInstanceOf(NumberValue.class, v);
+        assertEquals(0, ((NumberValue) v).value);
+    }
 
     // ── 17. Gesamtabdeckung: all_features.sp ─────────────────────
 

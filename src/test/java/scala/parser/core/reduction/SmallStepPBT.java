@@ -145,7 +145,7 @@ class SmallStepPBT {
 
     // ── Let-generalization stress test ───────────────────────────
 
-    @Property(tries = 100)
+    @Property(tries = 200)
     void letGeneralization(@ForAll("genLetPoly") ExpressionNode raw) {
         var errors = new ArrayList<ParserError>();
         var tc = new TypeChecker(errors);
@@ -157,57 +157,68 @@ class SmallStepPBT {
 
     @Provide
     Arbitrary<ExpressionNode> genLetPoly() {
-        return Arbitraries.randomValue(random -> {
-            int variant = random.nextInt(4);
-            // All variants use polymorphic `id = (x) => x`
-            return switch (variant) {
-                case 0 -> {
-                    // Top-level: val id = (x) => x; id(42); id(true)
-                    var id = new LambdaNode("x", new IdentifierNode("x", 0, 0), null, 0, 0);
-                    var let = new LetStatementNode("id", id, false, null, 0, 0);
-                    var app1 = new ApplicationNode(new IdentifierNode("id", 0, 0),
-                        new LiteralNode("42", 0, 0), 0, 0);
-                    var app2 = new ApplicationNode(new IdentifierNode("id", 0, 0),
-                        new BoolNode(0, 0, true), 0, 0);
-                    var block = new BlockNode(List.of(let, app1, app2), 0, 0);
-                    yield block;
-                }
-                case 1 -> {
-                    // Nested: val id = (x) => x; { id(42); id(true) }
-                    var id = new LambdaNode("x", new IdentifierNode("x", 0, 0), null, 0, 0);
-                    var let = new LetStatementNode("id", id, false, null, 0, 0);
-                    var app1 = new ApplicationNode(new IdentifierNode("id", 0, 0),
-                        new LiteralNode("42", 0, 0), 0, 0);
-                    var app2 = new ApplicationNode(new IdentifierNode("id", 0, 0),
-                        new BoolNode(0, 0, true), 0, 0);
-                    var inner = new BlockNode(List.of(app1, app2), 0, 0);
-                    yield new BlockNode(List.of(let, inner), 0, 0);
-                }
-                case 2 -> {
-                    // Multiple generalized lets
-                    var id1 = new LambdaNode("x", new IdentifierNode("x", 0, 0), null, 0, 0);
-                    var let1 = new LetStatementNode("id1", id1, false, null, 0, 0);
-                    var id2 = new LambdaNode("x", new IdentifierNode("x", 0, 0), null, 0, 0);
-                    var let2 = new LetStatementNode("id2", id2, false, null, 0, 0);
-                    var app1 = new ApplicationNode(new IdentifierNode("id1", 0, 0),
-                        new LiteralNode("42", 0, 0), 0, 0);
-                    var app2 = new ApplicationNode(new IdentifierNode("id2", 0, 0),
-                        new BoolNode(0, 0, true), 0, 0);
-                    var block = new BlockNode(List.of(let1, let2, app1, app2), 0, 0);
-                    yield block;
-                }
-                default -> {
-                    // let with ascription
-                    var id = new LambdaNode("x", new IdentifierNode("x", 0, 0),
-                        null, 0, 0);
-                    var let = new LetStatementNode("id", id, false, new TypeFun(
-                        new TypeVar("a"), new TypeVar("a")), 0, 0);
-                    var app = new ApplicationNode(new IdentifierNode("id", 0, 0),
-                        new LiteralNode("42", 0, 0), 0, 0);
-                    yield new BlockNode(List.of(let, app), 0, 0);
-                }
-            };
-        });
+        return Arbitraries.randomValue(random -> genLetPolyBlock(random, 2, 0));
+    }
+
+    private ExpressionNode genLetPolyBlock(Random rand, int maxDepth, int depth) {
+        int numLets = rand.nextInt(4) + 1; // 1-4 lets
+        var stmts = new ArrayList<ASTNode>();
+        var polyNames = new ArrayList<String>();
+        var monoNames = new ArrayList<String>();
+
+        for (int i = 0; i < numLets; i++) {
+            if (rand.nextBoolean()) {
+                String name = "f" + depth + "_" + i;
+                polyNames.add(name);
+                stmts.add(new LetStatementNode(name,
+                    new LambdaNode("x" + i, new IdentifierNode("x" + i, 0, 0),
+                        null, 0, 0),
+                    false, null, 0, 0));
+            } else {
+                String name = "n" + depth + "_" + i;
+                monoNames.add(name);
+                stmts.add(new LetStatementNode(name,
+                    rand.nextBoolean()
+                        ? new LiteralNode(String.valueOf(rand.nextInt(100)), 0, 0)
+                        : new BoolNode(0, 0, rand.nextBoolean()),
+                    false, null, 0, 0));
+            }
+        }
+
+        // Uses of polymorphic lets (apply to different types)
+        for (String name : polyNames) {
+            ExpressionNode arg1 = rand.nextBoolean()
+                ? new LiteralNode(String.valueOf(rand.nextInt(100)), 0, 0)
+                : new BoolNode(0, 0, rand.nextBoolean());
+            stmts.add(new ApplicationNode(
+                new IdentifierNode(name, 0, 0), arg1, 0, 0));
+            if (rand.nextDouble() < 0.7) {
+                ExpressionNode arg2 = rand.nextBoolean()
+                    ? new LiteralNode(String.valueOf(rand.nextInt(100)), 0, 0)
+                    : new BoolNode(0, 0, rand.nextBoolean());
+                stmts.add(new ApplicationNode(
+                    new IdentifierNode(name, 0, 0), arg2, 0, 0));
+            }
+        }
+
+        // Uses of monomorphic lets
+        for (String name : monoNames) {
+            if (rand.nextDouble() < 0.5) {
+                stmts.add(new IdentifierNode(name, 0, 0));
+            }
+        }
+
+        // Maybe add a nested block
+        if (depth < maxDepth && rand.nextDouble() < 0.3) {
+            stmts.add(genLetPolyBlock(rand, maxDepth, depth + 1));
+        }
+
+        // Ensure we have at least 2 statements
+        if (stmts.size() < 2) {
+            stmts.add(new LiteralNode("42", 0, 0));
+        }
+
+        return new BlockNode(stmts, 0, 0);
     }
 
     // ── Helpers ─────────────────────────────────────────────────
