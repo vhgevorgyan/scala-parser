@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 
 import scala.parser.lsp.CompilerPipeline;
-import scala.parser.core.interpreter.EvaluationResult;
 
 class EvaluatorTests {
 
@@ -386,5 +385,42 @@ class EvaluatorTests {
     void nestedConstructorInCase() {
         Value v = eval("enum Maybe[A] { case Nothing; case Just(x: A) }\nval x = Just(Just(42))\nx match { case Nothing => 0; case Just(y) => y match { case Nothing => 0; case Just(z) => z } }");
         assertEquals(42, ((NumberValue) v).value);
+    }
+
+    // ── Stack-safety / depth limit ───────────────────────────────
+
+    @Test
+    void depthLimitExceeded() {
+        var src = "def f(n: Int): Int = if (n == 0) 0 else f(n - 1); f(50)";
+        var r = new CompilerPipeline().analyze(src);
+        assertTrue(r.parserResult().errors.isEmpty());
+        // Default Evaluator has maxDepth=1000; create one with a tight limit
+        var e = new Evaluator(10);
+        assertThrows(RuntimeException.class, () -> e.evalProgram(r.parserResult().ast),
+            "Deep recursion must hit depth limit");
+    }
+
+    @Test
+    void depthLimitOkWithinBound() {
+        var src = "def f(n: Int): Int = if (n == 0) 0 else f(n - 1); f(5)";
+        var r = new CompilerPipeline().analyze(src);
+        assertTrue(r.parserResult().errors.isEmpty());
+        var e = new Evaluator(20);
+        Value v = e.evalProgram(r.parserResult().ast);
+        assertNotNull(v);
+        assertEquals(0, ((NumberValue) v).value);
+    }
+
+    @Test
+    void depthLimitEnforcedInMutualRecursion() {
+        // Deep mutual recursion must also hit the depth limit
+        var src = "def even(n: Int): Boolean = if (n == 0) true else odd(n - 1);\n" +
+                  "def odd(n: Int): Boolean = if (n == 0) false else even(n - 1);\n" +
+                  "even(50)";
+        var r = new CompilerPipeline().analyze(src);
+        assertTrue(r.parserResult().errors.isEmpty());
+        var e = new Evaluator(10);
+        assertThrows(RuntimeException.class, () -> e.evalProgram(r.parserResult().ast),
+            "Deep mutual recursion must hit depth limit");
     }
 }

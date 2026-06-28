@@ -8,10 +8,6 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 import scala.parser.core.ParserError;
-import scala.parser.core.ParserResult;
-import scala.parser.core.ast.*;
-import scala.parser.core.lexer.Tokenizer;
-import scala.parser.core.parser.Parser;
 import scala.parser.core.interpreter.EvaluationResult;
 import scala.parser.lsp.CompilerPipeline;
 
@@ -110,5 +106,53 @@ class TypeErrorMessageQualityTest {
         String msg = firstError("-true");
         assertTrue(msg.contains("expected") && msg.contains("Int"),
             "Should indicate expected Int: " + msg);
+    }
+
+    // ── Mutual recursion type error tests ────────────────────────
+
+    @Test
+    void mutualRecursionArgumentTypeMismatch() {
+        String msg = firstError(
+            "def f(x: Int) = x; def g(y: Boolean) = f(y)"
+        );
+        assertTrue(msg.contains("expected") && msg.contains("but got"),
+            "Argument type mismatch in mutual rec def, got: " + msg);
+    }
+
+    @Test
+    void mutualRecursionAnnotationMismatch() {
+        String msg = firstError(
+            "def even(n: Int): Int = if (n == 0) true else odd(n - 1); def odd(n: Int): Boolean = even(n - 1)"
+        );
+        assertTrue(msg.contains("expected") && msg.contains("but got"),
+            "Annotation mismatch in mutual rec def, got: " + msg);
+    }
+
+    @Test
+    void mutualRecursionCallNonFunction() {
+        String msg = firstError("def x = 5; def y = x(3)");
+        assertTrue(msg.contains("Cannot apply") || (msg.contains("expected") && msg.contains("but got")),
+            "Calling non-function in mutual rec, got: " + msg);
+    }
+
+    @Test
+    void mutualRecursionBodyTypeMismatchInBlock() {
+        String msg = firstError(
+            "{ def f(x: Int): Boolean = x; def g(y: Boolean): Int = y }"
+        );
+        assertTrue(msg.contains("expected") && msg.contains("but got"),
+            "Annotation mismatch in block mutual rec, got: " + msg);
+    }
+
+    @Test
+    void mutualRecursionThreeWayResolves() {
+        // Three mutually recursive defs; `c` calls `a` with wrong argument type
+        String msg = firstError(
+            "def a(n: Int): Int = if (n == 0) 0 else b(n - 1);" +
+            "def b(n: Int): Int = if (n == 0) 0 else a(n - 1);" +
+            "def c(n: Int): Int = if (n == 0) 0 else a(\"hi\")"
+        );
+        assertTrue(msg.contains("expected") && msg.contains("but got"),
+            "Three-way mutual rec type error, got: " + msg);
     }
 }
