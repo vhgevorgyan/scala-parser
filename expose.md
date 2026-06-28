@@ -228,7 +228,46 @@ Systematische Performance-Messung (`ScalingBenchmarks.java`) für Tokenize/Parse
 
 ---
 
-## 8. Ausblick / Erweiterungsmöglichkeiten
+## 8. Related Work
+
+### 8.1 MiniML (Leroy et al., 1990er–heute)
+
+Die Referenzimplementierung der Hindley-Milner-Typinferenz in OCaml. MiniML dient als Lehrsprache im TAPL-Kurs von Pierce und ist der historische Ausgangspunkt für viele HM-basierte Sprachprototypen. Unsere Arbeit unterscheidet sich durch:
+- Direkte Integration in eine **IDE (LSP/VS Code)**, nicht nur Compiler/REPL
+- **Erweiterte Sprachfeatures**: ADTs, Pattern Matching, Blocksyntax
+- **Nicht in OCaml**, sondern in Java — als Demonstrator für die Übertragbarkeit des Algorithmus
+- **Systematische Mutation- und Property-Based-Tests**, die über die typischen Unit-Tests von MiniML hinausgehen
+
+### 8.2 Plait (Felleisen et al., 2018)
+
+Plait ist eine in Racket eingebettete Sprache für den Programmiergrundlagenunterricht, die ein HM-ähnliches Typsystem mit algebraischen Datentypen bietet. Vergleichspunkte:
+- Plait setzt auf **gradual typing** und Fehlermeldungen für Anfänger, unser System auf **vollständige HM-Inferenz** mit let-Polymorphismus
+- Plait-Programme werden in Racket ausgeführt; unser System hat einen eigenständigen **Tree-Walking-Evaluator** und **Small-Step-Reduzierer**
+- Beide Systeme unterstützen Pattern Matching und rekursive Definitionen
+
+### 8.3 LambdaJS (Guerraoui et al., 2013)
+
+LambdaJS ist ein Kernkalkül zur Formalisierung von JavaScript mit HM-Typinferenz. Relevanz:
+- Zeigt, dass HM auch auf **imperative Sprachfeatures** anwendbar ist (unsere Sprache ist rein funktional)
+- LambdaJS hat **keine LSP-Integration** und keinen eigenständigen Evaluator
+- Unser formales Modell in `docs/lambda-core.md` ist vergleichbar detailliert, aber auf einen **Scala-3-artigen Kern** zugeschnitten
+
+### 8.4 DOT-Kalkül (Odersky et al., 2016–2024)
+
+Der Dependent Object Types (DOT)-Kalkül ist die formale Grundlage von Scala 3 und wesentlich mächtiger (Pfadabhängige Typen, Intersection/Union-Typen, Type Member). Unsere Arbeit:
+- Bleibt bewusst **einfach (HM + ADTs)**, um die Pipeline-Klarheit zu wahren
+- Ersetzt DOTs Komplexität durch **explizite Desugarisierung** von Scala-3-Konstrukten in λ-Core (dokumentiert in `docs/scala-map.md`)
+- Zeigt, dass selbst ein einfaches Typsystem **industrietaugliche IDE-Unterstützung** (LSP) ermöglicht
+
+### 8.5 Weitere
+
+- **Typed Racket (Tobin-Hochstadt, 2010)**: Gradually typed, optionales HM; Fokus auf Migration ungetypter → getypter Programme
+- **Haskell (Peyton Jones, 2003)**: HM + Typeclasses; deutlich mächtiger, aber auch komplexere Inferenz (kein vollständiger Algorithmus W)
+- **Elm (Czaplicki, 2012)**: HM + extrem benutzerfreundliche Fehlermeldungen; Inspiration für unsere Fehlerlokalisierungsanalyse
+
+---
+
+## 10. Ausblick / Erweiterungsmöglichkeiten
 
 - Typklassen (Typeclasses) nach Haskell-Vorbild
 - Module / Namespaces
@@ -238,7 +277,7 @@ Systematische Performance-Messung (`ScalingBenchmarks.java`) für Tokenize/Parse
 
 ---
 
-## 9. Dokumentation (`docs/`)
+## 11. Dokumentation (`docs/`)
 
 - **`docs/architecture.md`** – Drei Mermaid-Diagramme (Systemübersicht, Data Flow, Dependency Graph) + Paketstruktur
 - **`docs/grammar.md`** – Vollständige BNF-Grammatik, Operator-Präzedenztabelle, HM-Typregeln (Lam, App, Let, LetRec, Case, Data)

@@ -72,6 +72,28 @@ public class ScalaMapTest {
         assertEquals(120, ((NumberValue) v).value);
     }
 
+    @Test
+    void mutualRecursionEvenOdd() {
+        Value v = eval(
+            "def even(n: Int): Boolean = if (n == 0) true else odd(n - 1);\n" +
+            "def odd(n: Int): Boolean = if (n == 0) false else even(n - 1);\n" +
+            "even(5)"
+        );
+        assertInstanceOf(BoolValue.class, v);
+        assertEquals(false, ((BoolValue) v).value);
+    }
+
+    @Test
+    void mutualRecursionEvenOddAlternate() {
+        Value v = eval(
+            "def even(n: Int): Boolean = if (n == 0) true else odd(n - 1);\n" +
+            "def odd(n: Int): Boolean = if (n == 0) false else even(n - 1);\n" +
+            "odd(5)"
+        );
+        assertInstanceOf(BoolValue.class, v);
+        assertEquals(true, ((BoolValue) v).value);
+    }
+
     // ── 3. If / Unit ──────────────────────────────────────────────
 
     @Test
@@ -527,4 +549,5 @@ public class ScalaMapTest {
         assertEquals(1, ((NumberValue) tv.values.get(0)).value);
         assertEquals(10, ((NumberValue) tv.values.get(1)).value);
     }
+
 }

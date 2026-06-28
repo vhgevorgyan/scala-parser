@@ -45,6 +45,7 @@ public class Parser {
             if (pos == before) advance();
         }
 
+        statements = mergeMutualDefs(statements);
         ProgramNode program = new ProgramNode(statements);
         return new ParserResult(program, errors);
     }
@@ -547,7 +548,42 @@ public class Parser {
             stmts.add(parseStatement());
         }
         expect(TokenType.RBRACE, "Expected '}'");
+        stmts = mergeMutualDefs(stmts);
         return new BlockNode(stmts, start.line, start.column);
+    }
+
+    /** Merge adjacent recursive LetStatementNodes into MutualLetNodes. */
+    private List<ASTNode> mergeMutualDefs(List<ASTNode> stmts) {
+        List<ASTNode> result = new ArrayList<>();
+        int i = 0;
+        while (i < stmts.size()) {
+            if (stmts.get(i) instanceof LetStatementNode let && let.isRec) {
+                List<LetStatementNode> mutual = new ArrayList<>();
+                mutual.add(let);
+                int j = i + 1;
+                // Skip semicolon artifacts between defs
+                while (j < stmts.size() && isSemicolonArtifact(stmts.get(j))) j++;
+                while (j < stmts.size() && stmts.get(j) instanceof LetStatementNode next && next.isRec) {
+                    mutual.add(next);
+                    j++;
+                    while (j < stmts.size() && isSemicolonArtifact(stmts.get(j))) j++;
+                }
+                if (mutual.size() > 1) {
+                    result.add(new MutualLetNode(new ArrayList<>(mutual), let.line, let.column));
+                } else {
+                    result.add(let);
+                }
+                i = j;
+            } else {
+                result.add(stmts.get(i));
+                i++;
+            }
+        }
+        return result;
+    }
+
+    private boolean isSemicolonArtifact(ASTNode node) {
+        return node instanceof LiteralNode l && l.value.equals("0") && l.line == -1 && l.column == -1;
     }
 
     private ExpressionNode parseListLiteral(Token start) {

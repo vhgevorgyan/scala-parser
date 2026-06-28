@@ -225,7 +225,7 @@ class SmallStepPBT {
 
     private static ExpressionNode genExpr(Random rand, int depth) {
         if (depth <= 0) return genLeaf(rand);
-        return switch (rand.nextInt(10)) {
+        return switch (rand.nextInt(13)) {
             case 0, 1 -> genLeaf(rand);
             case 2 -> new LiteralNode(String.valueOf(rand.nextInt(1000)), 0, 0);
             case 3 -> new BoolNode(0, 0, rand.nextBoolean());
@@ -246,8 +246,37 @@ class SmallStepPBT {
             case 8 -> new UnaryExprNode(
                 rand.nextBoolean() ? "!" : "-",
                 genExpr(rand, depth - 1), 0, 0);
+            case 9 -> genRandomBlock(rand, depth);
+            case 10 -> {
+                int arity = 2 + rand.nextInt(2); // 2-3 elements
+                var elems = new ArrayList<ExpressionNode>();
+                for (int i = 0; i < arity; i++)
+                    elems.add(genExpr(rand, depth - 1));
+                yield new TupleNode(elems, 0, 0);
+            }
+            case 11 -> new AscriptionNode(genExpr(rand, depth - 1),
+                List.of(new TypeNumber(), new TypeBool(), new TypeString(), new TypeUnit())
+                    .get(rand.nextInt(4)), 0, 0);
             default -> genLeaf(rand);
         };
+    }
+
+    private static ExpressionNode genRandomBlock(Random rand, int depth) {
+        int numStmts = 1 + rand.nextInt(4); // 1-4 statements
+        var stmts = new ArrayList<ASTNode>();
+        for (int i = 0; i < numStmts - 1; i++) {
+            if (rand.nextBoolean()) {
+                String name = IDENTS.get(rand.nextInt(IDENTS.size())) + "_" + i;
+                stmts.add(new LetStatementNode(name,
+                    genExpr(rand, depth - 1), rand.nextBoolean(),
+                    null, 0, 0));
+            } else {
+                stmts.add(genExpr(rand, depth - 1));
+            }
+        }
+        // Last statement is always an expression
+        stmts.add(genExpr(rand, depth - 1));
+        return new BlockNode(stmts, 0, 0);
     }
 
     private static ExpressionNode genLeaf(Random rand) {
@@ -271,6 +300,7 @@ class SmallStepPBT {
             return "(" + t.elements.stream().map(SmallStepPBT::valueNodeToString)
                 .collect(Collectors.joining(", ")) + ")";
         }
+        if (node instanceof AscriptionNode a) return valueNodeToString(a.expr);
         return null;
     }
 }

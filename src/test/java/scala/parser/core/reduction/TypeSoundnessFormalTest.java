@@ -228,6 +228,74 @@ public class TypeSoundnessFormalTest {
         assertInstanceOf(LambdaNode.class, result);
     }
 
+    /** BlockNode reduction: { val x = 42; x } → 42 */
+    @Test
+    void blockLetReduces() {
+        ParserResult r = parse("{ val x = 42; x }");
+        assertTrue(r.errors.isEmpty());
+        check(r);
+
+        ExpressionNode expr = (ExpressionNode) r.ast.statements.get(0);
+        ExpressionNode v = SmallStepReducer.reduce(expr);
+        assertTrue(SmallStepReducer.isValue(v));
+        assertInstanceOf(LiteralNode.class, v);
+        assertEquals("42", ((LiteralNode) v).value);
+    }
+
+    /** BlockNode reduction: { (x) => x; (42) } → 42 */
+    @Test
+    void blockExprReduces() {
+        ParserResult r = parse("{ ((x: Int) => x)(42) }");
+        assertTrue(r.errors.isEmpty());
+        check(r);
+
+        ExpressionNode expr = (ExpressionNode) r.ast.statements.get(0);
+        ExpressionNode v = SmallStepReducer.reduce(expr);
+        assertTrue(SmallStepReducer.isValue(v));
+        assertInstanceOf(LiteralNode.class, v);
+        assertEquals("42", ((LiteralNode) v).value);
+    }
+
+    /** BlockNode: single expression unwraps */
+    @Test
+    void blockSingleExpr() {
+        ParserResult r = parse("{ 42 }");
+        assertTrue(r.errors.isEmpty());
+
+        ExpressionNode expr = (ExpressionNode) r.ast.statements.get(0);
+        ExpressionNode v = SmallStepReducer.reduce(expr);
+        assertTrue(SmallStepReducer.isValue(v));
+        assertInstanceOf(LiteralNode.class, v);
+    }
+
+    /** BlockNode: multiple lets substitute correctly */
+    @Test
+    void blockMultipleLets() {
+        ParserResult r = parse("{ val x = 5; val y = x + 3; y }");
+        assertTrue(r.errors.isEmpty());
+        check(r);
+
+        ExpressionNode expr = (ExpressionNode) r.ast.statements.get(0);
+        ExpressionNode v = SmallStepReducer.reduce(expr);
+        assertTrue(SmallStepReducer.isValue(v));
+        assertInstanceOf(LiteralNode.class, v);
+        assertEquals("8", ((LiteralNode) v).value);
+    }
+
+    /** BlockNode: let with lambda body */
+    @Test
+    void blockLetLambda() {
+        ParserResult r = parse("{ val id = (x: Int) => x; id(42) }");
+        assertTrue(r.errors.isEmpty());
+        check(r);
+
+        ExpressionNode expr = (ExpressionNode) r.ast.statements.get(0);
+        ExpressionNode v = SmallStepReducer.reduce(expr);
+        assertTrue(SmallStepReducer.isValue(v));
+        assertInstanceOf(LiteralNode.class, v);
+        assertEquals("42", ((LiteralNode) v).value);
+    }
+
     // ── Helpers ─────────────────────────────────────────────────
 
     private String astToString(ExpressionNode expr) {

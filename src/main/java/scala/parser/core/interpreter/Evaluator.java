@@ -1,7 +1,9 @@
 package scala.parser.core.interpreter;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import scala.parser.core.ast.*;
 
@@ -82,6 +84,25 @@ public class Evaluator {
 
             env.define(let.name, v);
             return v;
+        }
+
+        if (node instanceof MutualLetNode mutual) {
+            Env sharedEnv = new Env(env);
+            Value lastValue = null;
+            for (LetStatementNode def : mutual.defs) {
+                Value v = eval(def.value, env);
+                if (v instanceof ClosureValue clos) {
+                    ClosureValue recClos = new ClosureValue(clos.param, clos.body, sharedEnv);
+                    sharedEnv.define(def.name, recClos);
+                    env.define(def.name, recClos);
+                    lastValue = recClos;
+                } else {
+                    sharedEnv.define(def.name, v);
+                    env.define(def.name, v);
+                    lastValue = v;
+                }
+            }
+            return lastValue;
         }
 
         if (node instanceof ExpressionNode expr) {

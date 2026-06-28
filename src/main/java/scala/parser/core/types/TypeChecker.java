@@ -50,6 +50,24 @@ public class TypeChecker {
 
     public Map<ASTNode, Type> getInferredTypes() { return inferredTypes; }
 
+    private void reportError(String message, ASTNode location) {
+        int span = estimateSpan(location);
+        errors.add(new ParserError(message, location.line, location.column, span));
+    }
+
+    private void reportTypeError(String context, ASTNode location, Type expected, Type actual) {
+        reportError(context + " — expected " + expected + " but got " + actual, location);
+    }
+
+    private int estimateSpan(ASTNode node) {
+        if (node instanceof IdentifierNode id) return Math.max(1, id.name.length());
+        if (node instanceof LiteralNode lit) return Math.max(1, lit.value.length());
+        if (node instanceof BoolNode) return 5;
+        if (node instanceof StringLiteralNode s) return Math.max(2, s.value.length() + 2);
+        if (node instanceof UnitLiteralNode) return 2;
+        return 1;
+    }
+
     public void check(ASTNode node) {
         if (node instanceof ProgramNode program) {
             for (ASTNode stmt : program.statements) check(stmt);
@@ -72,7 +90,7 @@ public class TypeChecker {
 
             if (let.isRec) {
                 if (let.value instanceof IdentifierNode id && id.name.equals(let.name)) {
-                    errors.add(new ParserError("Recursive let '" + let.name + "' directly refers to itself; wrap body in a lambda", let.line, let.column));
+                    reportError("Recursive let '" + let.name + "' directly refers to itself — wrap body in a lambda", let);
                     return;
                 }
                 TypeVar recType = freshVar();
@@ -83,10 +101,22 @@ public class TypeChecker {
                 try {
                     sub = compose(unify(apply(sub, recType), type), sub);
                 } catch (TypeErrorException e) {
-                    errors.add(new ParserError("Type mismatch in recursive let '" + let.name + "'", let.line, let.column));
+                    errors.add(new ParserError("Type mismatch in recursive let '" + let.name + "' — expected " + apply(sub, recType) + " but body has type " + type, let.line, let.column));
                     return;
                 }
                 type = apply(sub, type);
+                if (let.declaredType != null) {
+                    Type ann = resolveAliases(let.declaredType);
+                    Type returnType = type;
+                    while (returnType instanceof TypeFun f) { returnType = f.to(); }
+                    try {
+                        sub = compose(unify(returnType, ann), sub);
+                    } catch (TypeErrorException e) {
+                        reportTypeError("Type annotation mismatch in '" + let.name + "'", let, ann, returnType);
+                        return;
+                    }
+                    type = apply(sub, type);
+                }
                 applySubToEnv(sub);
                 TypeScheme scheme = generalize(env, type);
                 env.put(let.name, scheme);
@@ -102,11 +132,7 @@ public class TypeChecker {
                     try {
                         sub = compose(unify(type, ann), sub);
                     } catch (TypeErrorException e) {
-                        String detail = e.left != null ? "cannot unify " + e.left + " with " + e.right
-                            : "declared " + ann + " vs inferred " + type;
-                        errors.add(new ParserError(
-                                "Type annotation mismatch in '" + let.name + "': " + detail,
-                                let.line, let.column));
+                        reportTypeError("Type annotation mismatch in '" + let.name + "'", let, ann, type);
                         return;
                     }
                     type = apply(sub, type);
@@ -117,6 +143,48 @@ public class TypeChecker {
                 env.put(let.name, scheme);
                 inferredTypes.put(let.value, type);
                 inferredTypes.put(let, scheme.body());
+            }
+            return;
+        }
+
+        if (node instanceof MutualLetNode mutual) {
+            // Phase 1: allocate fresh type variables for all defs
+            Map<String, TypeVar> recVars = new HashMap<>();
+            for (LetStatementNode def : mutual.defs) {
+                TypeVar recType = freshVar();
+                recVars.put(def.name, recType);
+                env.put(def.name, new TypeScheme(List.of(), recType));
+            }
+            // Phase 2: infer all bodies with all names in scope
+            for (LetStatementNode def : mutual.defs) {
+                TypeVar recType = recVars.get(def.name);
+                InferResult result = inferExpr(env, def.value);
+                Substitution sub = result.sub;
+                Type type = apply(sub, result.type);
+                try {
+                    sub = compose(unify(apply(sub, recType), type), sub);
+                } catch (TypeErrorException e) {
+                    errors.add(new ParserError("Type mismatch in recursive '" + def.name + "' — expected " + apply(sub, recType) + " but body has type " + type, def.line, def.column));
+                    continue;
+                }
+                type = apply(sub, type);
+                if (def.declaredType != null) {
+                    Type ann = resolveAliases(def.declaredType);
+                    Type returnType = type;
+                    while (returnType instanceof TypeFun f) { returnType = f.to(); }
+                    try {
+                        sub = compose(unify(returnType, ann), sub);
+                    } catch (TypeErrorException e) {
+                        reportTypeError("Type annotation mismatch in '" + def.name + "'", def, ann, returnType);
+                        continue;
+                    }
+                    type = apply(sub, type);
+                }
+                applySubToEnv(sub);
+                TypeScheme scheme = generalize(env, type);
+                env.put(def.name, scheme);
+                inferredTypes.put(def.value, type);
+                inferredTypes.put(def, scheme.body());
             }
             return;
         }
@@ -216,7 +284,7 @@ public class TypeChecker {
         if (expr instanceof IdentifierNode id) {
             TypeScheme scheme = env.get(id.name);
             if (scheme == null) {
-                errors.add(new ParserError("Undefined variable '" + id.name + "'", id.line, id.column));
+                reportError("Undefined variable '" + id.name + "'", id);
                 return new InferResult(new Substitution(), new TypeVar("?"));
             }
             return new InferResult(new Substitution(), instantiate(scheme));
@@ -245,8 +313,7 @@ public class TypeChecker {
                     return new InferResult(compose(s2, s1), new TypeNumber());
                 } catch (TypeErrorException e) {
                     String got = apply(s1, t1).toString();
-                    errors.add(new ParserError("Operator '-' requires Int, got " + got,
-                            un.operand.line, un.operand.column));
+                    reportTypeError("Operator '-'", un.operand, new TypeNumber(), apply(s1, t1));
                     return new InferResult(new Substitution(), new TypeVar("?"));
                 }
             }
@@ -256,8 +323,7 @@ public class TypeChecker {
                 return new InferResult(compose(s2, s1), new TypeBool());
             } catch (TypeErrorException e) {
                 String got = apply(s1, t1).toString();
-                errors.add(new ParserError("Operator '" + un.operator + "' requires Bool, got " + got,
-                        un.operand.line, un.operand.column));
+                reportTypeError("Operator '" + un.operator + "'", un.operand, new TypeBool(), apply(s1, t1));
                 return new InferResult(new Substitution(), new TypeVar("?"));
             }
         }
@@ -269,11 +335,7 @@ public class TypeChecker {
             Substitution s2;
             try { s2 = unify(apply(s1, t1), new TypeBool()); }
             catch (TypeErrorException e) {
-                String condType = apply(s1, t1).toString();
-                String detail = e.left != null && e.right != null
-                    ? "cannot unify " + e.left + " with " + e.right
-                    : "got " + condType;
-                errors.add(new ParserError("If condition must be Bool, " + detail, i.condition.line, i.condition.column));
+                reportTypeError("If condition", i.condition, new TypeBool(), apply(s1, t1));
                 s2 = new Substitution();
             }
             Map<String, TypeScheme> envAfterCond = apply(compose(s2, s1), env);
@@ -291,11 +353,7 @@ public class TypeChecker {
                 try { s5 = unify(appliedTThen, tElse); }
                 catch (TypeErrorException e) {
                     String thenS = appliedTThen.toString(), elseS = tElse.toString();
-                    String detail = e.left != null && e.right != null
-                        ? "cannot unify " + e.left + " with " + e.right
-                        : "then:" + thenS + " else:" + elseS;
-                    errors.add(new ParserError("If branches must have same type, " + detail,
-                        i.thenBranch.line, i.thenBranch.column));
+                    reportError("If branches must have the same type — then: " + thenS + ", else: " + elseS, i.condition);
                     return new InferResult(new Substitution(), new TypeVar("?"));
                 }
                 return new InferResult(compose(s5, compose(s4, compose(s3, compose(s2, s1)))), apply(s5, appliedTThen));
@@ -320,13 +378,13 @@ public class TypeChecker {
                 Substitution s3;
                 try { s3 = unify(appliedT1, new TypeNumber()); }
                 catch (TypeErrorException e) {
-                    errors.add(new ParserError("Range '..' requires Int, got " + appliedT1, bin.left.line, bin.left.column));
+                    reportTypeError("Range '..' — left operand", bin.left, new TypeNumber(), appliedT1);
                     return new InferResult(new Substitution(), new TypeVar("?"));
                 }
                 Substitution s4;
                 try { s4 = unify(apply(s3, t2), new TypeNumber()); }
                 catch (TypeErrorException e) {
-                    errors.add(new ParserError("Range '..' requires Int, got " + apply(s3, t2), bin.right.line, bin.right.column));
+                    reportTypeError("Range '..' — right operand", bin.right, new TypeNumber(), apply(s3, t2));
                     return new InferResult(new Substitution(), new TypeVar("?"));
                 }
                 return new InferResult(compose(s4, compose(s3, compose(s2, s1))),
@@ -338,7 +396,7 @@ public class TypeChecker {
             boolean isLogical = op.equals("&&") || op.equals("||");
 
             if (!isArithmetic && !isComparison && !isLogical) {
-                errors.add(new ParserError("Unknown operator '" + op + "'", bin.line, bin.column));
+                reportError("Unknown operator '" + op + "'", bin);
                 return new InferResult(new Substitution(), new TypeVar("?"));
             }
 
@@ -347,13 +405,13 @@ public class TypeChecker {
                 Substitution s3;
                 try { s3 = unify(apply(s2, t1), new TypeString()); }
                 catch (TypeErrorException e) {
-                    errors.add(new ParserError("Operator '+' requires string, got " + appliedT1, bin.left.line, bin.left.column));
+                    reportTypeError("Operator '+' — left operand", bin.left, new TypeString(), apply(s2, t1));
                     return new InferResult(new Substitution(), new TypeVar("?"));
                 }
                 Substitution s4;
                 try { s4 = unify(apply(s3, t2), new TypeString()); }
                 catch (TypeErrorException e) {
-                    errors.add(new ParserError("Operator '+' requires string, got " + apply(s3, t2), bin.right.line, bin.right.column));
+                    reportTypeError("Operator '+' — right operand", bin.right, new TypeString(), apply(s3, t2));
                     return new InferResult(new Substitution(), new TypeVar("?"));
                 }
                 return new InferResult(compose(s4, compose(s3, compose(s2, s1))), new TypeString());
@@ -363,15 +421,13 @@ public class TypeChecker {
             Substitution s3;
             try { s3 = unify(appliedT1, operandType); }
             catch (TypeErrorException e) {
-                String detail = e.left != null ? "cannot unify " + e.left + " with " + e.right : "got " + appliedT1;
-                errors.add(new ParserError("Operator '" + op + "' requires " + operandType + ", " + detail, bin.left.line, bin.left.column));
+                reportTypeError("Operator '" + op + "' — left operand", bin.left, operandType, appliedT1);
                 return new InferResult(new Substitution(), new TypeVar("?"));
             }
             Substitution s4;
             try { s4 = unify(apply(s3, t2), operandType); }
             catch (TypeErrorException e) {
-                String detail = e.left != null ? "cannot unify " + e.left + " with " + e.right : "got " + apply(s3, t2);
-                errors.add(new ParserError("Operator '" + op + "' requires " + operandType + ", " + detail, bin.right.line, bin.right.column));
+                reportTypeError("Operator '" + op + "' — right operand", bin.right, operandType, apply(s3, t2));
                 return new InferResult(new Substitution(), new TypeVar("?"));
             }
             Type resultType = isArithmetic ? new TypeNumber() : new TypeBool();
@@ -395,10 +451,7 @@ public class TypeChecker {
                         try {
                             s = compose(unify(apply(s, exprType), patType), s);
                         } catch (TypeErrorException e) {
-                            String detail = e.left != null ? "cannot unify " + e.left + " with " + e.right : "";
-                            errors.add(new ParserError(
-                                    "Literal pattern type incompatible with scrutinee type " + apply(s, exprType) + (detail.isEmpty() ? "" : " (" + detail + ")"),
-                                    caseNode.expr.line, caseNode.expr.column));
+                            reportTypeError("Literal pattern in match", branch.literalPattern(), apply(s, exprType), patType);
                             return new InferResult(new Substitution(), new TypeVar("?"));
                         }
                     }
@@ -413,10 +466,8 @@ public class TypeChecker {
                             Substitution unif = unify(apply(s, resultType), apply(s, branchType));
                             s = compose(unif, s);
                         } catch (TypeErrorException e) {
-                            String detail = e.left != null ? "cannot unify " + e.left + " with " + e.right : "got " + apply(s, resultType) + " vs " + apply(s, branchType);
-                            errors.add(new ParserError(
-                                    "Case branches must have the same type, " + detail,
-                                    branch.body().line, branch.body().column));
+                            String prev = apply(s, resultType).toString(), cur = apply(s, branchType).toString();
+                            reportError("Case branches must have the same type — previous: " + prev + ", this branch: " + cur, branch.body());
                             return new InferResult(new Substitution(), new TypeVar("?"));
                         }
                     }
@@ -425,7 +476,7 @@ public class TypeChecker {
 
                 TypeScheme ctorScheme = env.get(branch.constructor());
                 if (ctorScheme == null) {
-                    errors.add(new ParserError("Unknown constructor '" + branch.constructor() + "'", caseNode.line, caseNode.column, branch.constructor().length()));
+                    reportError("Unknown constructor '" + branch.constructor() + "'", caseNode.expr);
                     return new InferResult(new Substitution(), new TypeVar("?"));
                 }
 
@@ -452,10 +503,7 @@ public class TypeChecker {
                 try {
                     matchSub = unify(apply(s, appliedCtor), apply(s, exprType));
                 } catch (TypeErrorException e) {
-                    String detail = e.left != null ? "cannot unify " + e.left + " with " + e.right : "";
-                    errors.add(new ParserError(
-                            "Constructor '" + branch.constructor() + "' incompatible with scrutinee type " + apply(s, exprType) + (detail.isEmpty() ? "" : " (" + detail + ")"),
-                            caseNode.expr.line, caseNode.expr.column));
+                    reportTypeError("Constructor '" + branch.constructor() + "' in match", caseNode.expr, apply(s, appliedCtor), apply(s, exprType));
                     return new InferResult(new Substitution(), new TypeVar("?"));
                 }
 
@@ -476,10 +524,8 @@ public class TypeChecker {
                         Substitution unif = unify(apply(s, resultType), apply(s, branchType));
                         s = compose(unif, s);
                     } catch (TypeErrorException e) {
-                        String detail = e.left != null ? "cannot unify " + e.left + " with " + e.right : "got " + apply(s, resultType) + " vs " + apply(s, branchType);
-                        errors.add(new ParserError(
-                                "Case branches must have the same type, " + detail,
-                                branch.body().line, branch.body().column));
+                        String prev = apply(s, resultType).toString(), cur = apply(s, branchType).toString();
+                        reportError("Case branches must have the same type — previous: " + prev + ", this branch: " + cur, branch.body());
                         return new InferResult(new Substitution(), new TypeVar("?"));
                     }
                 }
@@ -493,9 +539,7 @@ public class TypeChecker {
                     for (var br : caseNode.branches) matched.add(br.constructor());
                     for (var ctor : decl.constructors) {
                         if (!matched.contains(ctor.name())) {
-                            errors.add(new ParserError(
-                                "Non-exhaustive pattern: missing constructor '" + ctor.name() + "' for type '" + decl.name + "'",
-                                caseNode.line, caseNode.column));
+                            reportError("Non-exhaustive pattern: missing constructor '" + ctor.name() + "' for type '" + decl.name + "'", caseNode.expr);
                         }
                     }
                 }
@@ -524,8 +568,7 @@ public class TypeChecker {
                 Substitution s = unify(apply(inner.sub, inner.type), targetType);
                 return new InferResult(compose(s, inner.sub), targetType);
             } catch (TypeErrorException e) {
-                errors.add(new ParserError("Type ascription mismatch: cannot unify " + apply(inner.sub, inner.type) + " with " + targetType,
-                    asc.line, asc.column));
+                reportTypeError("Type ascription", asc, targetType, apply(inner.sub, inner.type));
                 return new InferResult(new Substitution(), new TypeVar("?"));
             }
         }
@@ -543,16 +586,18 @@ public class TypeChecker {
             Substitution s3;
             try { s3 = unify(appliedT1, new TypeFun(t2, resultType)); }
             catch (TypeErrorException e) {
-                String detail = e.left != null
-                    ? "cannot unify " + e.left + " with " + e.right
-                    : "cannot apply " + appliedT1 + " to " + t2;
-                errors.add(new ParserError("Type error: " + detail, app.function.line, app.function.column));
+                if (appliedT1 instanceof TypeFun funType) {
+                    reportTypeError("Argument type mismatch in application",
+                        app.argument, funType.from(), t2);
+                } else {
+                    reportError("Cannot apply expression of type " + appliedT1 + " as a function (expected " + t2 + " → ?)", app.function);
+                }
                 return new InferResult(new Substitution(), new TypeVar("?"));
             }
             return new InferResult(compose(s3, compose(s2, s1)), apply(s3, resultType));
         }
 
-        errors.add(new ParserError("Unknown expression: " + expr.getClass().getSimpleName(), expr.line, expr.column));
+        reportError("Unknown expression: " + expr.getClass().getSimpleName(), expr);
         return new InferResult(new Substitution(), new TypeVar("?"));
     }
 
@@ -708,7 +753,7 @@ public class TypeChecker {
                 InferResult ir;
                 if (let.isRec) {
                     if (let.value instanceof IdentifierNode id && id.name.equals(let.name)) {
-                        errors.add(new ParserError("Recursive val '" + let.name + "' directly refers to itself", let.line, let.column));
+                        reportError("Recursive val '" + let.name + "' directly refers to itself — wrap body in a lambda", let);
                         return new InferResult(new Substitution(), new TypeVar("?"));
                     }
                     TypeVar recType = freshVar();
@@ -719,10 +764,22 @@ public class TypeChecker {
                     try {
                         s = compose(unify(apply(s, recType), type), s);
                     } catch (TypeErrorException e) {
-                        errors.add(new ParserError("Type mismatch in recursive val '" + let.name + "'", let.line, let.column));
+                        reportError("Type mismatch in recursive val '" + let.name + "' — expected " + apply(s, recType) + " but body has type " + type, let);
                         return new InferResult(new Substitution(), new TypeVar("?"));
                     }
                     type = apply(s, type);
+                    if (let.declaredType != null) {
+                        Type ann = resolveAliases(let.declaredType);
+                        Type returnType = type;
+                        while (returnType instanceof TypeFun f) { returnType = f.to(); }
+                        try {
+                            s = compose(unify(returnType, ann), s);
+                        } catch (TypeErrorException e) {
+                            reportTypeError("Type annotation mismatch in '" + let.name + "'", let, ann, returnType);
+                            return new InferResult(new Substitution(), new TypeVar("?"));
+                        }
+                        type = apply(s, type);
+                    }
                     localEnv = apply(s, localEnv);
                     TypeScheme scheme = generalize(localEnv, type);
                     localEnv.put(let.name, scheme);
@@ -737,11 +794,7 @@ public class TypeChecker {
                         try {
                             s = compose(unify(type, ann), s);
                         } catch (TypeErrorException e) {
-                            String detail = e.left != null ? "cannot unify " + e.left + " with " + e.right
-                                : "declared " + ann + " vs inferred " + type;
-                            errors.add(new ParserError(
-                                    "Type annotation mismatch in '" + let.name + "': " + detail,
-                                    let.line, let.column));
+                            reportTypeError("Type annotation mismatch in '" + let.name + "'", let, ann, type);
                             return new InferResult(new Substitution(), new TypeVar("?"));
                         }
                         type = apply(s, type);
@@ -753,6 +806,44 @@ public class TypeChecker {
                     inferredTypes.put(let, scheme.body());
                 }
                 lastType = inferredTypes.get(let);
+            } else if (stmt instanceof MutualLetNode mutual) {
+                Map<String, TypeVar> recVars = new HashMap<>();
+                for (LetStatementNode def : mutual.defs) {
+                    TypeVar recType = freshVar();
+                    recVars.put(def.name, recType);
+                    localEnv.put(def.name, new TypeScheme(List.of(), recType));
+                }
+                for (LetStatementNode def : mutual.defs) {
+                    TypeVar recType = recVars.get(def.name);
+                    InferResult ir = inferExpr(localEnv, def.value);
+                    s = compose(ir.sub, s);
+                    Type type = apply(s, ir.type);
+                    try {
+                        s = compose(unify(apply(s, recType), type), s);
+                    } catch (TypeErrorException e) {
+                        reportError("Type mismatch in recursive '" + def.name + "' — expected " + apply(s, recType) + " but body has type " + type, def);
+                        return new InferResult(new Substitution(), new TypeVar("?"));
+                    }
+                    type = apply(s, type);
+                    if (def.declaredType != null) {
+                        Type ann = resolveAliases(def.declaredType);
+                        Type returnType = type;
+                        while (returnType instanceof TypeFun f) { returnType = f.to(); }
+                        try {
+                            s = compose(unify(returnType, ann), s);
+                        } catch (TypeErrorException e) {
+                            reportTypeError("Type annotation mismatch in '" + def.name + "'", def, ann, returnType);
+                            return new InferResult(new Substitution(), new TypeVar("?"));
+                        }
+                        type = apply(s, type);
+                    }
+                    localEnv = apply(s, localEnv);
+                    TypeScheme scheme = generalize(localEnv, type);
+                    localEnv.put(def.name, scheme);
+                    inferredTypes.put(def.value, type);
+                    inferredTypes.put(def, scheme.body());
+                }
+                lastType = inferredTypes.get(mutual.defs.get(mutual.defs.size() - 1));
             } else if (stmt instanceof ExpressionNode e) {
                 InferResult ir = inferExpr(localEnv, e);
                 s = compose(ir.sub, s);

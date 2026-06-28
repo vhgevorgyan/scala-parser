@@ -94,8 +94,12 @@ public class SmallStepReducer {
             }
         }
 
-        // Let: let x = v in body  — requires body from surrounding context
-        // (not directly reducible as expression alone; handled by evaluation)
+        // Let: not directly reducible as expression alone (not an ExpressionNode)
+
+        // Block: let x = e1; ...; en  →  step or substitute
+        if (expr instanceof BlockNode block) {
+            return reduceBlock(block);
+        }
 
         // Case / Pattern Match
         if (expr instanceof CaseNode c) {
@@ -119,6 +123,96 @@ public class SmallStepReducer {
             }
         }
         return current;
+    }
+
+    private static ExpressionNode reduceBlock(BlockNode block) {
+        List<ASTNode> stmts = block.statements;
+        if (stmts.isEmpty()) {
+            return new UnitLiteralNode(block.line, block.column);
+        }
+
+        // Find first non-value let, or check last expression
+        for (int i = 0; i < stmts.size(); i++) {
+            if (stmts.get(i) instanceof LetStatementNode let) {
+                ExpressionNode val = let.value;
+                if (!isValue(val)) {
+                    // Step the let's value
+                    List<ASTNode> newStmts = new ArrayList<>(stmts);
+                    newStmts.set(i, new LetStatementNode(let.name, step(val), let.isRec, let.declaredType, let.line, let.column));
+                    return new BlockNode(newStmts, block.line, block.column);
+                }
+                // Let has a value — substitute in all subsequent statements
+                List<ASTNode> rest = stmts.subList(i + 1, stmts.size());
+                List<ASTNode> substituted = new ArrayList<>();
+                for (ASTNode s : rest) {
+                    substituted.add(substInNode(let.name, val, s));
+                }
+                // If there was a declared type, we checked it during typecheck;
+                // substitution replaces the name with the literal type
+                return new BlockNode(substituted, block.line, block.column);
+            }
+            if (stmts.get(i) instanceof MutualLetNode mutual) {
+                // Step the first non-value body, or substitute all when all are values
+                List<LetStatementNode> defs = mutual.defs;
+                boolean anyStepped = false;
+                for (int j = 0; j < defs.size(); j++) {
+                    ExpressionNode val = defs.get(j).value;
+                    if (!isValue(val)) {
+                        List<LetStatementNode> newDefs = new ArrayList<>(defs);
+                        LetStatementNode old = defs.get(j);
+                        newDefs.set(j, new LetStatementNode(old.name, step(val), old.isRec, old.declaredType, old.line, old.column));
+                        List<ASTNode> newStmts = new ArrayList<>(stmts);
+                        newStmts.set(i, new MutualLetNode(newDefs, mutual.line, mutual.column));
+                        return new BlockNode(newStmts, block.line, block.column);
+                    }
+                }
+                // All values: substitute all names in subsequent statements
+                List<ASTNode> rest = stmts.subList(i + 1, stmts.size());
+                List<ASTNode> substituted = new ArrayList<>();
+                for (ASTNode s : rest) {
+                    for (LetStatementNode def : defs) {
+                        s = substInNode(def.name, def.value, s);
+                    }
+                    substituted.add(s);
+                }
+                return new BlockNode(substituted, block.line, block.column);
+            }
+            // Expression statement
+            if (stmts.get(i) instanceof ExpressionNode e) {
+                if (!isValue(e)) {
+                    // Step the expression
+                    List<ASTNode> newStmts = new ArrayList<>(stmts);
+                    newStmts.set(i, step(e));
+                    return new BlockNode(newStmts, block.line, block.column);
+                }
+                // Expression is a value — if it's the last statement, unwrap
+                if (i == stmts.size() - 1) {
+                    return e;
+                }
+                // Otherwise skip it and continue
+            }
+        }
+        // All values — should not reach here if outermost was unwrapped
+        throw new RuntimeException("Block completely reduced: " + block);
+    }
+
+    private static ASTNode substInNode(String name, ExpressionNode value, ASTNode node) {
+        if (node instanceof ExpressionNode e) {
+            return Substitution.subst(name, value, e);
+        }
+        if (node instanceof LetStatementNode l) {
+            ExpressionNode newBody = Substitution.subst(name, value, l.value);
+            return new LetStatementNode(l.name, newBody, l.isRec, l.declaredType, l.line, l.column);
+        }
+        if (node instanceof MutualLetNode m) {
+            List<LetStatementNode> newDefs = new ArrayList<>();
+            for (LetStatementNode def : m.defs) {
+                ExpressionNode newBody = Substitution.subst(name, value, def.value);
+                newDefs.add(new LetStatementNode(def.name, newBody, def.isRec, def.declaredType, def.line, def.column));
+            }
+            return new MutualLetNode(newDefs, m.line, m.column);
+        }
+        return node;
     }
 
     private static ExpressionNode reduceOp(BinaryExprNode bin) {
