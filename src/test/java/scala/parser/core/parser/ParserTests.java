@@ -281,10 +281,9 @@ class ParserTests {
     void semicolonsSkipBetweenStatements() {
         ParserResult r = parse("val x = 1; val y = 2");
         assertTrue(r.errors.isEmpty());
-        assertEquals(3, r.ast.statements.size());
+        assertEquals(2, r.ast.statements.size());
         assertInstanceOf(LetStatementNode.class, r.ast.statements.get(0));
-        assertInstanceOf(LiteralNode.class, r.ast.statements.get(1));
-        assertInstanceOf(LetStatementNode.class, r.ast.statements.get(2));
+        assertInstanceOf(LetStatementNode.class, r.ast.statements.get(1));
     }
 
     @Test

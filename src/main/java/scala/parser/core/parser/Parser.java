@@ -575,7 +575,9 @@ public class Parser {
                 }
                 i = j;
             } else {
-                result.add(stmts.get(i));
+                if (!isSemicolonArtifact(stmts.get(i))) {
+                    result.add(stmts.get(i));
+                }
                 i++;
             }
         }

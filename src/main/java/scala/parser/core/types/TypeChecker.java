@@ -433,6 +433,23 @@ public class TypeChecker {
                 return new InferResult(compose(s4, compose(s3, compose(s2, s1))), new TypeString());
             }
 
+            // String comparison: allow == and != on strings
+            if ((op.equals("==") || op.equals("!=")) && appliedT1 instanceof TypeString) {
+                Substitution s3;
+                try { s3 = unify(apply(s2, t1), new TypeString()); }
+                catch (TypeErrorException e) {
+                    reportTypeError("Operator '" + op + "' — left operand", bin.left, new TypeString(), apply(s2, t1));
+                    return new InferResult(new Substitution(), new TypeVar("?"));
+                }
+                Substitution s4;
+                try { s4 = unify(apply(s3, t2), new TypeString()); }
+                catch (TypeErrorException e) {
+                    reportTypeError("Operator '" + op + "' — right operand", bin.right, new TypeString(), apply(s3, t2));
+                    return new InferResult(new Substitution(), new TypeVar("?"));
+                }
+                return new InferResult(compose(s4, compose(s3, compose(s2, s1))), new TypeBool());
+            }
+
             Type operandType = isLogical ? new TypeBool() : new TypeNumber();
             Substitution s3;
             try { s3 = unify(appliedT1, operandType); }
