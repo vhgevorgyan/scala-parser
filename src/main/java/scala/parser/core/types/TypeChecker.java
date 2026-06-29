@@ -85,65 +85,7 @@ public class TypeChecker {
         }
 
         if (node instanceof LetStatementNode let) {
-            InferResult result;
-            Substitution sub;
-
-            if (let.isRec) {
-                if (let.value instanceof IdentifierNode id && id.name.equals(let.name)) {
-                    reportError("Recursive let '" + let.name + "' directly refers to itself — wrap body in a lambda", let);
-                    return;
-                }
-                TypeVar recType = freshVar();
-                env.put(let.name, new TypeScheme(List.of(), recType));
-                result = inferExpr(env, let.value);
-                sub = result.sub;
-                Type type = apply(sub, result.type);
-                try {
-                    sub = compose(unify(apply(sub, recType), type), sub);
-                } catch (TypeErrorException e) {
-                    errors.add(new ParserError("Type mismatch in recursive let '" + let.name + "' — expected " + apply(sub, recType) + " but body has type " + type, let.line, let.column));
-                    return;
-                }
-                type = apply(sub, type);
-                if (let.declaredType != null) {
-                    Type ann = resolveAliases(let.declaredType);
-                    Type returnType = type;
-                    while (returnType instanceof TypeFun f) { returnType = f.to(); }
-                    try {
-                        sub = compose(unify(returnType, ann), sub);
-                    } catch (TypeErrorException e) {
-                        reportTypeError("Type annotation mismatch in '" + let.name + "'", let, ann, returnType);
-                        return;
-                    }
-                    type = apply(sub, type);
-                }
-                applySubToEnv(sub);
-                TypeScheme scheme = generalize(env, type);
-                env.put(let.name, scheme);
-                inferredTypes.put(let.value, type);
-                inferredTypes.put(let, scheme.body());
-            } else {
-                result = inferExpr(env, let.value);
-                sub = result.sub;
-                Type type = apply(sub, result.type);
-
-                if (let.declaredType != null) {
-                    Type ann = resolveAliases(let.declaredType);
-                    try {
-                        sub = compose(unify(type, ann), sub);
-                    } catch (TypeErrorException e) {
-                        reportTypeError("Type annotation mismatch in '" + let.name + "'", let, ann, type);
-                        return;
-                    }
-                    type = apply(sub, type);
-                }
-
-                applySubToEnv(sub);
-                TypeScheme scheme = generalize(env, type);
-                env.put(let.name, scheme);
-                inferredTypes.put(let.value, type);
-                inferredTypes.put(let, scheme.body());
-            }
+            inferLet(let, env);
             return;
         }
 
@@ -276,6 +218,66 @@ public class TypeChecker {
             lastType = scheme.body();
         }
         return lastType;
+    }
+
+    /** Infers and generalizes a single let-statement, mutating targetEnv in place. Returns true on success, false on type error. */
+    private boolean inferLet(LetStatementNode let, Map<String, TypeScheme> targetEnv) {
+        if (let.isRec) {
+            if (let.value instanceof IdentifierNode id && id.name.equals(let.name)) {
+                reportError("Recursive let '" + let.name + "' directly refers to itself — wrap body in a lambda", let);
+                return false;
+            }
+            TypeVar recType = freshVar();
+            targetEnv.put(let.name, new TypeScheme(List.of(), recType));
+            InferResult result = inferExpr(targetEnv, let.value);
+            Substitution sub = result.sub;
+            Type type = apply(sub, result.type);
+            try {
+                sub = compose(unify(apply(sub, recType), type), sub);
+            } catch (TypeErrorException e) {
+                reportError("Type mismatch in recursive '" + let.name + "' — expected " + apply(sub, recType) + " but body has type " + type, let);
+                return false;
+            }
+            type = apply(sub, type);
+            if (let.declaredType != null) {
+                Type ann = resolveAliases(let.declaredType);
+                Type returnType = type;
+                while (returnType instanceof TypeFun f) { returnType = f.to(); }
+                try {
+                    sub = compose(unify(returnType, ann), sub);
+                } catch (TypeErrorException e) {
+                    reportTypeError("Type annotation mismatch in '" + let.name + "'", let, ann, returnType);
+                    return false;
+                }
+                type = apply(sub, type);
+            }
+            applySubToEnv(sub, targetEnv);
+            TypeScheme scheme = generalize(targetEnv, type);
+            targetEnv.put(let.name, scheme);
+            inferredTypes.put(let.value, type);
+            inferredTypes.put(let, scheme.body());
+            return true;
+        } else {
+            InferResult result = inferExpr(targetEnv, let.value);
+            Substitution sub = result.sub;
+            Type type = apply(sub, result.type);
+            if (let.declaredType != null) {
+                Type ann = resolveAliases(let.declaredType);
+                try {
+                    sub = compose(unify(type, ann), sub);
+                } catch (TypeErrorException e) {
+                    reportTypeError("Type annotation mismatch in '" + let.name + "'", let, ann, type);
+                    return false;
+                }
+                type = apply(sub, type);
+            }
+            applySubToEnv(sub, targetEnv);
+            TypeScheme scheme = generalize(targetEnv, type);
+            targetEnv.put(let.name, scheme);
+            inferredTypes.put(let.value, type);
+            inferredTypes.put(let, scheme.body());
+            return true;
+        }
     }
 
     private InferResult inferExpr(Map<String, TypeScheme> env, ExpressionNode expr) {
@@ -764,60 +766,8 @@ public class TypeChecker {
         Type lastType = new TypeVar("?");
         for (ASTNode stmt : block.statements) {
             if (stmt instanceof LetStatementNode let) {
-                InferResult ir;
-                if (let.isRec) {
-                    if (let.value instanceof IdentifierNode id && id.name.equals(let.name)) {
-                        reportError("Recursive val '" + let.name + "' directly refers to itself — wrap body in a lambda", let);
-                        return new InferResult(new Substitution(), new TypeVar("?"));
-                    }
-                    TypeVar recType = freshVar();
-                    localEnv.put(let.name, new TypeScheme(List.of(), recType));
-                    ir = inferExpr(localEnv, let.value);
-                    s = compose(ir.sub, s);
-                    Type type = apply(s, ir.type);
-                    try {
-                        s = compose(unify(apply(s, recType), type), s);
-                    } catch (TypeErrorException e) {
-                        reportError("Type mismatch in recursive val '" + let.name + "' — expected " + apply(s, recType) + " but body has type " + type, let);
-                        return new InferResult(new Substitution(), new TypeVar("?"));
-                    }
-                    type = apply(s, type);
-                    if (let.declaredType != null) {
-                        Type ann = resolveAliases(let.declaredType);
-                        Type returnType = type;
-                        while (returnType instanceof TypeFun f) { returnType = f.to(); }
-                        try {
-                            s = compose(unify(returnType, ann), s);
-                        } catch (TypeErrorException e) {
-                            reportTypeError("Type annotation mismatch in '" + let.name + "'", let, ann, returnType);
-                            return new InferResult(new Substitution(), new TypeVar("?"));
-                        }
-                        type = apply(s, type);
-                    }
-                    localEnv = apply(s, localEnv);
-                    TypeScheme scheme = generalize(localEnv, type);
-                    localEnv.put(let.name, scheme);
-                    inferredTypes.put(let.value, type);
-                    inferredTypes.put(let, scheme.body());
-                } else {
-                    ir = inferExpr(localEnv, let.value);
-                    s = compose(ir.sub, s);
-                    Type type = apply(s, ir.type);
-                    if (let.declaredType != null) {
-                        Type ann = resolveAliases(let.declaredType);
-                        try {
-                            s = compose(unify(type, ann), s);
-                        } catch (TypeErrorException e) {
-                            reportTypeError("Type annotation mismatch in '" + let.name + "'", let, ann, type);
-                            return new InferResult(new Substitution(), new TypeVar("?"));
-                        }
-                        type = apply(s, type);
-                    }
-                    localEnv = apply(s, localEnv);
-                    TypeScheme scheme = generalize(localEnv, type);
-                    localEnv.put(let.name, scheme);
-                    inferredTypes.put(let.value, type);
-                    inferredTypes.put(let, scheme.body());
+                if (!inferLet(let, localEnv)) {
+                    return new InferResult(new Substitution(), new TypeVar("?"));
                 }
                 lastType = inferredTypes.get(let);
             } else if (stmt instanceof MutualLetNode mutual) {

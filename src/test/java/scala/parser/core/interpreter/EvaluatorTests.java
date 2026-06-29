@@ -390,6 +390,20 @@ class EvaluatorTests {
     // ── Stack-safety / depth limit ───────────────────────────────
 
     @Test
+    void depthLimitNoLeakOnError() {
+        // Verify depth counter is properly decremented even when recursion fails
+        var src = "def f(n: Int): Int = if (n == 0) 0 else f(n - 1); f(50)";
+        var r = new CompilerPipeline().analyze(src);
+        assertTrue(r.parserResult().errors.isEmpty());
+        var e = new Evaluator(5);
+        assertThrows(RuntimeException.class, () -> e.evalProgram(r.parserResult().ast));
+        // After error, depth counter should not leak — second eval must work
+        var e2 = new Evaluator(500);
+        Value v = e2.evalProgram(r.parserResult().ast);
+        assertEquals(0, ((NumberValue) v).value);
+    }
+
+    @Test
     void depthLimitExceeded() {
         var src = "def f(n: Int): Int = if (n == 0) 0 else f(n - 1); f(50)";
         var r = new CompilerPipeline().analyze(src);

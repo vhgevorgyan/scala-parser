@@ -62,10 +62,21 @@ public class SemanticTokenProvider {
         }
 
         if (node instanceof LetStatementNode let) {
-            out.add(new SemanticToken(let.line, let.column, let.isRec ? 3 : 3, "keyword"));
+            out.add(new SemanticToken(let.line, let.column, 3, "keyword"));
             int nameCol = let.column + 4;
             out.add(new SemanticToken(let.line, nameCol, let.name.length(), "variable"));
             walk(let.value, out); return;
+        }
+
+        if (node instanceof MutualLetNode mutual) {
+            out.add(new SemanticToken(mutual.line, mutual.column, 6, "keyword"));
+            int col = mutual.column + 7;
+            for (int i = 0; i < mutual.defs.size(); i++) {
+                LetStatementNode def = mutual.defs.get(i);
+                out.add(new SemanticToken(mutual.line, col, def.name.length(), "function"));
+                col += def.name.length() + 2;
+            }
+            for (LetStatementNode def : mutual.defs) walk(def.value, out); return;
         }
 
         if (node instanceof EnumDeclNode data) {
