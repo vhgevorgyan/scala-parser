@@ -72,6 +72,12 @@ public class HoverProvider {
             return "Type ascription: " + asc.declaredType;
         }
 
+        if (node instanceof MutualLetNode mutual) {
+            return "Mutual definitions: " + mutual.defs.stream()
+                .map(d -> d.name)
+                .collect(java.util.stream.Collectors.joining(", "));
+        }
+
         return null;
     }
 

@@ -148,44 +148,7 @@ public class TypeChecker {
         }
 
         if (node instanceof MutualLetNode mutual) {
-            // Phase 1: allocate fresh type variables for all defs
-            Map<String, TypeVar> recVars = new HashMap<>();
-            for (LetStatementNode def : mutual.defs) {
-                TypeVar recType = freshVar();
-                recVars.put(def.name, recType);
-                env.put(def.name, new TypeScheme(List.of(), recType));
-            }
-            // Phase 2: infer all bodies with all names in scope
-            for (LetStatementNode def : mutual.defs) {
-                TypeVar recType = recVars.get(def.name);
-                InferResult result = inferExpr(env, def.value);
-                Substitution sub = result.sub;
-                Type type = apply(sub, result.type);
-                try {
-                    sub = compose(unify(apply(sub, recType), type), sub);
-                } catch (TypeErrorException e) {
-                    errors.add(new ParserError("Type mismatch in recursive '" + def.name + "' — expected " + apply(sub, recType) + " but body has type " + type, def.line, def.column));
-                    continue;
-                }
-                type = apply(sub, type);
-                if (def.declaredType != null) {
-                    Type ann = resolveAliases(def.declaredType);
-                    Type returnType = type;
-                    while (returnType instanceof TypeFun f) { returnType = f.to(); }
-                    try {
-                        sub = compose(unify(returnType, ann), sub);
-                    } catch (TypeErrorException e) {
-                        reportTypeError("Type annotation mismatch in '" + def.name + "'", def, ann, returnType);
-                        continue;
-                    }
-                    type = apply(sub, type);
-                }
-                applySubToEnv(sub);
-                TypeScheme scheme = generalize(env, type);
-                env.put(def.name, scheme);
-                inferredTypes.put(def.value, type);
-                inferredTypes.put(def, scheme.body());
-            }
+            inferMutualGroup(mutual.defs, env);
             return;
         }
 
@@ -258,10 +221,61 @@ public class TypeChecker {
     }
 
     private void applySubToEnv(Substitution sub) {
-        List<Map.Entry<String, TypeScheme>> entries = new ArrayList<>(env.entrySet());
+        applySubToEnv(sub, env);
+    }
+
+    private void applySubToEnv(Substitution sub, Map<String, TypeScheme> targetEnv) {
+        List<Map.Entry<String, TypeScheme>> entries = new ArrayList<>(targetEnv.entrySet());
         for (Map.Entry<String, TypeScheme> entry : entries) {
-            env.put(entry.getKey(), new TypeScheme(entry.getValue().params(), apply(sub, entry.getValue().body())));
+            targetEnv.put(entry.getKey(), new TypeScheme(entry.getValue().params(), apply(sub, entry.getValue().body())));
         }
+    }
+
+    /** Type-check a group of mutually recursive definitions (two-phase). */
+    private Type inferMutualGroup(List<LetStatementNode> defs, Map<String, TypeScheme> targetEnv) {
+        // Phase 1: allocate fresh type variables for all defs
+        Map<String, TypeVar> recVars = new HashMap<>();
+        for (LetStatementNode def : defs) {
+            TypeVar recType = freshVar();
+            recVars.put(def.name, recType);
+            targetEnv.put(def.name, new TypeScheme(List.of(), recType));
+        }
+        Type lastType = null;
+        // Phase 2: infer all bodies with all names in scope
+        for (LetStatementNode def : defs) {
+            TypeVar recType = recVars.get(def.name);
+            InferResult result = inferExpr(targetEnv, def.value);
+            Substitution sub = result.sub;
+            Type type = apply(sub, result.type);
+            try {
+                sub = compose(unify(apply(sub, recType), type), sub);
+            } catch (TypeErrorException e) {
+                reportError("Type mismatch in recursive '" + def.name + "' — expected " + apply(sub, recType) + " but body has type " + type, def);
+                lastType = new TypeVar("?");
+                continue;
+            }
+            type = apply(sub, type);
+            if (def.declaredType != null) {
+                Type ann = resolveAliases(def.declaredType);
+                Type returnType = type;
+                while (returnType instanceof TypeFun f) { returnType = f.to(); }
+                try {
+                    sub = compose(unify(returnType, ann), sub);
+                } catch (TypeErrorException e) {
+                    reportTypeError("Type annotation mismatch in '" + def.name + "'", def, ann, returnType);
+                    lastType = new TypeVar("?");
+                    continue;
+                }
+                type = apply(sub, type);
+            }
+            applySubToEnv(sub, targetEnv);
+            TypeScheme scheme = generalize(targetEnv, type);
+            targetEnv.put(def.name, scheme);
+            inferredTypes.put(def.value, type);
+            inferredTypes.put(def, scheme.body());
+            lastType = scheme.body();
+        }
+        return lastType;
     }
 
     private InferResult inferExpr(Map<String, TypeScheme> env, ExpressionNode expr) {
@@ -807,43 +821,7 @@ public class TypeChecker {
                 }
                 lastType = inferredTypes.get(let);
             } else if (stmt instanceof MutualLetNode mutual) {
-                Map<String, TypeVar> recVars = new HashMap<>();
-                for (LetStatementNode def : mutual.defs) {
-                    TypeVar recType = freshVar();
-                    recVars.put(def.name, recType);
-                    localEnv.put(def.name, new TypeScheme(List.of(), recType));
-                }
-                for (LetStatementNode def : mutual.defs) {
-                    TypeVar recType = recVars.get(def.name);
-                    InferResult ir = inferExpr(localEnv, def.value);
-                    s = compose(ir.sub, s);
-                    Type type = apply(s, ir.type);
-                    try {
-                        s = compose(unify(apply(s, recType), type), s);
-                    } catch (TypeErrorException e) {
-                        reportError("Type mismatch in recursive '" + def.name + "' — expected " + apply(s, recType) + " but body has type " + type, def);
-                        return new InferResult(new Substitution(), new TypeVar("?"));
-                    }
-                    type = apply(s, type);
-                    if (def.declaredType != null) {
-                        Type ann = resolveAliases(def.declaredType);
-                        Type returnType = type;
-                        while (returnType instanceof TypeFun f) { returnType = f.to(); }
-                        try {
-                            s = compose(unify(returnType, ann), s);
-                        } catch (TypeErrorException e) {
-                            reportTypeError("Type annotation mismatch in '" + def.name + "'", def, ann, returnType);
-                            return new InferResult(new Substitution(), new TypeVar("?"));
-                        }
-                        type = apply(s, type);
-                    }
-                    localEnv = apply(s, localEnv);
-                    TypeScheme scheme = generalize(localEnv, type);
-                    localEnv.put(def.name, scheme);
-                    inferredTypes.put(def.value, type);
-                    inferredTypes.put(def, scheme.body());
-                }
-                lastType = inferredTypes.get(mutual.defs.get(mutual.defs.size() - 1));
+                lastType = inferMutualGroup(mutual.defs, localEnv);
             } else if (stmt instanceof ExpressionNode e) {
                 InferResult ir = inferExpr(localEnv, e);
                 s = compose(ir.sub, s);

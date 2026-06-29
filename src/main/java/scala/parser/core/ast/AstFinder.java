@@ -85,6 +85,13 @@ public class AstFinder {
                 }
             }
 
+            if (node instanceof MutualLetNode mutual) {
+                for (LetStatementNode def : mutual.defs) {
+                    ASTNode found = findRecursive(def, line, column);
+                    if (found != null) return found;
+                }
+            }
+
             if (node instanceof TypeAliasNode) {
                 return node;
             }

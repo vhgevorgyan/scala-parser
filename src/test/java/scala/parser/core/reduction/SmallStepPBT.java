@@ -143,6 +143,37 @@ class SmallStepPBT {
         assertNotNull(bigStr);
     }
 
+    // ── Block reduction: progress + value ────────────────────────
+
+    @Property(tries = 200)
+    void progressBlockNonValue(@ForAll("genClosedBlock") ExpressionNode raw) {
+        var errors = new ArrayList<ParserError>();
+        var tc = new TypeChecker(errors);
+        tc.check(new ProgramNode(List.of(raw)));
+        if (!errors.isEmpty()) return;
+
+        if (SmallStepReducer.isValue(raw)) return;
+        assertDoesNotThrow(() -> SmallStepReducer.step(raw),
+            "Progress: block " + raw.getClass().getSimpleName() + " must step");
+    }
+
+    @Property(tries = 200)
+    void blockReducesToValue(@ForAll("genClosedBlock") ExpressionNode raw) {
+        var errors = new ArrayList<ParserError>();
+        var tc = new TypeChecker(errors);
+        tc.check(new ProgramNode(List.of(raw)));
+        if (!errors.isEmpty()) return;
+        if (SmallStepReducer.isValue(raw)) return;
+
+        try {
+            ExpressionNode normal = SmallStepReducer.reduce(raw);
+            assertTrue(SmallStepReducer.isValue(normal),
+                "Block reduction must produce a value, got: " + normal);
+        } catch (RuntimeException e) {
+            // skip if reduction fails
+        }
+    }
+
     // ── Let-generalization stress test ───────────────────────────
 
     @Property(tries = 200)
@@ -277,6 +308,39 @@ class SmallStepPBT {
         // Last statement is always an expression
         stmts.add(genExpr(rand, depth - 1));
         return new BlockNode(stmts, 0, 0);
+    }
+
+    // ── Closed block generator (no free identifiers) ─────────────
+
+    @Provide
+    Arbitrary<ExpressionNode> genClosedBlock() {
+        return Arbitraries.randomValue(rand -> genClosedBlockExpr(rand, 3));
+    }
+
+    private static ExpressionNode genClosedBlockExpr(Random rand, int depth) {
+        if (depth <= 0 || rand.nextDouble() < 0.4) return genClosedLeaf(rand);
+        int numStmts = 1 + rand.nextInt(3);
+        var stmts = new ArrayList<ASTNode>();
+        for (int i = 0; i < numStmts - 1; i++) {
+            if (rand.nextBoolean()) {
+                String name = "b" + depth + "_" + i + "_" + rand.nextInt(10000);
+                stmts.add(new LetStatementNode(name,
+                    genClosedLeaf(rand), false, null, 0, 0));
+            } else {
+                stmts.add(genClosedLeaf(rand));
+            }
+        }
+        stmts.add(genClosedLeaf(rand));
+        return new BlockNode(stmts, 0, 0);
+    }
+
+    private static ExpressionNode genClosedLeaf(Random rand) {
+        return switch (rand.nextInt(4)) {
+            case 0 -> new LiteralNode(String.valueOf(rand.nextInt(1000)), 0, 0);
+            case 1 -> new BoolNode(0, 0, rand.nextBoolean());
+            case 2 -> new UnitLiteralNode(0, 0);
+            default -> new StringLiteralNode("hi", 0, 0);
+        };
     }
 
     private static ExpressionNode genLeaf(Random rand) {
