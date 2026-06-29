@@ -5,6 +5,7 @@ import java.util.stream.*;
 import scala.parser.core.*;
 import scala.parser.core.ast.*;
 import scala.parser.core.ast.CaseNode.*;
+import scala.parser.core.ast.EnumDeclNode.ConstructorDef;
 import scala.parser.core.interpreter.Evaluator;
 import scala.parser.core.lexer.*;
 import scala.parser.core.parser.Parser;
@@ -119,57 +120,100 @@ public class MutationAnalysis {
     }
 
     // ---------------------------------------------------------------
-    // Well-typed program generator — guaranteed well-typed
-    // Uses only numbers, arithmetic, and if(==) to prevent type errors.
+    // Well-typed program generator — generates expressions across all
+    // language constructs. Not guaranteed well-typed (the retry loop
+    // in runOp filters via TypeChecker).
     // ---------------------------------------------------------------
 
+    private static final List<String> BINOPS = List.of("+", "-", "*", "/", "==", "!=", "<", ">", "<=", ">=", "&&", "||");
+
+    private static final List<String> SAMPLE_STRINGS = List.of("hello", "", "42", "true", "x");
+
+    record DataTemplate(String name, List<String> params, List<CtorDef> ctors) {}
+    record CtorDef(String name, List<String> argTypes) {}
+
+    private static final List<DataTemplate> DATA_TPL = List.of(
+        new DataTemplate("MyBool", List.of(),
+            List.of(new CtorDef("MyTrue", List.of()), new CtorDef("MyFalse", List.of()))),
+        new DataTemplate("MyMaybe", List.of("a"),
+            List.of(new CtorDef("MyNothing", List.of()), new CtorDef("MyJust", List.of("a"))))
+    );
+
     private static ProgramNode generateWellTyped(Random rand) {
-        int n = rand.nextInt(3) + 2;
+        int n = rand.nextInt(6) + 1;
         var stmts = new ArrayList<ASTNode>();
-        // Pre-bind a variable so identifier-dependent mutations can reference it
-        if (rand.nextDouble() < 0.5) {
-            stmts.add(new LetStatementNode("x", new LiteralNode("42", 0, 0), 0, 0));
+        boolean hasData = rand.nextDouble() < 0.3 && !DATA_TPL.isEmpty();
+        DataTemplate tpl = hasData ? DATA_TPL.get(rand.nextInt(DATA_TPL.size())) : null;
+        if (hasData) {
+            stmts.add(new EnumDeclNode(tpl.name(), tpl.params(),
+                tpl.ctors().stream().map(c -> new ConstructorDef(c.name(), c.argTypes())).toList(),
+                0, 0));
         }
-        for (int i = 0; i < n; i++) {
-            stmts.add(genSafeNumExpr(rand, 3));
+        for (int i = stmts.size(); i < n; i++) {
+            if (rand.nextDouble() < 0.4 && i < n - 1) {
+                stmts.add(new LetStatementNode(
+                    IDENTS.get(rand.nextInt(IDENTS.size())), genExpr(rand, 3, tpl), 0, 0));
+            } else {
+                stmts.add(genExpr(rand, 3, tpl));
+            }
         }
         return new ProgramNode(stmts);
     }
 
-    private static ExpressionNode genSafeNumExpr(Random rand, int depth) {
-        if (depth <= 0) return new LiteralNode(String.valueOf(rand.nextInt(1000)), 0, 0);
-        return switch (rand.nextInt(6)) {
-            case 0, 1 -> new LiteralNode(String.valueOf(rand.nextInt(1000)), 0, 0);
-            case 2 -> {
-                String op = rand.nextBoolean() ? "+" : "-";
-                yield new BinaryExprNode(
-                    new LiteralNode(String.valueOf(rand.nextInt(1000)), 0, 0), op,
-                    new LiteralNode(String.valueOf(rand.nextInt(1000)), 0, 0), 0, 0);
+    private static ExpressionNode genExpr(Random rand, int depth, DataTemplate tpl) {
+        if (depth <= 0 || (rand.nextDouble() < 0.12 && depth < 4)) return genLeaf(rand);
+        return switch (rand.nextInt(14)) {
+            case 0, 1 -> genLeaf(rand);
+            case 2 -> new LiteralNode(String.valueOf(rand.nextInt(1000)), 0, 0);
+            case 3 -> new BoolNode(0, 0, rand.nextBoolean());
+            case 4 -> new StringLiteralNode(SAMPLE_STRINGS.get(rand.nextInt(SAMPLE_STRINGS.size())), 0, 0);
+            case 5 -> new LambdaNode(IDENTS.get(rand.nextInt(IDENTS.size())),
+                genExpr(rand, depth - 1, tpl), 0, 0);
+            case 6 -> new ApplicationNode(genExpr(rand, depth - 1, tpl),
+                genExpr(rand, depth - 1, tpl), 0, 0);
+            case 7 -> {
+                ExpressionNode c = genExpr(rand, depth - 1, tpl);
+                yield new IfNode(c, genExpr(rand, depth - 1, tpl),
+                    genExpr(rand, depth - 1, tpl));
             }
-            case 3 -> {
-                String op = rand.nextBoolean() ? "*" : "/";
-                var rhs = op.equals("/") ? new LiteralNode(String.valueOf(rand.nextInt(99) + 1), 0, 0)
-                    : new LiteralNode(String.valueOf(rand.nextInt(1000)), 0, 0);
-                yield new BinaryExprNode(
-                    new LiteralNode(String.valueOf(rand.nextInt(1000)), 0, 0), op, rhs, 0, 0);
+            case 8 -> new BinaryExprNode(genExpr(rand, depth - 1, tpl),
+                BINOPS.get(rand.nextInt(BINOPS.size())),
+                genExpr(rand, depth - 1, tpl), 0, 0);
+            case 9 -> new UnaryExprNode("!", genExpr(rand, depth - 1, tpl), 0, 0);
+            case 10 -> genCase(rand, depth, tpl);
+            default -> genLeaf(rand);
+        };
+    }
+
+    private static ExpressionNode genCase(Random rand, int depth, DataTemplate tpl) {
+        if (tpl == null) return genLeaf(rand);
+        var ct = tpl.ctors().get(rand.nextInt(tpl.ctors().size()));
+        ExpressionNode disc;
+        if (ct.argTypes().isEmpty()) {
+            disc = new IdentifierNode(ct.name(), 0, 0);
+        } else {
+            ExpressionNode arg = genExpr(rand, depth - 1, tpl);
+            disc = new ApplicationNode(new IdentifierNode(ct.name(), 0, 0), arg, 0, 0);
+        }
+        var branches = new ArrayList<CaseBranch>();
+        for (CtorDef c : tpl.ctors()) {
+            var bindings = new ArrayList<CaseNode.Binding>();
+            for (int i = 0; i < c.argTypes().size(); i++) {
+                bindings.add(new CaseNode.Binding(
+                    IDENTS.get(rand.nextInt(IDENTS.size())), 0, 0));
             }
-            case 4 -> {
-                // == produces Bool; we wrap in if so program stays Number-typed
-                var cmp = new BinaryExprNode(
-                    new LiteralNode(String.valueOf(rand.nextInt(10)), 0, 0), "==",
-                    new LiteralNode(String.valueOf(rand.nextInt(10)), 0, 0), 0, 0);
-                yield new IfNode(cmp, genSafeNumExpr(rand, depth - 1),
-                    genSafeNumExpr(rand, depth - 1));
-            }
-            case 5 -> {
-                // < produces Bool; wrap in if
-                var cmp = new BinaryExprNode(
-                    new LiteralNode(String.valueOf(rand.nextInt(10)), 0, 0), "<",
-                    new LiteralNode(String.valueOf(rand.nextInt(10)), 0, 0), 0, 0);
-                yield new IfNode(cmp, genSafeNumExpr(rand, depth - 1),
-                    genSafeNumExpr(rand, depth - 1));
-            }
-            default -> new LiteralNode(String.valueOf(rand.nextInt(1000)), 0, 0);
+            branches.add(new CaseBranch(c.name(), bindings,
+                genExpr(rand, depth - 1, tpl)));
+        }
+        return new CaseNode(disc, branches, 0, 0);
+    }
+
+    private static ExpressionNode genLeaf(Random rand) {
+        return switch (rand.nextInt(4)) {
+            case 0 -> new LiteralNode(String.valueOf(rand.nextInt(1000)), 0, 0);
+            case 1 -> new BoolNode(0, 0, rand.nextBoolean());
+            case 2 -> new StringLiteralNode(SAMPLE_STRINGS.get(rand.nextInt(SAMPLE_STRINGS.size())), 0, 0);
+            default -> new IdentifierNode(IDENTS.get(rand.nextInt(IDENTS.size())), 0, 0);
         };
     }
 

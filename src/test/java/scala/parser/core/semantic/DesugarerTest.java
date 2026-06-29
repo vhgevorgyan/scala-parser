@@ -15,9 +15,10 @@ class DesugarerTest {
         var thenBr = new LiteralNode("1", 1, 1);
         var ifn = new IfNode(cond, thenBr, null);
         assertEquals(null, ifn.elseBranch);
-        Desugarer.desugarExpr(ifn);
-        assertNotNull(ifn.elseBranch);
-        assertInstanceOf(UnitLiteralNode.class, ifn.elseBranch);
+        ExpressionNode result = Desugarer.desugarExpr(ifn);
+        assertInstanceOf(IfNode.class, result);
+        assertNotNull(((IfNode) result).elseBranch);
+        assertInstanceOf(UnitLiteralNode.class, ((IfNode) result).elseBranch);
     }
 
     @Test
@@ -26,7 +27,7 @@ class DesugarerTest {
         var thenBr = new LiteralNode("1", 1, 1);
         var elseBr = new LiteralNode("2", 1, 1);
         var ifn = new IfNode(cond, thenBr, elseBr);
-        Desugarer.desugarExpr(ifn);
-        assertSame(elseBr, ifn.elseBranch);
+        ExpressionNode result = Desugarer.desugarExpr(ifn);
+        assertSame(ifn, result);
     }
 }

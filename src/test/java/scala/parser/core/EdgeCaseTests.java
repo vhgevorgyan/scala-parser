@@ -237,9 +237,10 @@ class EdgeCaseTests {
     void ifWithoutElseViaDesugarer() {
         ExpressionNode e = parseExpr("if (true) 1");
         assertNull(((IfNode) e).elseBranch);
-        Desugarer.desugarExpr(e);
-        assertNotNull(((IfNode) e).elseBranch);
-        assertInstanceOf(UnitLiteralNode.class, ((IfNode) e).elseBranch);
+        ExpressionNode result = Desugarer.desugarExpr(e);
+        assertInstanceOf(IfNode.class, result);
+        assertNotNull(((IfNode) result).elseBranch);
+        assertInstanceOf(UnitLiteralNode.class, ((IfNode) result).elseBranch);
     }
 
     @Test
@@ -336,11 +337,13 @@ class EdgeCaseTests {
         ExpressionNode e = parseExpr("if (true) if (false) 1 else 2");
         IfNode outer = (IfNode) e;
         assertNull(outer.elseBranch);
-        Desugarer.desugarExpr(e);
-        assertNotNull(outer.elseBranch);
-        assertInstanceOf(UnitLiteralNode.class, outer.elseBranch);
+        ExpressionNode result = Desugarer.desugarExpr(e);
+        assertInstanceOf(IfNode.class, result);
+        IfNode outerResult = (IfNode) result;
+        assertNotNull(outerResult.elseBranch);
+        assertInstanceOf(UnitLiteralNode.class, outerResult.elseBranch);
         // Inner if already has else, should be unchanged
-        IfNode inner = (IfNode) outer.thenBranch;
+        IfNode inner = (IfNode) outerResult.thenBranch;
         assertNotNull(inner.elseBranch);
         assertInstanceOf(LiteralNode.class, inner.elseBranch);
     }
@@ -348,8 +351,8 @@ class EdgeCaseTests {
     @Test
     void desugarIfWithoutElseInLambda() {
         ExpressionNode e = parseExpr("(x: Int) => if (x == 0) 1");
-        Desugarer.desugarExpr(e);
-        LambdaNode lam = (LambdaNode) e;
+        ExpressionNode result = Desugarer.desugarExpr(e);
+        LambdaNode lam = (LambdaNode) result;
         IfNode ifn = (IfNode) lam.body;
         assertNotNull(ifn.elseBranch);
         assertInstanceOf(UnitLiteralNode.class, ifn.elseBranch);

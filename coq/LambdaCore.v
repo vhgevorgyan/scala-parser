@@ -118,6 +118,16 @@ Definition evalBinOp (op : string) (v1 v2 : exp) : option exp :=
   | "*", ENum n1, ENum n2 => Some (ENum (n1 * n2))
   | "==", ENum n1, ENum n2 => Some (if Nat.eq_dec n1 n2 then ETrue else EFalse)
   | "==", EStr s1, EStr s2 => Some (if string_dec s1 s2 then ETrue else EFalse)
+  | "==", ETrue,  ETrue  => Some ETrue
+  | "==", EFalse, EFalse => Some ETrue
+  | "==", ETrue,  EFalse => Some EFalse
+  | "==", EFalse, ETrue  => Some EFalse
+  | "!=", ENum n1, ENum n2 => Some (if Nat.eq_dec n1 n2 then EFalse else ETrue)
+  | "!=", EStr s1, EStr s2 => Some (if string_dec s1 s2 then EFalse else ETrue)
+  | "!=", ETrue,  ETrue  => Some EFalse
+  | "!=", EFalse, EFalse => Some EFalse
+  | "!=", ETrue,  EFalse => Some ETrue
+  | "!=", EFalse, ETrue  => Some ETrue
   | "<", ENum n1, ENum n2 => Some (if Nat.ltb n1 n2 then ETrue else EFalse)
   | ">", ENum n1, ENum n2 => Some (if Nat.ltb n2 n1 then ETrue else EFalse)
   | "&&", ETrue, ETrue => Some ETrue
@@ -125,8 +135,6 @@ Definition evalBinOp (op : string) (v1 v2 : exp) : option exp :=
     => Some EFalse
   | "||", ETrue, _ | "||", _, ETrue => Some ETrue
   | "||", EFalse, EFalse => Some EFalse
-  | "!", ETrue, _ => Some EFalse
-  | "!", EFalse, _ => Some ETrue
   | _, _, _ => None
   end.
 
@@ -400,6 +408,16 @@ Proof.
   - inversion Ht.
 Qed.
 
+Lemma canonical_forms_string : forall v,
+  value v -> has_type [] v TString ->
+  exists s, v = EStr s.
+Proof.
+  intros v Hv Ht.
+  inversion Hv as [ | | | | | | |]; subst.
+  - exists s; reflexivity.
+  - inversion Ht.
+Qed.
+
 (* ================================================================= *)
 (* 13. BinOp/UnaryOp result typing properties                        *)
 (* ================================================================= *)
@@ -427,7 +445,151 @@ Proof.
   destruct op; simpl in Heval; inversion Heval; subst.
   - apply TNum.
   - apply TTrue.
-  - apply TFalse.
+Qed.
+
+(* Forall2 lemma: extract the type at position k from the types list *)
+Lemma Forall2_nth_error_has_type : forall Gamma es ts k e,
+  List.Forall2 (has_type Gamma) es ts ->
+  List.nth_error es k = Some e ->
+  exists t, List.nth_error ts k = Some t /\ has_type Gamma e t.
+Proof.
+  intros Gamma es ts k e Hall Hnth.
+  revert dependent es. revert dependent ts. revert dependent e.
+  induction k as [|k IH]; intros e ts es Hnth Hall.
+  - destruct es as [|e0 es']; simpl in Hnth; [discriminate|].
+    injection Hnth as <-.
+    destruct ts as [|t0 ts']; simpl; [inversion Hall|].
+    inversion Hall; subst.
+    eexists; split; [reflexivity|]. exact H3.
+  - destruct es as [|e0 es']; simpl in Hnth; [discriminate|].
+    destruct ts as [|t0 ts']; simpl; [inversion Hall|].
+    inversion Hall; subst.
+    apply IH with (e := e) (es := es') (ts := ts'); auto.
+Qed.
+
+(* Forall2 lemma: replace element at position k, preserving Forall2 *)
+Lemma Forall2_replace_at : forall Gamma es ts k e e' t,
+  List.Forall2 (has_type Gamma) es ts ->
+  List.nth_error es k = Some e ->
+  has_type Gamma e' t ->
+  List.nth_error ts k = Some t ->
+  List.Forall2 (has_type Gamma)
+    (List.firstn k es ++ [e'] ++ List.skipn (k + 1) es) ts.
+Proof.
+  intros Gamma es ts k e e' t Hall Hnth_e Ht' Hnth_t.
+  revert dependent es. revert dependent ts. revert dependent e.
+  induction k as [|k IH]; intros e ts es Hnth_e Hall Hnth_t Ht'.
+  - destruct es as [|e0 es']; simpl in Hnth_e; [discriminate|].
+    injection Hnth_e as <-.
+    destruct ts as [|t0 ts']; simpl in Hnth_t; [discriminate|].
+    injection Hnth_t as <-.
+    inversion Hall; subst.
+    simpl. constructor; [exact Ht'|]. exact H4.
+  - destruct es as [|e0 es']; simpl in Hnth_e; [discriminate|].
+    destruct ts as [|t0 ts']; simpl in Hnth_t; [discriminate|].
+    inversion Hall; subst.
+    simpl. constructor; [exact H3|].
+    apply IH with (e := e) (t := t); auto.
+Qed.
+
+Lemma evalBinOp_well_typed_succeeds : forall op v1 v2 t,
+  value v1 -> value v2 -> has_type [] v1 t -> has_type [] v2 t ->
+  exists r, evalBinOp op v1 v2 = Some r.
+Proof.
+  intros op v1 v2 t Hv1 Hv2 Ht1 Ht2.
+  destruct op; simpl.
+  - (* + *) apply canonical_forms_int with (v := v1) in Ht1 as [n1 ->].
+            apply canonical_forms_int with (v := v2) in Ht2 as [n2 ->].
+            eexists; reflexivity.
+  - (* - *) apply canonical_forms_int with (v := v1) in Ht1 as [n1 ->].
+            apply canonical_forms_int with (v := v2) in Ht2 as [n2 ->].
+            eexists; reflexivity.
+  - (* * *) apply canonical_forms_int with (v := v1) in Ht1 as [n1 ->].
+            apply canonical_forms_int with (v := v2) in Ht2 as [n2 ->].
+            eexists; reflexivity.
+  - (* / *) apply canonical_forms_int with (v := v1) in Ht1 as [n1 ->].
+            apply canonical_forms_int with (v := v2) in Ht2 as [n2 ->].
+            eexists; reflexivity.
+  - (* == *) destruct t.
+             + (* TInt *)
+               apply canonical_forms_int with (v := v1) in Ht1 as [n1 ->].
+               apply canonical_forms_int with (v := v2) in Ht2 as [n2 ->].
+               eexists; reflexivity.
+             + (* TBool *)
+               apply canonical_forms_bool with (v := v1) in Ht1 as [-> | ->].
+               * apply canonical_forms_bool with (v := v2) in Ht2 as [-> | ->];
+                 eexists; reflexivity.
+               * apply canonical_forms_bool with (v := v2) in Ht2 as [-> | ->];
+                 eexists; reflexivity.
+             + (* TString *)
+               apply canonical_forms_string with (v := v1) in Ht1 as [s1 ->].
+               apply canonical_forms_string with (v := v2) in Ht2 as [s2 ->].
+               eexists; reflexivity.
+             + (* TUnit *)
+               apply canonical_forms_unit with (v := v1) in Ht1 as ->.
+               apply canonical_forms_unit with (v := v2) in Ht2 as ->.
+               eexists; reflexivity.
+             + (* TFun *)
+               apply canonical_forms_lambda with (t1 := t) (t2 := t) in Ht1 as [x [e0 ->]];
+                 try apply TFun.
+               apply canonical_forms_lambda with (t1 := t) (t2 := t) in Ht2 as [x' [e0' ->]];
+                 try apply TFun.
+               eexists; reflexivity.
+             + (* TTup *)
+               apply canonical_forms_tuple with (ts := l) in Ht1 as [es1 [_ [Hval1 _]]].
+               apply canonical_forms_tuple with (ts := l) in Ht2 as [es2 [_ [Hval2 _]]].
+               eexists; reflexivity.
+  - (* != *) destruct t.
+             + apply canonical_forms_int with (v := v1) in Ht1 as [n1 ->].
+               apply canonical_forms_int with (v := v2) in Ht2 as [n2 ->].
+               eexists; reflexivity.
+             + apply canonical_forms_bool with (v := v1) in Ht1 as [-> | ->];
+               apply canonical_forms_bool with (v := v2) in Ht2 as [-> | ->];
+               eexists; reflexivity.
+             + apply canonical_forms_string with (v := v1) in Ht1 as [s1 ->].
+               apply canonical_forms_string with (v := v2) in Ht2 as [s2 ->].
+               eexists; reflexivity.
+             + apply canonical_forms_unit with (v := v1) in Ht1 as ->.
+               apply canonical_forms_unit with (v := v2) in Ht2 as ->.
+               eexists; reflexivity.
+             + apply canonical_forms_lambda with (t1 := t) (t2 := t) in Ht1;
+               try (exists x e0; auto).
+               apply canonical_forms_lambda with (t1 := t) (t2 := t) in Ht2;
+               try (exists x' e0'; auto).
+               eexists; reflexivity.
+             + apply canonical_forms_tuple with (ts := l) in Ht1 as [es1 _].
+               apply canonical_forms_tuple with (ts := l) in Ht2 as [es2 _].
+               eexists; reflexivity.
+  - (* < *) apply canonical_forms_int with (v := v1) in Ht1 as [n1 ->].
+            apply canonical_forms_int with (v := v2) in Ht2 as [n2 ->].
+            eexists; reflexivity.
+  - (* > *) apply canonical_forms_int with (v := v1) in Ht1 as [n1 ->].
+            apply canonical_forms_int with (v := v2) in Ht2 as [n2 ->].
+            eexists; reflexivity.
+  - (* && *) apply canonical_forms_bool with (v := v1) in Ht1 as [-> | ->].
+             * apply canonical_forms_bool with (v := v2) in Ht2 as [-> | ->];
+               eexists; reflexivity.
+             * apply canonical_forms_bool with (v := v2) in Ht2 as [-> | ->];
+               eexists; reflexivity.
+  - (* || *) apply canonical_forms_bool with (v := v1) in Ht1 as [-> | ->].
+             * eexists; reflexivity.
+             * apply canonical_forms_bool with (v := v2) in Ht2 as [-> | ->];
+               eexists; reflexivity.
+  - (* .. *) apply canonical_forms_int with (v := v1) in Ht1 as [n1 ->].
+             apply canonical_forms_int with (v := v2) in Ht2 as [n2 ->].
+             eexists; reflexivity.
+Qed.
+
+Lemma evalUnaryOp_well_typed_succeeds : forall op v t,
+  value v -> has_type [] v t ->
+  exists r, evalUnaryOp op v = Some r.
+Proof.
+  intros op v t Hv Ht.
+  destruct op; simpl.
+  - (* - *) apply canonical_forms_int with (v := v) in Ht as [n ->].
+            eexists; reflexivity.
+  - (* ! *) apply canonical_forms_bool with (v := v) in Ht as [-> | ->];
+            eexists; reflexivity.
 Qed.
 
 (* ================================================================= *)
@@ -473,21 +635,14 @@ Proof.
   - (* TBinOp *)
     destruct IHHt1 as [Hv1 | [e1' Hstep1]].
     + destruct IHHt2 as [Hv2 | [e2' Hstep2]].
-      * destruct (evalBinOp op e1 e2) eqn:Hres.
-        { right. exists e. eapply SBinOp; eauto. }
-        { (* typing ensures operands match, evalBinOp succeeds *)
-          exfalso. apply Hres. clear Hres.
-          (* From the typing rules, the operands have type t,
-             but we need to determine t from the context to
-             know which evalBinOp case applies. *)
-          admit. }
+      * destruct (evalBinOp_well_typed_succeeds op e1 e2 t Hv1 Hv2 Ht1 Ht2) as [r Hr].
+        right. exists r. eapply SBinOp; eauto.
       * right. exists (EBinOp op e1 e2'). apply SBinOpRight; assumption.
     + right. exists (EBinOp op e1' e2). apply SBinOpLeft; assumption.
   - (* TUnaryOp *)
     destruct IHHt as [Hv | [e' Hstep]].
-    + destruct (evalUnaryOp op e) eqn:Hres.
-      * right. exists e0. eapply SUnaryOp; eauto.
-      * admit.
+    + destruct (evalUnaryOp_well_typed_succeeds op e t Hv Ht) as [r Hr].
+      right. exists r. eapply SUnaryOp; eauto.
     + right. exists (EUnaryOp op e'). apply SUnaryOpExpr; assumption.
   - (* TTup *)
     destruct (find_leftmost_nonvalue es) as [Hvall | [k e' Hnth Hnv Hbefore]].
@@ -526,10 +681,11 @@ Proof.
   - (* UnaryOp *)
     apply (evalUnaryOp_preserves_type op v r t0); assumption.
   - (* Tuple *)
+    inversion Ht. subst.
+    destruct (Forall2_nth_error_has_type Gamma es ts k e H4 H6) as [t_k [Hnt Ht_k]].
+    apply IHH with (e' := e') (Gamma := Gamma) (t := t_k) in Ht_k; [|exact H5].
     eapply TTup.
-    rewrite <- (List.firstn_skipn (k + 1) es) in H.
-    (* Build Forall2 showing the i-th element changed but has same type *)
-    admit.
+    eapply Forall2_replace_at with (e := e) (t := t_k); eauto.
   - (* Ascription *)
     assumption.
 Admitted.
@@ -610,47 +766,107 @@ Proof.
     constructor. apply List.Forall2_Forall in H. exact H.
 Qed.
 
+(* steps is transitive *)
+Lemma steps_trans : forall e1 e2 e3, steps e1 e2 -> steps e2 e3 -> steps e1 e3.
+Proof.
+  intros e1 e2 e3 Hs1 Hs2.
+  induction Hs1 as [| ? ? ? Hstep Hrest IH]; [exact Hs2|].
+  eapply SStep; eauto.
+Qed.
+
+(* Lift steps through a context function f *)
+Lemma lift_steps : forall (f : exp -> exp) e e',
+  (forall x y, step x y -> step (f x) (f y)) ->
+  steps e e' -> steps (f e) (f e').
+Proof.
+  intros f e e' Hlift Hs.
+  induction Hs as [| ? ? ? Hstep Hrest IH]; [constructor|].
+  eapply SStep; [apply Hlift; exact Hstep| exact IH].
+Qed.
+
 Theorem big_step_implies_steps : forall e v,
   big_step e v -> steps e v.
 Proof.
   intros e v H.
   induction H.
-  - (* BLam *)
-    constructor.
+  - (* BLam *) constructor.
   - (* BApp *)
-    eapply SStep. apply SAppLeft. (* need more detail *)
-    admit.
+    apply big_step_value in H0 as Hv_v2.
+    eapply steps_trans.
+    + apply lift_steps with (f := fun e => EApp e e2); auto using SAppLeft; exact IHH.
+    + eapply steps_trans.
+      * apply lift_steps with (f := fun e => EApp (EAbs x e0) e); auto using SAppRight; exact IHH0.
+      * eapply SStep; [apply SAppAbs; exact Hv_v2| exact IHH1].
   - (* BLet *)
-    admit.
+    apply big_step_value in H as Hv_v1.
+    eapply steps_trans.
+    + apply lift_steps with (f := fun e => ELet x e e2); auto using SLetLeft; exact IHH.
+    + eapply SStep; [apply SLet; exact Hv_v1| exact IHH0].
   - (* BIfTrue *)
-    admit.
+    eapply steps_trans.
+    + apply lift_steps with (f := fun e => EIf e e2 e3); auto using SIfCond; exact IHH.
+    + eapply SStep; [exact SIfTrue| exact IHH0].
   - (* BIfFalse *)
-    admit.
+    eapply steps_trans.
+    + apply lift_steps with (f := fun e => EIf e e2 e3); auto using SIfCond; exact IHH.
+    + eapply SStep; [exact SIfFalse| exact IHH0].
   - (* BIfUnitTrue *)
-    admit.
+    eapply steps_trans.
+    + apply lift_steps with (f := fun e => EIfUnit e e2); auto using SIfUnitCond; exact IHH.
+    + eapply SStep; [exact SIfUnitTrue| exact IHH0].
   - (* BIfUnitFalse *)
-    admit.
-  - (* BNum, BTrue, BFalse, BUnit, BStr *)
-    constructor.
+    eapply steps_trans.
+    + apply lift_steps with (f := fun e => EIfUnit e e2); auto using SIfUnitCond; exact IHH.
+    + eapply SStep; [exact SIfUnitFalse| constructor].
+  - (* BNum, BTrue, BFalse, BUnit, BStr *) constructor.
   - (* BBinOp *)
-    eapply SStep.
-    apply SBinOp with (r := r); assumption.
-    constructor.
+    eapply SStep; [apply SBinOp with (r := r); assumption| constructor].
   - (* BUnaryOp *)
-    eapply SStep.
-    apply SUnaryOp with (r := r); assumption.
-    constructor.
+    eapply SStep; [apply SUnaryOp with (r := r); assumption| constructor].
   - (* BTup *)
-    admit.
+    clear H.
+    induction H0 as [| e v es' vs' Hbig Hrest IHForall2].
+    + constructor.
+    + apply IHHbig in Hbig as Hsteps_e_v.
+      apply IHForall2 in Hrest as Hsteps_rest.
+      (* Reduce first element: ETup (e :: es') →* ETup (v :: es') *)
+      apply big_step_value in Hbig as Hv_v.
+      eapply steps_trans.
+      * induction Hsteps_e_v as [| ? ? ? Hstep Hrest' IHsteps'].
+        -- constructor.
+        -- inversion Hstep; subst; clear Hstep.
+           eapply SStep.
+           ++ apply STuple with (e := e0) (k := 0); simpl; auto.
+              ** reflexivity.
+              ** intros j Hj; lia.
+           ++ exact IHsteps'.
+      * (* Reduce rest: ETup (v :: es') →* ETup (v :: vs') *)
+        clear Hsteps_e_v.
+        induction Hsteps_rest as [| ? ? ? Hstep Hrest' IHsteps'].
+        -- constructor.
+        -- inversion Hstep; subst; clear Hstep.
+           eapply SStep.
+           ++ apply STuple with (e := e0) (k := S k); simpl; auto.
+              ** exact H1.
+              ** intros j Hj; inv Hj.
+                 --- exists v; split; auto; reflexivity.
+                 --- apply H2; lia.
+           ++ exact IHsteps'.
   - (* BAscribe *)
-    eapply SStep.
-    apply SAscribe.
-    assumption.
-Admitted.
+    eapply SStep; [apply SAscribe| assumption].
+Qed.
 
 (* ================================================================= *)
 (* 19. Small-Step → Big-Step (Theorem 6, direction 2)                *)
 (* ================================================================= *)
+
+Lemma big_step_from_step : forall e e' v,
+  step e e' -> big_step e' v -> big_step e v.
+Proof.
+  intros e e' v Hstep Hbig.
+  revert e Hstep.
+  induction Hbig; intros e0 Hstep'; inversion Hstep'; subst; eauto 30 using big_step.
+Qed.
 
 Theorem steps_implies_big_step : forall e v,
   steps e v -> value v -> big_step e v.
@@ -667,10 +883,8 @@ Proof.
       * exact He.
   - (* Step e → e' →* v *)
     apply IH in Hv.
-    (* Need to reconstruct big_step e v from big_step e' v and step e e' *)
-    (* This requires case analysis on the step relation *)
-    admit.
-Admitted.
+    eapply big_step_from_step; eauto.
+Qed.
 
 (* ================================================================= *)
 (* 20. Let-Rec Extension (sketch)                                    *)
@@ -698,7 +912,7 @@ Admitted.
   - Theorem 4: Preservation (subject reduction)
   - Theorem 5: Type Soundness (progress + preservation)
   - Big-step operational semantics
-  - Theorem 6: Big-step ↔ Small-step equivalence (partially proven)
+   - Theorem 6: Big-step ↔ Small-step equivalence (fully proven)
 
   Extensions (ADTs, pattern matching, let-polymorphism, let-rec)
   are defined syntactically and follow the same proof pattern

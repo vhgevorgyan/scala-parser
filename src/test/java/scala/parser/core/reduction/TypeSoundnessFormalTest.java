@@ -296,6 +296,94 @@ public class TypeSoundnessFormalTest {
         assertEquals("42", ((LiteralNode) v).value);
     }
 
+    // ── Case/match reduction tests ──────────────────────────────
+
+    /** Constructor pattern match reduces */
+    @Test
+    void constructorMatchReduces() {
+        ParserResult r = parse("enum Maybe[A] { case Nothing; case Just(x: A) }; Just(42) match { case Just(y) => y }");
+        assertTrue(r.errors.isEmpty());
+        check(r);
+
+        ExpressionNode expr = (ExpressionNode) r.ast.statements.get(1);
+        ExpressionNode v = SmallStepReducer.reduce(expr);
+        assertTrue(SmallStepReducer.isValue(v));
+        assertInstanceOf(LiteralNode.class, v);
+        assertEquals("42", ((LiteralNode) v).value);
+    }
+
+    /** Wildcard pattern reduces */
+    @Test
+    void wildcardMatchReduces() {
+        ParserResult r = parse("42 match { case _ => 0 }");
+        assertTrue(r.errors.isEmpty());
+        check(r);
+
+        ExpressionNode expr = (ExpressionNode) r.ast.statements.get(0);
+        ExpressionNode v = SmallStepReducer.reduce(expr);
+        assertTrue(SmallStepReducer.isValue(v));
+        assertInstanceOf(LiteralNode.class, v);
+        assertEquals("0", ((LiteralNode) v).value);
+    }
+
+    /** Literal pattern match reduces */
+    @Test
+    void literalPatternMatchReduces() {
+        ParserResult r = parse("0 match { case 0 => 1; case _ => 2 }");
+        assertTrue(r.errors.isEmpty());
+        check(r);
+
+        ExpressionNode expr = (ExpressionNode) r.ast.statements.get(0);
+        ExpressionNode v = SmallStepReducer.reduce(expr);
+        assertTrue(SmallStepReducer.isValue(v));
+        assertInstanceOf(LiteralNode.class, v);
+        assertEquals("1", ((LiteralNode) v).value);
+    }
+
+    /** Nested constructor match reduces: outer value passed through inner constructor */
+    @Test
+    void nestedConstructorMatchReduces() {
+        ParserResult r = parse("enum Box[A] { case Box(x: A) }; Box(1 + 2) match { case Box(x) => x }");
+        assertTrue(r.errors.isEmpty());
+        check(r);
+
+        ExpressionNode expr = (ExpressionNode) r.ast.statements.get(1);
+        ExpressionNode v = SmallStepReducer.reduce(expr);
+        assertTrue(SmallStepReducer.isValue(v));
+        assertInstanceOf(LiteralNode.class, v);
+        assertEquals("3", ((LiteralNode) v).value);
+    }
+
+    /** Progress: non-value case match can step */
+    @Test
+    void progressCaseMatch() {
+        ParserResult r = parse("(1 + 2) match { case _ => 0 }");
+        assertTrue(r.errors.isEmpty());
+        check(r);
+
+        ExpressionNode expr = (ExpressionNode) r.ast.statements.get(0);
+        assertFalse(SmallStepReducer.isValue(expr));
+        ExpressionNode next = SmallStepReducer.step(expr);
+        assertNotNull(next);
+    }
+
+    /** Preservation: case match preserves type */
+    @Test
+    void preservationCaseMatch() {
+        ParserResult r = parse("enum Opt[A] { case None; case Some(x: A) }; Some(1 + 2) match { case Some(x) => x }");
+        assertTrue(r.errors.isEmpty());
+        TypeChecker tc = check(r);
+        Type t1 = tc.getInferredTypes().get(r.ast.statements.get(1));
+
+        ExpressionNode expr = (ExpressionNode) r.ast.statements.get(1);
+        ExpressionNode next = SmallStepReducer.reduce(expr);
+
+        ParserResult r2 = parse(astToString(next));
+        TypeChecker tc2 = check(r2);
+        Type t2 = tc2.getInferredTypes().get(r2.ast.statements.get(0));
+        assertEquals(t1.toString(), t2.toString());
+    }
+
     // ── Helpers ─────────────────────────────────────────────────
 
     private String astToString(ExpressionNode expr) {
