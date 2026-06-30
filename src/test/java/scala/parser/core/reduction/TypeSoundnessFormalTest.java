@@ -384,6 +384,66 @@ public class TypeSoundnessFormalTest {
         assertEquals(t1.toString(), t2.toString());
     }
 
+    // ── Recursive def (FixpointNode) tests ──────────────────────
+
+    /** BlockNode: recursive def factorial reduces correctly */
+    @Test
+    void blockLetRecFactorial() {
+        ParserResult r = parse("{ def fact(n: Int): Int = if (n == 0) 1 else n * fact(n - 1); fact(5) }");
+        assertTrue(r.errors.isEmpty());
+        check(r);
+
+        ExpressionNode expr = (ExpressionNode) r.ast.statements.get(0);
+        ExpressionNode v = SmallStepReducer.reduce(expr);
+        assertTrue(SmallStepReducer.isValue(v));
+        assertInstanceOf(LiteralNode.class, v);
+        assertEquals("120", ((LiteralNode) v).value);
+    }
+
+    /** BlockNode: recursive def fibonacci reduces correctly */
+    @Test
+    void blockLetRecFibonacci() {
+        ParserResult r = parse("{ def fib(n: Int): Int = if (n == 0) 0 else if (n == 1) 1 else fib(n - 1) + fib(n - 2); fib(10) }");
+        assertTrue(r.errors.isEmpty());
+        check(r);
+
+        ExpressionNode expr = (ExpressionNode) r.ast.statements.get(0);
+        ExpressionNode v = SmallStepReducer.reduce(expr);
+        assertTrue(SmallStepReducer.isValue(v));
+        assertInstanceOf(LiteralNode.class, v);
+        assertEquals("55", ((LiteralNode) v).value);
+    }
+
+    /** Preservation: recursive def preserves type */
+    @Test
+    void preservationBlockLetRec() {
+        ParserResult r = parse("{ def fact(n: Int): Int = if (n == 0) 1 else n * fact(n - 1); fact(5) }");
+        assertTrue(r.errors.isEmpty());
+        TypeChecker tc = check(r);
+        Type t1 = tc.getInferredTypes().get(r.ast.statements.get(0));
+
+        ExpressionNode expr = (ExpressionNode) r.ast.statements.get(0);
+        ExpressionNode next = SmallStepReducer.reduce(expr);
+
+        ParserResult r2 = parse(astToString(next));
+        TypeChecker tc2 = check(r2);
+        Type t2 = tc2.getInferredTypes().get(r2.ast.statements.get(0));
+        assertEquals(t1.toString(), t2.toString());
+    }
+
+    /** Progress: non-value recursive call can step */
+    @Test
+    void progressRecursiveCall() {
+        ParserResult r = parse("{ def fact(n: Int): Int = if (n == 0) 1 else n * fact(n - 1); fact(3 + 2) }");
+        assertTrue(r.errors.isEmpty());
+        check(r);
+
+        ExpressionNode expr = (ExpressionNode) r.ast.statements.get(0);
+        assertFalse(SmallStepReducer.isValue(expr));
+        ExpressionNode next = SmallStepReducer.step(expr);
+        assertNotNull(next);
+    }
+
     // ── Helpers ─────────────────────────────────────────────────
 
     private String astToString(ExpressionNode expr) {

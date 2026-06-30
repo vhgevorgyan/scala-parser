@@ -65,6 +65,12 @@ public class Substitution {
                 asc.declaredType, asc.line, asc.column);
         }
 
+        if (expr instanceof FixpointNode fp) {
+            return new FixpointNode(
+                subst(var, replacement, fp.body),
+                fp.line, fp.column);
+        }
+
         if (expr instanceof BlockNode block) {
             var newStmts = block.statements.stream()
                 .map(s -> s instanceof ExpressionNode e

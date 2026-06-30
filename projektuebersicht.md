@@ -200,13 +200,18 @@ Jede Mutation wird kategorisiert als:
 | Operator | Erkennung | Phase |
 |---|---|---|
 | `SelfReference` (`def f = f`) | **100%** | TypeChecker |
-| `ReplaceLiteralType` (Number↔String↔Bool) | **63,5%** | TypeChecker |
-| `DivideByZero` (RHS einer Division = 0) | **62,0%** | Evaluator |
-| `NotOnNumber` (`!` auf Number) | **39,5%** | TypeChecker |
+| `ReplaceLiteralType` (Number↔String↔Bool) | **0%** | unerkannt (Typwechsel auf Top-Level) |
+| `DivideByZero` (RHS einer Division = 0) | **4,5%** | Evaluator |
+| `BoolNegate` (`-` auf Bool) | **27,5%** | TypeChecker |
+| `NotOnNumber` (`!` auf Number) | **8,5%** | TypeChecker |
+| `SelfReference` (`def f = f`) | **97,0%** | TypeChecker |
+| `UndefinedVariable` | **1,5%** | TypeError (selten getroffen) |
+| `UndeclaredConstructor` | **100%** ✅ | TypeChecker |
+| `RemoveCaseBranch` | **100%** ✅ | TypeChecker (Exhaustiveness) |
+| `TypeAnnotationMismatch` (`let x: Bool = 42`) | **100%** ✅ | Parser |
 | Semantische Operatoren (SwapOperator, SwapIfBranches, RemoveLetBinding) | **0%** | unerkannt (typkorrekt) |
-| `TypeAnnotationMismatch` (`let x: Bool = 42`) | **100%** ✅ | TypeChecker (stringify serialisiert nun Annotationen) |
 
-Gesamterkennungsrate: **36,5%** (erwartbar, da semantische Änderungen typkorrekt bleiben).
+Gesamterkennungsrate: **31,4%** (mit erweitertem Programm-Generator nun auch ADTs, Lambdas, Tuples, Case/Match). Operatoren mit hoher Escape-Rate ändern Semantik typkorrekt oder treffen toten Code.
 
 ---
 
@@ -232,7 +237,11 @@ Gesamterkennungsrate: **36,5%** (erwartbar, da semantische Änderungen typkorrek
 9. ✅ Property-Based Tests (11 Properties, >8000 Tries)
 10. ✅ Type Error Messages (mit Quelltext-Location + beteiligten Typen)
 11. ✅ Scaling Benchmarks (Performance-Skalierung bei n = 10–1000)
-12. ✅ Mutation Analysis (12 Operatoren, 2000 Mutationen, 26,5% Erkennung)
+12. ✅ Mutation Analysis (12 Operatoren, 2200 Mutationen, 31,4% Erkennung, inkl. ADTs/Lambdas/Tupel/Case)
 13. ✅ `TestParser` CLI-Tool
 14. ✅ Dokumentation: Architektur-Diagramme + BNF-Grammatik (`docs/`)
 15. ✅ Scala-3-Syntax-Lücken geschlossen: `Unit`/`()`, `if` ohne `else`, Wildcard `_`, Literal-Patterns, Multi-Parameter-Defs, Type Ascription
+16. ✅ Coq-Formalisierung: Λ-Core mit 6 Theoremen (Progress, Preservation, Type Soundness, Big↔Small), alle bewiesen (0 Admitted)
+17. ✅ Case/Match-Reduktion im SmallStepReducer getestet (6 Tests in TypeSoundnessFormalTest)
+18. ✅ TypeChecker Property-Based-Tests (5 Properties in TypeCheckerPBT.java)
+19. ✅ Desugarer: `a..b` → `(a, b)` via funktionalem Rewrite

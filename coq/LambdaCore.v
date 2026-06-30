@@ -601,18 +601,15 @@ Theorem progress : forall e t,
   value e \/ (exists e', step e e').
 Proof.
   intros e t Ht.
-  remember [] as Gamma.
-  induction Ht; try solve [left; constructor; auto];
-    try (right; repeat eexists; eauto; fail).
+  induction Ht.
   - (* TVar: impossible in empty context *)
-    subst Gamma. simpl in H. discriminate.
+    simpl in H. discriminate.
   - (* TAbs: value *)
     left. constructor.
   - (* TApp *)
     destruct IHHt1 as [Hv1 | [e1' Hstep1]].
     + destruct IHHt2 as [Hv2 | [e2' Hstep2]].
-      * (* Both values — beta reduction *)
-        destruct (canonical_forms_lambda _ _ _ Hv1 Ht1) as [x [e0 Heq]].
+      * destruct (canonical_forms_lambda _ _ _ Hv1 Ht1) as [x [e0 Heq]].
         subst e1. right. exists (subst x e2 e0). apply SAppAbs; exact Hv2.
       * right. exists (EApp e1 e2'). apply SAppRight; assumption.
     + right. exists (EApp e1' e2). apply SAppLeft; assumption.
@@ -651,7 +648,17 @@ Proof.
       apply STuple with (e := e') (k := k); assumption.
   - (* TAscribe *)
     right. exists e. exact SAscribe.
-Admitted.
+  - (* TTrue *)
+    left. constructor.
+  - (* TFalse *)
+    left. constructor.
+  - (* TNum *)
+    left. constructor.
+  - (* TStr *)
+    left. constructor.
+  - (* TUnit *)
+    left. constructor.
+Qed.
 
 (* ================================================================= *)
 (* 15. Preservation Theorem (Theorem 4)                              *)
@@ -662,33 +669,49 @@ Theorem preservation : forall Gamma e e' t,
 Proof.
   intros Gamma e e' t Ht Hs.
   induction Hs; inversion Ht; subst; eauto using has_type.
-  - (* Beta *)
+  - (* SAppAbs *)
     eapply substitution_lemma; eauto.
     + exact H3.
     + exact H5.
-  - (* Let *)
+  - (* SLet *)
     eapply substitution_lemma; eauto.
-  - (* IfTrue *)
+  - (* SIfTrue *)
     exact H4.
-  - (* IfFalse *)
+  - (* SIfFalse *)
     exact H5.
-  - (* IfNoElseTrue *)
+  - (* SIfUnitTrue *)
     exact H4.
-  - (* IfNoElseFalse *)
+  - (* SIfUnitFalse *)
     apply TUnit.
-  - (* BinOp *)
+  - (* SBinOp *)
     apply (evalBinOp_preserves_type op v1 v2 r t0) with (v1 := v1) (v2 := v2); assumption.
-  - (* UnaryOp *)
+  - (* SUnaryOp *)
     apply (evalUnaryOp_preserves_type op v r t0); assumption.
-  - (* Tuple *)
+  - (* STuple *)
     inversion Ht. subst.
     destruct (Forall2_nth_error_has_type Gamma es ts k e H4 H6) as [t_k [Hnt Ht_k]].
-    apply IHH with (e' := e') (Gamma := Gamma) (t := t_k) in Ht_k; [|exact H5].
+    apply IHHs with (e' := e') (Gamma := Gamma) (t := t_k) in Ht_k; [|exact H5].
     eapply TTup.
     eapply Forall2_replace_at with (e := e) (t := t_k); eauto.
-  - (* Ascription *)
+  - (* SAscribe *)
     assumption.
-Admitted.
+  - (* SAppLeft *)
+    eapply TApp; eauto.
+  - (* SAppRight *)
+    eapply TApp; eauto.
+  - (* SLetLeft *)
+    eapply TLet; eauto.
+  - (* SIfCond *)
+    eapply TIf; eauto.
+  - (* SIfUnitCond *)
+    eapply TIfUnit; eauto.
+  - (* SBinOpLeft *)
+    eapply TBinOp; eauto.
+  - (* SBinOpRight *)
+    eapply TBinOp; eauto.
+  - (* SUnaryOpExpr *)
+    eapply TUnaryOp; eauto.
+Qed.
 
 (* ================================================================= *)
 (* 16. Type Soundness (Theorem 5)                                    *)

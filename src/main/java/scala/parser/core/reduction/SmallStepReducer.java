@@ -18,6 +18,8 @@ public class SmallStepReducer {
         }
         // Constructor call: K(v₁, ..., vₙ) via curried application
         if (isConstructorValue(expr)) return true;
+        // Fixpoint is not a value — it must unroll first
+        if (expr instanceof FixpointNode) return false;
         return false;
     }
 
@@ -83,6 +85,14 @@ public class SmallStepReducer {
             return asc.expr;
         }
 
+        // Fixpoint: fix(λx. body) → subst x (fix(λx. body)) body
+        if (expr instanceof FixpointNode fp) {
+            if (fp.body instanceof LambdaNode lam) {
+                return Substitution.subst(lam.param, expr, lam.body);
+            }
+            throw new RuntimeException("Fixpoint body must be a lambda: " + fp.body);
+        }
+
         // Tuple: reduce leftmost non-value
         if (expr instanceof TupleNode tup) {
             List<ExpressionNode> newEls = new ArrayList<>(tup.elements);
@@ -142,10 +152,21 @@ public class SmallStepReducer {
                     return new BlockNode(newStmts, block.line, block.column);
                 }
                 // Let has a value — substitute in all subsequent statements
+                ExpressionNode substVal = val;
+                if (let.isRec && val instanceof LambdaNode lam) {
+                    // Wrap in FixpointNode:
+                    //   let rec f = λx. body
+                    //   becomes f ↦ fix(λf. λx. body) in subsequent statements
+                    // FixpointNode unrolls: fix(λf. λx. body) → λx. body[f ↦ fix(λf. λx. body)]
+                    // The outer λf introduces the recursive self-reference.
+                    substVal = new FixpointNode(
+                        new LambdaNode(let.name, val, let.line, let.column),
+                        let.line, let.column);
+                }
                 List<ASTNode> rest = stmts.subList(i + 1, stmts.size());
                 List<ASTNode> substituted = new ArrayList<>();
                 for (ASTNode s : rest) {
-                    substituted.add(substInNode(let.name, val, s));
+                    substituted.add(substInNode(let.name, substVal, s));
                 }
                 // If there was a declared type, we checked it during typecheck;
                 // substitution replaces the name with the literal type
