@@ -146,6 +146,10 @@ public class Substitution {
             }
             return;
         }
+        if (expr instanceof FixpointNode fp) {
+            collectFree(fp.body, fv, bound);
+            return;
+        }
         if (expr instanceof CaseNode c) {
             collectFree(c.expr, fv, bound);
             for (var br : c.branches) {

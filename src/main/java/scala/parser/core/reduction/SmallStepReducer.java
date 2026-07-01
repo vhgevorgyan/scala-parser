@@ -1,7 +1,9 @@
 package scala.parser.core.reduction;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import scala.parser.core.ast.*;
 
@@ -187,12 +189,44 @@ public class SmallStepReducer {
                         return new BlockNode(newStmts, block.line, block.column);
                     }
                 }
-                // All values: substitute all names in subsequent statements
+                // All values: wrap recursive lambdas in FixpointNodes,
+                // cross-substitute all mutual names, then substitute in subsequent statements
+                // 1) Create self-recursive fixpoints for all names
+                Map<String, ExpressionNode> wraps = new HashMap<>();
+                List<String> names = defs.stream().map(d -> d.name).toList();
+                for (LetStatementNode def : defs) {
+                    if (def.isRec && def.value instanceof LambdaNode) {
+                        wraps.put(def.name, new FixpointNode(
+                            new LambdaNode(def.name, def.value, def.line, def.column),
+                            def.line, def.column));
+                    } else {
+                        wraps.put(def.name, def.value);
+                    }
+                }
+                // 2) Cross-substitute into original lambda bodies (before FixpointNode wrapping),
+                //    then wrap each in FixpointNode. This avoids alpha-renaming the fixpoint's
+                //    own binding (the freevars of the other fixpoints may contain our name).
+                Map<String, ExpressionNode> finalWraps = new HashMap<>();
+                for (LetStatementNode def : defs) {
+                    if (def.isRec && def.value instanceof LambdaNode) {
+                        ExpressionNode val = def.value;
+                        for (String otherName : names) {
+                            if (!otherName.equals(def.name)) {
+                                val = Substitution.subst(otherName, wraps.get(otherName), val);
+                            }
+                        }
+                        finalWraps.put(def.name, new FixpointNode(
+                            new LambdaNode(def.name, val, def.line, def.column),
+                            def.line, def.column));
+                    } else {
+                        finalWraps.put(def.name, def.value);
+                    }
+                }
                 List<ASTNode> rest = stmts.subList(i + 1, stmts.size());
                 List<ASTNode> substituted = new ArrayList<>();
                 for (ASTNode s : rest) {
                     for (LetStatementNode def : defs) {
-                        s = substInNode(def.name, def.value, s);
+                        s = substInNode(def.name, finalWraps.get(def.name), s);
                     }
                     substituted.add(s);
                 }
@@ -261,6 +295,13 @@ public class SmallStepReducer {
                 case "==" -> bln(l.value == r.value, l);
                 case "!=" -> bln(l.value != r.value, l);
                 default -> throw new RuntimeException("Unknown bool op: " + bin.operator);
+            };
+        }
+        if (bin.left instanceof StringLiteralNode l && bin.right instanceof StringLiteralNode r) {
+            return switch (bin.operator) {
+                case "==" -> bln(l.value.equals(r.value), l);
+                case "!=" -> bln(!l.value.equals(r.value), l);
+                default -> throw new RuntimeException("Unknown string op: " + bin.operator);
             };
         }
         throw new RuntimeException("Cannot reduce " + bin.operator);

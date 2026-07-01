@@ -444,6 +444,115 @@ public class TypeSoundnessFormalTest {
         assertNotNull(next);
     }
 
+    // ── Mutual recursion tests ───────────────────────────────────
+
+    /** Mutual recursion: even/odd reduce correctly */
+    @Test
+    void blockMutualEvenOdd() {
+        ParserResult r = parse("{ def even(n: Int): Bool = if (n == 0) true else odd(n - 1); def odd(n: Int): Bool = if (n == 0) false else even(n - 1); even(5) }");
+        assertTrue(r.errors.isEmpty());
+        check(r);
+
+        ExpressionNode expr = (ExpressionNode) r.ast.statements.get(0);
+        ExpressionNode v = SmallStepReducer.reduce(expr);
+        assertTrue(SmallStepReducer.isValue(v));
+        assertInstanceOf(BoolNode.class, v);
+        assertFalse(((BoolNode) v).value);
+    }
+
+    /** Mutual recursion: even(0) → true */
+    @Test
+    void blockMutualEvenZero() {
+        ParserResult r = parse("{ def even(n: Int): Bool = if (n == 0) true else odd(n - 1); def odd(n: Int): Bool = if (n == 0) false else even(n - 1); even(0) }");
+        assertTrue(r.errors.isEmpty());
+        check(r);
+
+        ExpressionNode expr = (ExpressionNode) r.ast.statements.get(0);
+        ExpressionNode v = SmallStepReducer.reduce(expr);
+        assertTrue(SmallStepReducer.isValue(v));
+        assertInstanceOf(BoolNode.class, v);
+        assertTrue(((BoolNode) v).value);
+    }
+
+    /** Preservation: mutual recursion preserves type (Bool) */
+    @Test
+    void preservationBlockMutualEvenOdd() {
+        ParserResult r = parse("{ def even(n: Int): Bool = if (n == 0) true else odd(n - 1); def odd(n: Int): Bool = if (n == 0) false else even(n - 1); even(5) }");
+        assertTrue(r.errors.isEmpty());
+        check(r);
+
+        ExpressionNode expr = (ExpressionNode) r.ast.statements.get(0);
+        ExpressionNode next = SmallStepReducer.reduce(expr);
+        assertTrue(SmallStepReducer.isValue(next));
+        assertInstanceOf(BoolNode.class, next);
+
+        ParserResult r2 = parse(astToString(next));
+        assertTrue(r2.errors.isEmpty());
+        TypeChecker tc2 = check(r2);
+        Type t2 = tc2.getInferredTypes().get(r2.ast.statements.get(0));
+        assertEquals("Boolean", t2.toString());
+    }
+
+    /** Progress: non-value mutual recursive call can step */
+    @Test
+    void progressMutualRecursiveCall() {
+        ParserResult r = parse("{ def even(n: Int): Bool = if (n == 0) true else odd(n - 1); def odd(n: Int): Bool = if (n == 0) false else even(n - 1); even(3 + 2) }");
+        assertTrue(r.errors.isEmpty());
+        check(r);
+
+        ExpressionNode expr = (ExpressionNode) r.ast.statements.get(0);
+        assertFalse(SmallStepReducer.isValue(expr));
+        ExpressionNode next = SmallStepReducer.step(expr);
+        assertNotNull(next);
+    }
+
+    // ── String comparison tests ──────────────────────────────────
+
+    /** String equality comparison reduces */
+    @Test
+    void stringEquality() {
+        ParserResult r = parse("\"hello\" == \"hello\"");
+        assertTrue(r.errors.isEmpty());
+        check(r);
+
+        ExpressionNode expr = (ExpressionNode) r.ast.statements.get(0);
+        ExpressionNode v = SmallStepReducer.reduce(expr);
+        assertTrue(SmallStepReducer.isValue(v));
+        assertInstanceOf(BoolNode.class, v);
+        assertTrue(((BoolNode) v).value);
+    }
+
+    /** String inequality comparison reduces */
+    @Test
+    void stringInequality() {
+        ParserResult r = parse("\"hello\" == \"world\"");
+        assertTrue(r.errors.isEmpty());
+        check(r);
+
+        ExpressionNode expr = (ExpressionNode) r.ast.statements.get(0);
+        ExpressionNode v = SmallStepReducer.reduce(expr);
+        assertTrue(SmallStepReducer.isValue(v));
+        assertInstanceOf(BoolNode.class, v);
+        assertFalse(((BoolNode) v).value);
+    }
+
+    /** Preservation: string comparison preserves Bool type */
+    @Test
+    void preservationStringEquality() {
+        ParserResult r = parse("\"hello\" == \"hello\"");
+        assertTrue(r.errors.isEmpty());
+        TypeChecker tc = check(r);
+        Type t1 = tc.getInferredTypes().get(r.ast.statements.get(0));
+
+        ExpressionNode expr = (ExpressionNode) r.ast.statements.get(0);
+        ExpressionNode next = SmallStepReducer.reduce(expr);
+
+        ParserResult r2 = parse(astToString(next));
+        TypeChecker tc2 = check(r2);
+        Type t2 = tc2.getInferredTypes().get(r2.ast.statements.get(0));
+        assertEquals(t1.toString(), t2.toString());
+    }
+
     // ── Helpers ─────────────────────────────────────────────────
 
     private String astToString(ExpressionNode expr) {
@@ -476,6 +585,9 @@ public class TypeSoundnessFormalTest {
             return "(" + astToString(asc.expr) + ": " + asc.declaredType + ")";
         }
         if (expr instanceof StringLiteralNode s) return "\"" + s.value + "\"";
+        if (expr instanceof FixpointNode fp) {
+            return "fix(" + astToString(fp.body) + ")";
+        }
         if (expr instanceof CaseNode c) {
             return astToString(c.expr) + " match { ... }";
         }
