@@ -97,14 +97,24 @@ Kern: **let-Polymorphismus** mit `generalize`/`instantiate`, Unifikation mit `oc
 - **Rekursive Selbstreferenz**: `def f = f` wird abgefangen
 - **Detaillierte Fehlermeldungen** mit Quelltext-Location
 
-### 3.4 Evaluator
+### 3.4 Evaluator / SmallStepReducer
 
-Tree-Walking-Interpreter mit environments (linked-list of scopes):
+Zwei Evaluierungsstrategien:
+
+**Tree-Walking-Interpreter (Big-Step)**:
 - Closures für Lambda-Ausdrücke
 - `ConstructorBuilder` für curried Constructor-Application
 - Fixpoint-Semantik für `let rec`
 - Rekursionstiefenlimit (1000)
 - `Env.toString()` für REPL `:env`
+
+**SmallStepReducer (Small-Step)**:
+- Schrittweise Reduktion mit `step()` / `reduce()`-Loop
+- `FixpointNode`: fix(λx. body) → subst x (fix(λx. body)) body
+- `reduceBlock`: Block-Ausdrücke mit let-Substitution, Fixpoint-Wrapping für rekursive `def`
+- MutualRecursion: Kreuz-Substitution aller Namen in originale Lambda-Bodies vor Fixpoint-Wrapping
+- String-Vergleich (`==`/`!=` für StringLiteralNode)
+- Progress + Preservation durch TypeSoundnessFormalTest abgedeckt
 
 ### 3.5 LSP Server (LSP4J 0.21.0)
 
@@ -160,7 +170,7 @@ Aufruf: `gradlew runTestParser --args="<file.sp>"`
 
 ## 4. Testing
 
-### 4.1 Unit Tests (JUnit 5) – 166+ Tests
+### 4.1 Unit Tests (JUnit 5) – 365 Tests
 
 | Testklasse | Tests | Abdeckung |
 |---|---|---|
@@ -168,6 +178,8 @@ Aufruf: `gradlew runTestParser --args="<file.sp>"`
 | `ParserTests` | ~50 | Alle AST-Knoten, Präzedenz, Fehlerrecovery |
 | `TypeCheckerTests` | ~40 | HM-Inferenz, let-Poly, ADTs, Fehlererkennung |
 | `EvaluatorTests` | ~30 | Alle Values, Builtins, Rekursion, Pattern Matching |
+| `TypeSoundnessFormalTest` | ~60+ | Progress/Preservation für SmallStepReducer, Block-Reduktion, Case/Match, rekursive defs, mutual recursion, String-Vergleich |
+| `LanguageConfigTest` | 20 | Language-Feature-Flags, Unicode-Operatoren |
 
 ### 4.2 Property-Based Tests (jqwik) – 13 Properties, ~9500+ Tries
 
@@ -245,3 +257,6 @@ Gesamterkennungsrate: **31,4%** (mit erweitertem Programm-Generator nun auch ADT
 17. ✅ Case/Match-Reduktion im SmallStepReducer getestet (6 Tests in TypeSoundnessFormalTest)
 18. ✅ TypeChecker Property-Based-Tests (5 Properties in TypeCheckerPBT.java)
 19. ✅ Desugarer: `a..b` → `(a, b)` via funktionalem Rewrite
+20. ✅ SmallStepReducer mit FixpointNode für let-rec-Rekursion (8 Tests in TypeSoundnessFormalTest)
+21. ✅ String-Vergleich (`==`/`!=`) im SmallStepReducer (3 Tests)
+22. ✅ MutualRecursion via FixpointNode + Kreuz-Substitution (4 Tests in TypeSoundnessFormalTest)
