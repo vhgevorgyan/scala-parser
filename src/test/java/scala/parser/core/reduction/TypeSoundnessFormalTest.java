@@ -1,15 +1,18 @@
 package scala.parser.core.reduction;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
+import scala.parser.core.ParserError;
 import scala.parser.core.ParserResult;
 import scala.parser.core.ast.*;
 import scala.parser.core.lexer.Token;
 import scala.parser.core.lexer.Tokenizer;
 import scala.parser.core.parser.Parser;
+import scala.parser.core.interpreter.*;
 import scala.parser.core.reduction.SmallStepReducer;
 import scala.parser.core.reduction.Substitution;
 import scala.parser.core.types.*;
@@ -551,6 +554,219 @@ public class TypeSoundnessFormalTest {
         TypeChecker tc2 = check(r2);
         Type t2 = tc2.getInferredTypes().get(r2.ast.statements.get(0));
         assertEquals(t1.toString(), t2.toString());
+    }
+
+    // ── Gradual Typing: ? type and runtime type checks ──────────
+
+    @Test
+    void dynamicTypeAsAnnotation() {
+        ExpressionNode expr = parseAndGet("(42: ?)");
+        assertNotNull(expr);
+        assertInstanceOf(AscriptionNode.class, expr);
+    }
+
+    @Test
+    void dynamicTypeParseAndCheck() {
+        ParserResult r = parse("val x: ? = 42");
+        var errors = new ArrayList<ParserError>();
+        new TypeChecker(errors).check(r.ast);
+        assertTrue(errors.isEmpty(), "val x: ? = 42 must be well-typed: " + errors);
+    }
+
+    @Test
+    void dynamicTypeAcceptsAny() {
+        Value v = eval("(42: ?)");
+        assertInstanceOf(NumberValue.class, v);
+        assertEquals(42, ((NumberValue) v).value);
+    }
+
+    @Test
+    void dynamicTypeAcceptsBool() {
+        Value v = eval("(true: ?)");
+        assertInstanceOf(BoolValue.class, v);
+        assertTrue(((BoolValue) v).value);
+    }
+
+    @Test
+    void ascriptionToConcreteTypePasses() {
+        Value v = eval("(42: Int)");
+        assertInstanceOf(NumberValue.class, v);
+        assertEquals(42, ((NumberValue) v).value);
+    }
+
+    @Test
+    void ascriptionToWrongTypeFails() {
+        assertThrows(RuntimeException.class, () -> eval("(42: Boolean)"),
+            "Casting Int to Boolean must fail at runtime");
+    }
+
+    @Test
+    void ascriptionStringToIntFails() {
+        assertThrows(RuntimeException.class, () -> eval("(\"hello\": Int)"),
+            "Casting String to Int must fail at runtime");
+    }
+
+    @Test
+    void ascriptionBoolToStringFails() {
+        assertThrows(RuntimeException.class, () -> eval("(true: String)"),
+            "Casting Boolean to String must fail at runtime");
+    }
+
+    @Test
+    void dynamicTypeInFunctionType() {
+        ParserResult r = parse("val f: (? => ?) = (x: ?) => x");
+        var errors = new ArrayList<ParserError>();
+        new TypeChecker(errors).check(r.ast);
+        assertTrue(errors.isEmpty(), "Function with ? types must be well-typed: " + errors);
+    }
+
+    @Test
+    void ascriptionViaSmallStep() {
+        ExpressionNode result = reduce("(42: ?)");
+        assertTrue(SmallStepReducer.isValue(result),
+            "Reduction of (42: ?) must produce a value");
+    }
+
+    @Test
+    void ascriptionErasesInReducer() {
+        ExpressionNode result = parseAndStep("(42: Int)");
+        assertInstanceOf(LiteralNode.class, result,
+            "SmallStepReducer must erase ascription, leaving the inner expression");
+    }
+
+    // ── Builtins: succ / pred / iszero / print ──────────────────
+
+    @Test
+    void builtinSucc() {
+        ExpressionNode expr = parseAndStep("succ(5)");
+        assertInstanceOf(LiteralNode.class, expr);
+        assertEquals("6", ((LiteralNode) expr).value);
+    }
+
+    @Test
+    void builtinPred() {
+        ExpressionNode expr = parseAndStep("pred(5)");
+        assertInstanceOf(LiteralNode.class, expr);
+        assertEquals("4", ((LiteralNode) expr).value);
+    }
+
+    @Test
+    void builtinIszeroTrue() {
+        ExpressionNode expr = parseAndStep("iszero(0)");
+        assertInstanceOf(BoolNode.class, expr);
+        assertTrue(((BoolNode) expr).value);
+    }
+
+    @Test
+    void builtinIszeroFalse() {
+        ExpressionNode expr = parseAndStep("iszero(1)");
+        assertInstanceOf(BoolNode.class, expr);
+        assertFalse(((BoolNode) expr).value);
+    }
+
+    @Test
+    void builtinPrint() {
+        ExpressionNode expr = parseAndStep("print(42)");
+        assertInstanceOf(LiteralNode.class, expr);
+        assertEquals("42", ((LiteralNode) expr).value);
+    }
+
+    @Test
+    void builtinSuccNested() {
+        ExpressionNode expr = reduce("succ(succ(5))");
+        assertInstanceOf(LiteralNode.class, expr);
+        assertEquals("7", ((LiteralNode) expr).value);
+    }
+
+    @Test
+    void builtinSuccWithExpr() {
+        ExpressionNode expr = reduce("succ(3 + 4)");
+        assertInstanceOf(LiteralNode.class, expr);
+        assertEquals("8", ((LiteralNode) expr).value);
+    }
+
+    @Test
+    void builtinIsValue() {
+        assertTrue(SmallStepReducer.isValue(parseIdent("succ")));
+        assertTrue(SmallStepReducer.isValue(parseIdent("pred")));
+        assertTrue(SmallStepReducer.isValue(parseIdent("iszero")));
+        assertTrue(SmallStepReducer.isValue(parseIdent("print")));
+    }
+
+    @Test
+    void builtinNotConstructorValue() {
+        // succ(5) should NOT be a constructor value (succ is not a constructor)
+        ExpressionNode app = parseAndGet("succ(5)");
+        assertFalse(SmallStepReducer.isValue(app));
+    }
+
+    @Test
+    void substitutionInNestedBlockLetStatements() {
+        // Regression: Substitution.subst for BlockNode skipped LetStatementNode
+        // and MutualLetNode, leaving free variables after reduction.
+        //   { val g0 = 42; { val y = g0; y } }
+        var innerBlock = new BlockNode(List.of(
+            new LetStatementNode("y", new IdentifierNode("g0", 0, 0), false, null, 0, 0),
+            new IdentifierNode("y", 0, 0)
+        ), 0, 0);
+        var outerBlock = new BlockNode(List.of(
+            new LetStatementNode("g0", new LiteralNode("42", 0, 0), false, null, 0, 0),
+            innerBlock
+        ), 0, 0);
+        var program = new ProgramNode(List.of(outerBlock));
+
+        var errors = new ArrayList<ParserError>();
+        new TypeChecker(errors).check(program);
+        assertTrue(errors.isEmpty(), "Initial block must be well-typed: " + errors);
+
+        assertFalse(SmallStepReducer.isValue(outerBlock), "Block must not be a value");
+        ExpressionNode step1 = SmallStepReducer.step(outerBlock);
+
+        var errors2 = new ArrayList<ParserError>();
+        new TypeChecker(errors2).check(new ProgramNode(List.of(step1)));
+        assertTrue(errors2.isEmpty(),
+            "After step1 (subst g0=42), result must be well-typed, got: " + errors2);
+
+        assertFalse(SmallStepReducer.isValue(step1), "Step1 result must not be a value");
+        ExpressionNode step2 = SmallStepReducer.step(step1);
+
+        var errors3 = new ArrayList<ParserError>();
+        new TypeChecker(errors3).check(new ProgramNode(List.of(step2)));
+        assertTrue(errors3.isEmpty(),
+            "After step2, result must be well-typed, got: " + errors3);
+
+        ExpressionNode normal = SmallStepReducer.reduce(outerBlock);
+        assertNotNull(normal, "Reduction must produce a result");
+        assertTrue(SmallStepReducer.isValue(normal),
+            "Full reduction must produce a value, got: " + normal);
+    }
+
+    private ExpressionNode parseIdent(String name) {
+        return new IdentifierNode(name, 0, 0);
+    }
+
+    private ExpressionNode parseAndGet(String source) {
+        ParserResult r = parse(source);
+        return (ExpressionNode) r.ast.statements.get(0);
+    }
+
+    private ExpressionNode parseAndStep(String source) {
+        ExpressionNode expr = parseAndGet(source);
+        return SmallStepReducer.step(expr);
+    }
+
+    private ExpressionNode reduce(String source) {
+        ExpressionNode expr = parseAndGet(source);
+        return SmallStepReducer.reduce(expr);
+    }
+
+    private Value eval(String source) {
+        ParserResult r = parse(source);
+        var errors = new ArrayList<ParserError>();
+        new TypeChecker(errors).check(r.ast);
+        if (!errors.isEmpty())
+            throw new RuntimeException("Type error: " + errors.get(0).message);
+        return new Evaluator().evalProgram(r.ast);
     }
 
     // ── Helpers ─────────────────────────────────────────────────

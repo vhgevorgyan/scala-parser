@@ -227,6 +227,9 @@ public class Parser {
     }
 
     private Type parseTypeAtom() {
+        if (match(TokenType.QUESTION)) {
+            return new TypeDynamic();
+        }
         if (match(TokenType.IDENT)) {
             String text = previous().text;
             return switch (text) {

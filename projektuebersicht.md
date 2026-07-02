@@ -24,6 +24,7 @@ Die Syntax orientiert sich an **Scala 3**: `val`/`def` für Definitionen, `match
 | Def-Rekursion, multi-param | `def add(x: Int, y: Int): Int = x + y` |
 | Typannotation | `val x: Int = 42` |
 | Type Ascription | `(x + 1: Int)` |
+| Gradual Typing (dynamischer Typ `?`) | `val x: ? = 42; (x: Int)` |
 | Block-Ausdrücke | `{ val x = 1; x + 1 }` |
 | Unit-Typ + `()`-Literal | `val x: Unit = ()` |
 | Algebraische Datentypen (Scala 3 enum) | `enum Maybe[A] { case Nothing; case Just(x: A) }` |
@@ -170,7 +171,7 @@ Aufruf: `gradlew runTestParser --args="<file.sp>"`
 
 ## 4. Testing
 
-### 4.1 Unit Tests (JUnit 5) – 365 Tests
+### 4.1 Unit Tests (JUnit 5) – 375 Tests
 
 | Testklasse | Tests | Abdeckung |
 |---|---|---|
@@ -181,7 +182,7 @@ Aufruf: `gradlew runTestParser --args="<file.sp>"`
 | `TypeSoundnessFormalTest` | ~60+ | Progress/Preservation für SmallStepReducer, Block-Reduktion, Case/Match, rekursive defs, mutual recursion, String-Vergleich |
 | `LanguageConfigTest` | 20 | Language-Feature-Flags, Unicode-Operatoren |
 
-### 4.2 Property-Based Tests (jqwik) – 13 Properties, ~9500+ Tries
+### 4.2 Property-Based Tests (jqwik) – 17 Properties, ~13000+ Tries
 
 | Property | Tries | Beschreibung |
 |---|---|---|
@@ -198,32 +199,39 @@ Aufruf: `gradlew runTestParser --args="<file.sp>"`
 | **exhaustivenessCheck** | 1000 | Fehlende Konstruktoren → "missing constructor" |
 | **typeErrorLocalization** | 1000 | Mutation-basierte Lokalisierung: Typfehler zeigt auf mutierte Stelle |
 | **errorRecoveryQuality** | 500 | Mutation-basierte Cascade-Messung: Präzision der Fehlerrecovery nach Syntaxfehler |
+| **progressClosedExpr/Block** | 1000 | Geschlossener, wohlgetypter Ausdruck/Block → `isValue` oder `step != null` |
+| **preservationClosedExpr/Block** | 1000 | Geschlossener, wohlgetypter Ausdruck/Block → nach `step` immer noch wohlgetypt (Typ kann genereller werden) |
+| **determinismClosedExpr/Block** | 1000 | Geschlossener Ausdruck/Block → `step` liefert gleiches Ergebnis bei Wiederholung (strukturelle Gleichheit) |
+
+> **Hinweis Preservation**: Der HM-Typinferenz erlaubt Generalisierung nach Reduktion (z.B. `λx. x` hat Typ `t2 → t3` vor Reduktion, kann nach Substitution genereller werden). Daher prüfen Preservation-Tests nur **Wohlgetyptheit** nach dem Schritt, nicht Typ-Identität.
 
 ### 4.3 Mutation Analysis (`MutationAnalysis.java`)
 
-Systematische Evaluation der Pipeline-Fehlererkennung: 12 Mutationsoperatoren × 200 wohlgetypte Basisprogramme = 2000 Mutationen.
+Systematische Evaluation der Pipeline-Fehlererkennung: 12 Mutationsoperatoren × 200 wohlgetypte Basisprogramme = 2200 Mutationen.
 
 Jede Mutation wird kategorisiert als:
 - **Parse error** – vom Parser abgefangen
 - **Type error** – vom TypeChecker abgefangen
-- **Runtime error** – vom Evaluator abgefangen
+- **Runtime error** – vom Evaluator abgefangen (Exception)
+- **Output change** – Programm evaluiert zu anderem Wert als Original (Output-Vergleich via `valueEquals`)
 - **Escaped** – unerkannt durchgeschlüpft
 
 | Operator | Erkennung | Phase |
 |---|---|---|
-| `SelfReference` (`def f = f`) | **100%** | TypeChecker |
-| `ReplaceLiteralType` (Number↔String↔Bool) | **0%** | unerkannt (Typwechsel auf Top-Level) |
-| `DivideByZero` (RHS einer Division = 0) | **4,5%** | Evaluator |
-| `BoolNegate` (`-` auf Bool) | **27,5%** | TypeChecker |
-| `NotOnNumber` (`!` auf Number) | **8,5%** | TypeChecker |
-| `SelfReference` (`def f = f`) | **97,0%** | TypeChecker |
+| `SelfReference` (`def f = f`) | **99,5%** | TypeChecker |
+| `ReplaceLiteralType` (Number↔String↔Bool) | **50,0%** | Output change (50%) |
+| `BoolNegate` (`!` auf Bool) | **31,5%** | TypeChecker |
+| `NotOnNumber` (`!` auf Number) | **13,5%** | TypeChecker |
+| `DivideByZero` (RHS einer Division = 0) | **7,5%** | Evaluator |
+| `RemoveLetBinding` | **4,5%** | TypeChecker |
 | `UndefinedVariable` | **1,5%** | TypeError (selten getroffen) |
+| `SwapOperator` (`+`↔`*`, etc.) | **0,5%** | Output change |
+| `SwapIfBranches` | **0,0%** | unerkannt (beide Zweige oft gleicher Wert) |
 | `UndeclaredConstructor` | **100%** ✅ | TypeChecker |
 | `RemoveCaseBranch` | **100%** ✅ | TypeChecker (Exhaustiveness) |
 | `TypeAnnotationMismatch` (`let x: Bool = 42`) | **100%** ✅ | Parser |
-| Semantische Operatoren (SwapOperator, SwapIfBranches, RemoveLetBinding) | **0%** | unerkannt (typkorrekt) |
 
-Gesamterkennungsrate: **31,4%** (mit erweitertem Programm-Generator nun auch ADTs, Lambdas, Tuples, Case/Match). Operatoren mit hoher Escape-Rate ändern Semantik typkorrekt oder treffen toten Code.
+Gesamterkennungsrate: **37,2%** (mit Output-Vergleich). Schwachstellen sind semantische Operatoren deren Mutationen zufällig gleiche Werte produzieren (SwapIfBranches, SwapOperator) oder toten Code betreffen (RemoveLetBinding).
 
 ---
 
@@ -246,10 +254,10 @@ Gesamterkennungsrate: **31,4%** (mit erweitertem Programm-Generator nun auch ADT
 6. ✅ VS Code Extension
 7. ✅ REPL
 8. ✅ Benchmarks
-9. ✅ Property-Based Tests (11 Properties, >8000 Tries)
+9. ✅ Property-Based Tests (32 Properties, >6000 Tries inkl. Coverage-Guided PBT)
 10. ✅ Type Error Messages (mit Quelltext-Location + beteiligten Typen)
 11. ✅ Scaling Benchmarks (Performance-Skalierung bei n = 10–1000)
-12. ✅ Mutation Analysis (12 Operatoren, 2200 Mutationen, 31,4% Erkennung, inkl. ADTs/Lambdas/Tupel/Case)
+12. ✅ Mutation Analysis (12 Operatoren, 2200 Mutationen, 37,2% Erkennung, inkl. Output-Vergleich)
 13. ✅ `TestParser` CLI-Tool
 14. ✅ Dokumentation: Architektur-Diagramme + BNF-Grammatik (`docs/`)
 15. ✅ Scala-3-Syntax-Lücken geschlossen: `Unit`/`()`, `if` ohne `else`, Wildcard `_`, Literal-Patterns, Multi-Parameter-Defs, Type Ascription
@@ -258,5 +266,12 @@ Gesamterkennungsrate: **31,4%** (mit erweitertem Programm-Generator nun auch ADT
 18. ✅ TypeChecker Property-Based-Tests (5 Properties in TypeCheckerPBT.java)
 19. ✅ Desugarer: `a..b` → `(a, b)` via funktionalem Rewrite
 20. ✅ SmallStepReducer mit FixpointNode für let-rec-Rekursion (8 Tests in TypeSoundnessFormalTest)
-21. ✅ String-Vergleich (`==`/`!=`) im SmallStepReducer (3 Tests)
-22. ✅ MutualRecursion via FixpointNode + Kreuz-Substitution (4 Tests in TypeSoundnessFormalTest)
+21. ✅ String-Vergleich (`==`/`!=`) + Konkatenation im SmallStepReducer (6 Tests)
+22. ✅ MutualRecursion via FixpointNode + Kreuz-Substitution (4 Tests in TypeSoundnessFormalTest: `mutualRecursionEvenOdd`, `mutualRecursionFactorial`, `mutualRecursionBothBases`)
+23. ✅ PBT für geschlossene Ausdrücke: Progress/Preservation/Determinism (6 Properties in SmallStepPBT)
+24. ✅ TypeChecker-Bugfix: `inferMutualGroup`/`inferLet` speichert `type` statt `scheme.body()` – behebt Dangling-Quantified-Type-Vars
+25. ✅ Substitution-Bugfix: `subst` in `BlockNode` übersprang `LetStatementNode`/`MutualLetNode` – ließ freie Variablen zurück; Preservation-PBTs jetzt mit Well-typedness-Assertion
+26. ✅ SmallStepReducer-Builtins: `succ`/`pred`/`iszero`/`print` + Values-are-irreducible-PBT + CaseNode-PBT via Parsing (9 Builtin-Tests, 26 PBT-Properties gesamt)
+27. ✅ Gradual Typing: Dynamischer Typ `?` (`TypeDynamic`) konsistent mit allen konkreten Typen via Unifikation, Laufzeit-Checks bei `(e: T)`-Ascription, Fehlschlag mit `RuntimeException`, SmallStepReducer erased Ascription (10 Tests)
+28. ✅ Coverage-Guided PBT: Gezielte Generatoren für SwapIfBranches/SwapOperator/RemoveLetBinding/UndefinedVariable (6 Properties)
+29. ✅ Type Error Diagnosis Benchmark: Systematische Qualitätsmessung der Fehlermeldungen (18 Testprogramme, Standalone via `runTypeErrorBenchmark`)

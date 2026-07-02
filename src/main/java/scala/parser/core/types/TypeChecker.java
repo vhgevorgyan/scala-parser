@@ -630,6 +630,11 @@ public class TypeChecker {
             return new InferResult(compose(s3, compose(s2, s1)), apply(s3, resultType));
         }
 
+        if (expr instanceof FixpointNode fp) {
+            // fix(λx. body) has the same type as λx. body (delegates to LambdaNode handling)
+            return inferExpr(env, fp.body);
+        }
+
         reportError("Unknown expression: " + expr.getClass().getSimpleName(), expr);
         return new InferResult(new Substitution(), new TypeVar("?"));
     }
@@ -637,6 +642,7 @@ public class TypeChecker {
     private TypeVar freshVar() { return new TypeVar("t" + varCounter++); }
 
     private Substitution unify(Type a, Type b) throws TypeErrorException {
+        if (a instanceof TypeDynamic || b instanceof TypeDynamic) return new Substitution();
         if (a instanceof TypeVar va) return unifyVar(va.name(), b);
         if (b instanceof TypeVar vb) return unifyVar(vb.name(), a);
         if (a instanceof TypeNumber && b instanceof TypeNumber) return new Substitution();

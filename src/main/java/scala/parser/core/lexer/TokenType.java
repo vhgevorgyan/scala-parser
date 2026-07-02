@@ -13,6 +13,7 @@ public enum TokenType {
     PLUS, MINUS, STAR, SLASH,
     EQUAL,
     COLON,
+    QUESTION,
     // Logical
     AND, OR, NOT,
     // Parentheses, braces & brackets

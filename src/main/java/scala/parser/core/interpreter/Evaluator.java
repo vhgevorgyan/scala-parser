@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 
 import scala.parser.core.ast.*;
+import scala.parser.core.types.*;
 
 public class Evaluator {
 
@@ -240,7 +241,12 @@ public class Evaluator {
         }
 
         if (node instanceof AscriptionNode asc) {
-            return evalExpr(asc.expr, env);
+            Value v = evalExpr(asc.expr, env);
+            Type dyn = asc.declaredType;
+            if (!(dyn instanceof TypeDynamic) && !runtimeTypeMatches(v, dyn)) {
+                throw new RuntimeException("Dynamic type error: expected " + dyn + " but got " + runtimeTypeOf(v));
+            }
+            return v;
         }
 
         if (node instanceof LambdaNode lam) {
@@ -318,5 +324,41 @@ public class Evaluator {
         if (a instanceof BoolValue ba && b instanceof BoolValue bb) return ba.value == bb.value;
         if (a instanceof StringValue sa && b instanceof StringValue sb) return sa.value.equals(sb.value);
         return false;
+    }
+
+    private boolean runtimeTypeMatches(Value v, Type t) {
+        if (t instanceof TypeDynamic) return true;
+        if (t instanceof TypeNumber) return v instanceof NumberValue;
+        if (t instanceof TypeBool) return v instanceof BoolValue;
+        if (t instanceof TypeString) return v instanceof StringValue;
+        if (t instanceof TypeUnit) return v instanceof UnitValue;
+        if (t instanceof TypeTuple tt) {
+            if (!(v instanceof TupleValue tv)) return false;
+            if (tv.values.size() != tt.members().size()) return false;
+            for (int i = 0; i < tv.values.size(); i++) {
+                if (!runtimeTypeMatches(tv.values.get(i), tt.members().get(i))) return false;
+            }
+            return true;
+        }
+        if (t instanceof TypeFun) return v instanceof ClosureValue || v instanceof BuiltinValue;
+        if (t instanceof TypeConstructor) return v instanceof ConstructorValue;
+        return true;
+    }
+
+    private Type runtimeTypeOf(Value v) {
+        if (v instanceof NumberValue) return new TypeNumber();
+        if (v instanceof BoolValue) return new TypeBool();
+        if (v instanceof StringValue) return new TypeString();
+        if (v instanceof UnitValue) return new TypeUnit();
+        if (v instanceof TupleValue tv) {
+            return new TypeTuple(tv.values.stream().map(this::runtimeTypeOf).toList());
+        }
+        if (v instanceof ClosureValue || v instanceof BuiltinValue) {
+            return new TypeFun(new TypeDynamic(), new TypeDynamic());
+        }
+        if (v instanceof ConstructorValue cv) {
+            return new TypeConstructor(cv.name, cv.args.stream().map(a -> (Type) new TypeDynamic()).toList());
+        }
+        return new TypeDynamic();
     }
 }

@@ -1,6 +1,8 @@
 package scala.parser.core.reduction;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import scala.parser.core.ast.*;
@@ -73,8 +75,7 @@ public class Substitution {
 
         if (expr instanceof BlockNode block) {
             var newStmts = block.statements.stream()
-                .map(s -> s instanceof ExpressionNode e
-                    ? subst(var, replacement, e) : s)
+                .map(s -> substInBlockStatement(var, replacement, s))
                 .toList();
             return new BlockNode(newStmts, block.line, block.column);
         }
@@ -93,6 +94,23 @@ public class Substitution {
 
     public static ExpressionNode renameVar(String oldName, String newName, ExpressionNode expr) {
         return subst(oldName, new IdentifierNode(newName, 0, 0), expr);
+    }
+
+    public static ASTNode substInBlockStatement(String var, ExpressionNode replacement, ASTNode node) {
+        if (node instanceof ExpressionNode e) return subst(var, replacement, e);
+        if (node instanceof LetStatementNode l) {
+            ExpressionNode newBody = subst(var, replacement, l.value);
+            return new LetStatementNode(l.name, newBody, l.isRec, l.declaredType, l.line, l.column);
+        }
+        if (node instanceof MutualLetNode m) {
+            List<LetStatementNode> newDefs = new ArrayList<>();
+            for (LetStatementNode def : m.defs) {
+                ExpressionNode newBody = subst(var, replacement, def.value);
+                newDefs.add(new LetStatementNode(def.name, newBody, def.isRec, def.declaredType, def.line, def.column));
+            }
+            return new MutualLetNode(newDefs, m.line, m.column);
+        }
+        return node;
     }
 
     public static Set<String> freeVars(ExpressionNode expr) {
@@ -143,6 +161,10 @@ public class Substitution {
         if (expr instanceof BlockNode block) {
             for (var s : block.statements) {
                 if (s instanceof ExpressionNode e) collectFree(e, fv, bound);
+                if (s instanceof LetStatementNode l) collectFree(l.value, fv, bound);
+                if (s instanceof MutualLetNode m) {
+                    for (var def : m.defs) collectFree(def.value, fv, bound);
+                }
             }
             return;
         }

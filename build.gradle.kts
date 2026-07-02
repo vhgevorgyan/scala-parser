@@ -43,6 +43,11 @@ tasks.register<JavaExec>("runMutationAnalysis") {
 	classpath = sourceSets.main.get().runtimeClasspath
 }
 
+tasks.register<JavaExec>("runTypeErrorBenchmark") {
+	mainClass.set("scala.parser.TypeErrorDiagnosisBenchmark")
+	classpath = sourceSets.main.get().runtimeClasspath
+}
+
 tasks.named<Jar>("jar") {
 	manifest {
 		attributes("Main-Class" to "scala.parser.ParserApplication")

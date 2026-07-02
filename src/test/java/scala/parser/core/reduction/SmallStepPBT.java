@@ -11,6 +11,8 @@ import scala.parser.core.ast.*;
 import scala.parser.core.interpreter.*;
 import scala.parser.core.reduction.*;
 import scala.parser.core.types.*;
+import scala.parser.core.lexer.*;
+import scala.parser.core.parser.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -74,7 +76,8 @@ class SmallStepPBT {
             var errors2 = new ArrayList<ParserError>();
             var tc2 = new TypeChecker(errors2);
             tc2.check(new ProgramNode(List.of(next)));
-            if (!errors2.isEmpty()) return; // skip if step produces ill-typed (e.g. open term)
+            assertTrue(errors2.isEmpty(),
+                "Preservation after step: stepped term must be well-typed");
             var type2 = tc2.getInferredTypes().get(next);
             if (type2 == null) return;
             assertEquals(normalizeType(type1), normalizeType(type2),
@@ -151,7 +154,7 @@ class SmallStepPBT {
 
     private static ExpressionNode genClosedExpr(Random rand, int depth, List<String> bound) {
         if (depth <= 0 || rand.nextDouble() < 0.2) return genClosedLeaf(rand, bound);
-        int choice = rand.nextInt(12);
+        int choice = rand.nextInt(13);
         if (choice == 0) return genClosedLeaf(rand, bound);
         if (choice == 1) {
             String p = freshName("p", bound);
@@ -196,6 +199,12 @@ class SmallStepPBT {
                 genClosedExpr(rand, depth - 1, bound),
                 List.of(new TypeNumber(), new TypeBool(), new TypeString(), new TypeUnit())
                     .get(rand.nextInt(4)), 0, 0);
+        }
+        if (choice == 9) {
+            int idx = rand.nextInt(4);
+            String name = idx == 0 ? "succ" : idx == 1 ? "pred" : idx == 2 ? "iszero" : "print";
+            return new ApplicationNode(new IdentifierNode(name, 0, 0),
+                genClosedExpr(rand, depth - 1, bound), 0, 0);
         }
         return genClosedLeaf(rand, bound);
     }
@@ -267,6 +276,82 @@ class SmallStepPBT {
             candidate = base + (++n);
         }
         return candidate;
+    }
+
+    // ── Closed CaseNode generator (via parsing) ──────────────────
+
+    @Provide
+    Arbitrary<ExpressionNode> closedCase() {
+        return Arbitraries.randomValue(rand -> {
+            for (int i = 0; i < 50; i++) {
+                String src = genEnumSource(rand);
+                var tokens = new Tokenizer(src).tokenize();
+                var result = new Parser(tokens).parse();
+                if (!result.errors.isEmpty()) continue;
+                var errors = new ArrayList<ParserError>();
+                new TypeChecker(errors).check(result.ast);
+                if (!errors.isEmpty()) continue;
+                for (ASTNode stmt : result.ast.statements) {
+                    if (stmt instanceof CaseNode cn) return cn;
+                }
+            }
+            return new LiteralNode("0", 0, 0);
+        });
+    }
+
+    @Provide
+    Arbitrary<String> caseSource() {
+        return Arbitraries.randomValue(rand -> {
+            for (int i = 0; i < 50; i++) {
+                String src = genEnumSource(rand);
+                var tokens = new Tokenizer(src).tokenize();
+                var result = new Parser(tokens).parse();
+                if (!result.errors.isEmpty()) continue;
+                var errors = new ArrayList<ParserError>();
+                new TypeChecker(errors).check(result.ast);
+                if (!errors.isEmpty()) continue;
+                return src;
+            }
+            return "val x: Int = 0; x";
+        });
+    }
+
+    private static String genEnumSource(Random rand) {
+        int numCtors = 2 + rand.nextInt(2);
+        var ctorDefs = new ArrayList<String>();
+        var ctorNames = new ArrayList<String>();
+        var hasArg = new ArrayList<Boolean>();
+        for (int j = 0; j < numCtors; j++) {
+            String ctorName = "E_C" + j;
+            ctorNames.add(ctorName);
+            if (rand.nextBoolean()) {
+                ctorDefs.add("case " + ctorName + "(x: Int)");
+                hasArg.add(true);
+            } else {
+                ctorDefs.add("case " + ctorName);
+                hasArg.add(false);
+            }
+        }
+        String enumName = "MyEnum";
+        String enumDecl = "enum " + enumName + " { " + String.join("; ", ctorDefs) + " }";
+
+        String scrutinee;
+        if (hasArg.get(0)) {
+            scrutinee = ctorNames.get(0) + "(0)";
+        } else {
+            scrutinee = ctorNames.get(0);
+        }
+
+        var branches = new ArrayList<String>();
+        for (int j = 0; j < numCtors; j++) {
+            String pattern = ctorNames.get(j) + (hasArg.get(j) ? "(x)" : "");
+            branches.add("case " + pattern + " => " + rand.nextInt(1000));
+        }
+        if (rand.nextDouble() < 0.3) {
+            branches.add("case _ => " + rand.nextInt(1000));
+        }
+
+        return enumDecl + "\n" + scrutinee + " match { " + String.join("; ", branches) + " }";
     }
 
     // ── Full reduction → value ──────────────────────────────────
@@ -390,13 +475,29 @@ class SmallStepPBT {
             "Progress: closed block " + raw.getClass().getSimpleName() + " must step");
     }
 
+    // ── Values are irreducible: isValue(e) ⇒ step(e) throws ──────
+
+    @Property(tries = 200)
+    void valueIsIrreducible(@ForAll("closedExpr") ExpressionNode raw) {
+        if (!SmallStepReducer.isValue(raw)) return;
+        assertThrows(RuntimeException.class, () -> SmallStepReducer.step(raw),
+            "Value must not be reducible: " + raw.getClass().getSimpleName());
+    }
+
+    @Property(tries = 200)
+    void blockValueIsIrreducible(@ForAll("closedBlock") ExpressionNode raw) {
+        if (!SmallStepReducer.isValue(raw)) return;
+        assertThrows(RuntimeException.class, () -> SmallStepReducer.step(raw),
+            "Block value must not be reducible: " + raw.getClass().getSimpleName());
+    }
+
     // ── Deep closed: preservation ────────────────────────────────
     //
     // Verifies that stepping a well-typed closed expression produces a
     // well-typed result. In HM type systems the type can become MORE GENERAL
     // after reduction (e.g. when a let-bound lambda is substituted and its
     // context constraints are lost), so we only check well-typedness, not
-    // type equality.
+    // type equality. FixpointNode is now handled by the TypeChecker.
 
     @Property(tries = 200)
     void preservationClosedExpr(@ForAll("closedExpr") ExpressionNode raw) {
@@ -411,8 +512,8 @@ class SmallStepPBT {
             var errors2 = new ArrayList<ParserError>();
             var tc2 = new TypeChecker(errors2);
             tc2.check(new ProgramNode(List.of(next)));
-            // Note: step may produce ill-typed results for some edge cases
-            // (known reducer issue with FixpointNode substitution)
+            assertTrue(errors2.isEmpty(),
+                "Preservation of closed expr: stepped term must be well-typed");
         } catch (RuntimeException e) { /* stuck — not a preservation failure */ }
     }
 
@@ -429,8 +530,8 @@ class SmallStepPBT {
             var errors2 = new ArrayList<ParserError>();
             var tc2 = new TypeChecker(errors2);
             tc2.check(new ProgramNode(List.of(next)));
-            // Note: step may produce ill-typed results for some edge cases
-            // (known reducer issue with FixpointNode substitution)
+            assertTrue(errors2.isEmpty(),
+                "Preservation of closed block: stepped term must be well-typed");
         } catch (RuntimeException e) { /* stuck — not a preservation failure */ }
     }
 
@@ -452,6 +553,84 @@ class SmallStepPBT {
         ExpressionNode step2 = SmallStepReducer.step(raw);
         assertTrue(exprEquals(step1, step2),
             "step must be deterministic for: " + raw.getClass().getSimpleName());
+    }
+
+    // ── Closed CaseNode: progress / preservation / determinism ───
+
+    @Property(tries = 200)
+    void progressClosedCase(@ForAll("closedCase") ExpressionNode raw) {
+        if (SmallStepReducer.isValue(raw)) return;
+        assertDoesNotThrow(() -> SmallStepReducer.step(raw),
+            "Progress: closed case " + raw.getClass().getSimpleName() + " must step");
+    }
+
+    @Property(tries = 200)
+    void preservationClosedCase(@ForAll("closedCase") ExpressionNode raw) {
+        if (SmallStepReducer.isValue(raw)) return;
+        try {
+            ExpressionNode next = SmallStepReducer.step(raw);
+            var errors = new ArrayList<ParserError>();
+            new TypeChecker(errors).check(new ProgramNode(List.of(next)));
+            assertTrue(errors.isEmpty(),
+                "Preservation of closed case: stepped term must be well-typed");
+        } catch (RuntimeException e) { /* stuck — skip */ }
+    }
+
+    @Property(tries = 200)
+    void valueCaseIsIrreducible(@ForAll("closedCase") ExpressionNode raw) {
+        ExpressionNode normal;
+        try {
+            normal = SmallStepReducer.reduce(raw);
+        } catch (RuntimeException e) { return; }
+        if (!SmallStepReducer.isValue(normal)) return;
+        assertThrows(RuntimeException.class, () -> SmallStepReducer.step(normal),
+            "Reduced case value must not be reducible");
+    }
+
+    @Property(tries = 200)
+    void determinismClosedCase(@ForAll("closedCase") ExpressionNode raw) {
+        if (SmallStepReducer.isValue(raw)) return;
+        ExpressionNode step1 = SmallStepReducer.step(raw);
+        ExpressionNode step2 = SmallStepReducer.step(raw);
+        assertTrue(exprEquals(step1, step2),
+            "step must be deterministic for case: " + raw.getClass().getSimpleName());
+    }
+
+    @Property(tries = 100)
+    void caseBigStepMatchesSmallStep(@ForAll("caseSource") String source) {
+        var tokens = new Tokenizer(source).tokenize();
+        var result = new Parser(tokens).parse();
+        if (!result.errors.isEmpty()) return;
+        var errors = new ArrayList<ParserError>();
+        var tc = new TypeChecker(errors);
+        tc.check(result.ast);
+        if (!errors.isEmpty()) return;
+
+        var evaluator = new Evaluator(1000);
+        Value bigValue;
+        try {
+            bigValue = evaluator.evalProgram(result.ast);
+        } catch (RuntimeException e) { return; }
+        if (bigValue == null) return;
+
+        CaseNode caseNode = null;
+        for (ASTNode stmt : result.ast.statements) {
+            if (stmt instanceof CaseNode cn) { caseNode = cn; break; }
+        }
+        if (caseNode == null) return;
+        if (SmallStepReducer.isValue(caseNode)) return;
+
+        ExpressionNode normal;
+        try {
+            normal = SmallStepReducer.reduce(caseNode);
+        } catch (RuntimeException e) { return; }
+        if (!SmallStepReducer.isValue(normal)) return;
+
+        String smallStr = valueNodeToString(normal);
+        String bigStr = valueToString(bigValue);
+        assertNotNull(smallStr, "Small-step must produce a recognizable value");
+        assertNotNull(bigStr, "Big-step must produce a recognizable value");
+        assertEquals(bigStr, smallStr, "Big-step and small-step must produce the same value for case match");
     }
 
     private static boolean exprEquals(ExpressionNode a, ExpressionNode b) {
@@ -476,6 +655,18 @@ class SmallStepPBT {
         }
         if (a instanceof AscriptionNode aa && b instanceof AscriptionNode ab) return exprEquals(aa.expr, ab.expr) && aa.declaredType.toString().equals(ab.declaredType.toString());
         if (a instanceof FixpointNode fa && b instanceof FixpointNode fb) return exprEquals(fa.body, fb.body);
+        if (a instanceof CaseNode ca && b instanceof CaseNode cb) {
+            if (!exprEquals(ca.expr, cb.expr)) return false;
+            if (ca.branches.size() != cb.branches.size()) return false;
+            for (int i = 0; i < ca.branches.size(); i++) {
+                var ba = ca.branches.get(i);
+                var bb = cb.branches.get(i);
+                if (!Objects.equals(ba.constructor(), bb.constructor())) return false;
+                if (!Objects.equals(ba.literalPattern(), bb.literalPattern())) return false;
+                if (!exprEquals(ba.body(), bb.body())) return false;
+            }
+            return true;
+        }
         if (a instanceof BlockNode ba && b instanceof BlockNode bb) {
             if (ba.statements.size() != bb.statements.size()) return false;
             for (int i = 0; i < ba.statements.size(); i++) {
@@ -746,6 +937,7 @@ class SmallStepPBT {
                 .collect(Collectors.joining(", ")) + ")";
         }
         if (node instanceof AscriptionNode a) return valueNodeToString(a.expr);
+        if (node instanceof CaseNode c) return "case(" + valueNodeToString(c.expr) + ")";
         return null;
     }
 

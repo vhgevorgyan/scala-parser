@@ -6,7 +6,7 @@ import scala.parser.core.*;
 import scala.parser.core.ast.*;
 import scala.parser.core.ast.CaseNode.*;
 import scala.parser.core.ast.EnumDeclNode.ConstructorDef;
-import scala.parser.core.interpreter.Evaluator;
+import scala.parser.core.interpreter.*;
 import scala.parser.core.lexer.*;
 import scala.parser.core.parser.Parser;
 import scala.parser.core.types.TypeChecker;
@@ -22,18 +22,18 @@ public class MutationAnalysis {
     private static final int TRIALS_PER_OP = 200;
     private static final List<String> IDENTS = List.of("x", "y", "z", "f", "g", "n", "b", "s");
 
-    record Result(int total, int caughtParse, int caughtType, int caughtRuntime, int escaped) {
+    record Result(int total, int caughtParse, int caughtType, int caughtRuntime, int caughtOutput, int escaped) {
         double detectionRate() { return total == 0 ? 1.0 : (total - escaped) / (double) total; }
         public String toString() {
-            return String.format("%5d  %5d  %5d  %5d  %5d  %6.1f%%",
-                total, caughtParse, caughtType, caughtRuntime, escaped, detectionRate() * 100);
+            return String.format("%5d  %5d  %5d  %5d  %5d  %5d  %6.1f%%",
+                total, caughtParse, caughtType, caughtRuntime, caughtOutput, escaped, detectionRate() * 100);
         }
     }
 
     public static void main(String[] args) {
         System.out.println("=== Mutation Analysis ===\n");
         System.out.println("Each mutation operator is applied to " + TRIALS_PER_OP + " well-typed base programs.");
-        System.out.println("Detection: the mutation causes a parse error, type error, or runtime error.\n");
+        System.out.println("Detection: the mutation causes a parse error, type error, runtime error, or different output.\n");
 
         var results = new LinkedHashMap<String, Result>();
         var rand = new Random(42);
@@ -57,10 +57,10 @@ public class MutationAnalysis {
         }
 
         // Print table
-        System.out.printf("%-32s %5s  %5s  %5s  %5s  %5s  %6s%n",
-            "Operator", "Total", "Parse", "Type", "RTE", "Esc", "Rate");
-        System.out.println("-".repeat(72));
-        int totalAll = 0, caughtP = 0, caughtT = 0, caughtR = 0, escapedAll = 0;
+        System.out.printf("%-32s %5s  %5s  %5s  %5s  %5s  %5s  %6s%n",
+            "Operator", "Total", "Parse", "Type", "RTE", "Output", "Esc", "Rate");
+        System.out.println("-".repeat(82));
+        int totalAll = 0, caughtP = 0, caughtT = 0, caughtR = 0, caughtO = 0, escapedAll = 0;
         for (var e : results.entrySet()) {
             System.out.printf("%-32s %s%n", e.getKey(), e.getValue());
             var r = e.getValue();
@@ -68,16 +68,17 @@ public class MutationAnalysis {
             caughtP += r.caughtParse;
             caughtT += r.caughtType;
             caughtR += r.caughtRuntime;
+            caughtO += r.caughtOutput;
             escapedAll += r.escaped;
         }
-        System.out.println("-".repeat(72));
+        System.out.println("-".repeat(82));
         double overall = totalAll == 0 ? 1.0 : (totalAll - escapedAll) / (double) totalAll;
-        System.out.printf("%-32s %5d  %5d  %5d  %5d  %5d  %6.1f%%%n",
-            "OVERALL", totalAll, caughtP, caughtT, caughtR, escapedAll, overall * 100);
+        System.out.printf("%-32s %5d  %5d  %5d  %5d  %5d  %5d  %6.1f%%%n",
+            "OVERALL", totalAll, caughtP, caughtT, caughtR, caughtO, escapedAll, overall * 100);
     }
 
     private static Result runOp(MutationOperator op, Random rand) {
-        int total = 0, caughtParse = 0, caughtType = 0, caughtRuntime = 0, escaped = 0;
+        int total = 0, caughtParse = 0, caughtType = 0, caughtRuntime = 0, caughtOutput = 0, escaped = 0;
         int maxRetries = TRIALS_PER_OP * 20; // safety limit
         int retries = 0;
         for (int trials = 0; trials < TRIALS_PER_OP && retries < maxRetries; retries++) {
@@ -89,6 +90,13 @@ public class MutationAnalysis {
             var errors = new ArrayList<ParserError>();
             new TypeChecker(errors).check(result.ast);
             if (!errors.isEmpty()) continue;
+
+            // Evaluate original to get reference output
+            Value originalValue;
+            try {
+                originalValue = new Evaluator().evalProgram(result.ast);
+            } catch (Exception e) { continue; }
+            if (originalValue == null) continue;
 
             // Apply mutation
             var mutated = op.apply(base, rand);
@@ -110,13 +118,35 @@ public class MutationAnalysis {
                 continue;
             }
             try {
-                new Evaluator().evalProgram(mutatedResult.ast);
-                escaped++;
+                Value mutatedValue = new Evaluator().evalProgram(mutatedResult.ast);
+                if (mutatedValue == null || !valueEquals(originalValue, mutatedValue)) {
+                    caughtOutput++;
+                } else {
+                    escaped++;
+                }
             } catch (Exception e) {
                 caughtRuntime++;
             }
         }
-        return new Result(total, caughtParse, caughtType, caughtRuntime, escaped);
+        return new Result(total, caughtParse, caughtType, caughtRuntime, caughtOutput, escaped);
+    }
+
+    private static boolean valueEquals(Value a, Value b) {
+        if (a == b) return true;
+        if (a == null || b == null) return false;
+        if (a.getClass() != b.getClass()) return false;
+        if (a instanceof NumberValue na && b instanceof NumberValue nb) return na.value == nb.value;
+        if (a instanceof BoolValue ba && b instanceof BoolValue bb) return ba.value == bb.value;
+        if (a instanceof StringValue sa && b instanceof StringValue sb) return sa.value.equals(sb.value);
+        if (a instanceof UnitValue) return true;
+        if (a instanceof TupleValue ta && b instanceof TupleValue tb) {
+            if (ta.values.size() != tb.values.size()) return false;
+            for (int i = 0; i < ta.values.size(); i++)
+                if (!valueEquals(ta.values.get(i), tb.values.get(i))) return false;
+            return true;
+        }
+        // For closures, constructors, etc., compare by toString (approximate)
+        return a.toString().equals(b.toString());
     }
 
     // ---------------------------------------------------------------

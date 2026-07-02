@@ -2,12 +2,20 @@ package scala.parser.core.reduction;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import scala.parser.core.ast.*;
 
 public class SmallStepReducer {
+
+    private static final Set<String> BUILTINS = Set.of("succ", "pred", "iszero", "print");
+
+    private static boolean isBuiltin(String name) {
+        return BUILTINS.contains(name);
+    }
 
     public static boolean isValue(ExpressionNode expr) {
         if (expr instanceof LambdaNode) return true;
@@ -15,6 +23,7 @@ public class SmallStepReducer {
         if (expr instanceof BoolNode) return true;
         if (expr instanceof StringLiteralNode) return true;
         if (expr instanceof UnitLiteralNode) return true;
+        if (expr instanceof IdentifierNode id && isBuiltin(id.name)) return true;
         if (expr instanceof TupleNode tup) {
             return tup.elements.stream().allMatch(SmallStepReducer::isValue);
         }
@@ -30,8 +39,43 @@ public class SmallStepReducer {
         if (expr instanceof ApplicationNode app) {
             return isValue(app.argument) && isConstructorValue(app.function);
         }
-        // Base: K as identifier
-        return expr instanceof IdentifierNode;
+        // Base: K as identifier (but not a builtin — builtins are not constructors)
+        return expr instanceof IdentifierNode id && !isBuiltin(id.name);
+    }
+
+    private static ExpressionNode applyBuiltin(String name, ExpressionNode arg) {
+        if (name.equals("print")) {
+            System.out.println(exprToDisplayString(arg));
+            return arg;
+        }
+        if (arg instanceof LiteralNode l) {
+            int n = Integer.parseInt(l.value);
+            return switch (name) {
+                case "succ" -> lit(n + 1, l);
+                case "pred" -> lit(n - 1, l);
+                case "iszero" -> bln(n == 0, l);
+                default -> throw new RuntimeException("Unknown builtin: " + name);
+            };
+        }
+        throw new RuntimeException("Builtin " + name + " expects a number, got " + arg.getClass().getSimpleName());
+    }
+
+    private static String exprToDisplayString(ExpressionNode expr) {
+        if (expr instanceof LiteralNode l) return l.value;
+        if (expr instanceof BoolNode b) return String.valueOf(b.value);
+        if (expr instanceof StringLiteralNode s) return "\"" + s.value + "\"";
+        if (expr instanceof UnitLiteralNode) return "()";
+        if (expr instanceof IdentifierNode id) return id.name;
+        if (expr instanceof LambdaNode) return "<closure>";
+        if (expr instanceof TupleNode t) {
+            StringBuilder sb = new StringBuilder("(");
+            for (int i = 0; i < t.elements.size(); i++) {
+                if (i > 0) sb.append(", ");
+                sb.append(exprToDisplayString(t.elements.get(i)));
+            }
+            return sb.append(")").toString();
+        }
+        return expr.toString();
     }
 
     public static ExpressionNode step(ExpressionNode expr) {
@@ -41,6 +85,10 @@ public class SmallStepReducer {
         if (expr instanceof ApplicationNode app) {
             if (app.function instanceof LambdaNode lam && isValue(app.argument)) {
                 return Substitution.subst(lam.param, app.argument, lam.body);
+            }
+            // Builtin application: succ(5) → 6
+            if (app.function instanceof IdentifierNode id && isBuiltin(id.name) && isValue(app.argument)) {
+                return applyBuiltin(id.name, app.argument);
             }
             // App-Left
             if (!(app.function instanceof LambdaNode) && !isValue(app.function)) {
@@ -252,22 +300,7 @@ public class SmallStepReducer {
     }
 
     private static ASTNode substInNode(String name, ExpressionNode value, ASTNode node) {
-        if (node instanceof ExpressionNode e) {
-            return Substitution.subst(name, value, e);
-        }
-        if (node instanceof LetStatementNode l) {
-            ExpressionNode newBody = Substitution.subst(name, value, l.value);
-            return new LetStatementNode(l.name, newBody, l.isRec, l.declaredType, l.line, l.column);
-        }
-        if (node instanceof MutualLetNode m) {
-            List<LetStatementNode> newDefs = new ArrayList<>();
-            for (LetStatementNode def : m.defs) {
-                ExpressionNode newBody = Substitution.subst(name, value, def.value);
-                newDefs.add(new LetStatementNode(def.name, newBody, def.isRec, def.declaredType, def.line, def.column));
-            }
-            return new MutualLetNode(newDefs, m.line, m.column);
-        }
-        return node;
+        return Substitution.substInBlockStatement(name, value, node);
     }
 
     private static ExpressionNode reduceOp(BinaryExprNode bin) {

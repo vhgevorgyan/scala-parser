@@ -135,6 +135,7 @@ public class Tokenizer {
                 case ',' -> { tokens.add(makeToken(TokenType.COMMA)); advance(); }
                 case '_' -> { tokens.add(makeToken(TokenType.UNDERSCORE)); advance(); }
                 case '|' -> { tokens.add(makeToken(TokenType.PIPE)); advance(); }
+                case '?' -> { tokens.add(makeToken(TokenType.QUESTION)); advance(); }
                 case '[' -> { tokens.add(makeToken(TokenType.LBRACKET)); advance(); }
                 case ']' -> { tokens.add(makeToken(TokenType.RBRACKET)); advance(); }
                 default -> {
