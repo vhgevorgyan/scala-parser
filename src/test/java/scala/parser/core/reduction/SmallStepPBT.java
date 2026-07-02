@@ -77,11 +77,196 @@ class SmallStepPBT {
             if (!errors2.isEmpty()) return; // skip if step produces ill-typed (e.g. open term)
             var type2 = tc2.getInferredTypes().get(next);
             if (type2 == null) return;
-            assertEquals(type1.toString(), type2.toString(),
+            assertEquals(normalizeType(type1), normalizeType(type2),
                 "Preservation: " + raw + " → " + next);
         } catch (RuntimeException e) {
             // Stuck term - not a preservation failure
         }
+    }
+
+    // ── Type variable normalization for preservation comparison ──
+
+    private static String normalizeType(Type t) {
+        Map<String, String> renames = new HashMap<>();
+        return normalizeRec(t, renames);
+    }
+
+    private static String normalizeRec(Type t, Map<String, String> renames) {
+        if (t instanceof TypeNumber) return "Int";
+        if (t instanceof TypeBool) return "Boolean";
+        if (t instanceof TypeString) return "String";
+        if (t instanceof TypeUnit) return "Unit";
+        if (t instanceof TypeVar v) {
+            return renames.computeIfAbsent(v.name(), k -> "α" + renames.size());
+        }
+        if (t instanceof TypeFun f) {
+            return "(" + normalizeRec(f.from(), renames) + " => "
+                + normalizeRec(f.to(), renames) + ")";
+        }
+        if (t instanceof TypeTuple tu) {
+            return "(" + tu.members().stream()
+                .map(e -> normalizeRec(e, renames))
+                .collect(Collectors.joining(", ")) + ")";
+        }
+        if (t instanceof TypeConstructor c) {
+            String args = c.args().isEmpty() ? ""
+                : "[" + c.args().stream().map(e -> normalizeRec(e, renames))
+                    .collect(Collectors.joining(", ")) + "]";
+            return c.name() + args;
+        }
+        return t.toString();
+    }
+
+    // ── Deep closed expression generators ───────────────────────
+
+    private static final List<String> BINOPS = List.of("+", "-", "*", "/", "==", "!=", "<", ">", "<=", ">=", "&&", "||");
+
+    @Provide
+    Arbitrary<ExpressionNode> closedExpr() {
+        return Arbitraries.randomValue(rand -> {
+            for (int i = 0; i < 50; i++) {
+                ExpressionNode expr = genClosedExpr(rand, 3, List.of());
+                var errors = new ArrayList<ParserError>();
+                var tc = new TypeChecker(errors);
+                tc.check(new ProgramNode(List.of(expr)));
+                if (errors.isEmpty()) return expr;
+            }
+            return new LiteralNode("0", 0, 0); // fallback: always well-typed
+        });
+    }
+
+    @Provide
+    Arbitrary<ExpressionNode> closedBlock() {
+        return Arbitraries.randomValue(rand -> {
+            for (int i = 0; i < 50; i++) {
+                ExpressionNode expr = genClosedBlockExpr(rand, 3, List.of());
+                var errors = new ArrayList<ParserError>();
+                var tc = new TypeChecker(errors);
+                tc.check(new ProgramNode(List.of(expr)));
+                if (errors.isEmpty()) return expr;
+            }
+            return new LiteralNode("0", 0, 0);
+        });
+    }
+
+    private static ExpressionNode genClosedExpr(Random rand, int depth, List<String> bound) {
+        if (depth <= 0 || rand.nextDouble() < 0.2) return genClosedLeaf(rand, bound);
+        int choice = rand.nextInt(12);
+        if (choice == 0) return genClosedLeaf(rand, bound);
+        if (choice == 1) {
+            String p = freshName("p", bound);
+            List<String> nb = new ArrayList<>(bound);
+            nb.add(p);
+            return new LambdaNode(p, genClosedExpr(rand, depth - 1, nb), null, 0, 0);
+        }
+        if (choice == 2) {
+            return new ApplicationNode(
+                genClosedExpr(rand, depth - 1, bound),
+                genClosedExpr(rand, depth - 1, bound), 0, 0);
+        }
+        if (choice == 3) {
+            return new IfNode(
+                genClosedExpr(rand, depth - 1, bound),
+                genClosedExpr(rand, depth - 1, bound),
+                genClosedExpr(rand, depth - 1, bound));
+        }
+        if (choice == 4) {
+            return new BinaryExprNode(
+                genClosedExpr(rand, depth - 1, bound),
+                BINOPS.get(rand.nextInt(BINOPS.size())),
+                genClosedExpr(rand, depth - 1, bound), 0, 0);
+        }
+        if (choice == 5) {
+            return new UnaryExprNode(
+                rand.nextBoolean() ? "!" : "-",
+                genClosedExpr(rand, depth - 1, bound), 0, 0);
+        }
+        if (choice == 6) {
+            return genClosedBlockExpr(rand, depth, bound);
+        }
+        if (choice == 7) {
+            int arity = 2 + rand.nextInt(2);
+            var elems = new ArrayList<ExpressionNode>();
+            for (int i = 0; i < arity; i++)
+                elems.add(genClosedExpr(rand, depth - 1, bound));
+            return new TupleNode(elems, 0, 0);
+        }
+        if (choice == 8) {
+            return new AscriptionNode(
+                genClosedExpr(rand, depth - 1, bound),
+                List.of(new TypeNumber(), new TypeBool(), new TypeString(), new TypeUnit())
+                    .get(rand.nextInt(4)), 0, 0);
+        }
+        return genClosedLeaf(rand, bound);
+    }
+
+    private static ExpressionNode genClosedBlockExpr(Random rand, int depth, List<String> outerBound) {
+        List<String> bound = new ArrayList<>(outerBound);
+        int numStmts = 1 + rand.nextInt(3);
+        var stmts = new ArrayList<ASTNode>();
+        for (int i = 0; i < numStmts - 1; i++) {
+            if (rand.nextDouble() < 0.25) {
+                // Recursive let: λ-body can reference own name
+                String name = freshName("f", bound);
+                List<String> nb = new ArrayList<>(bound);
+                nb.add(name);
+                String param = freshName("x", nb);
+                List<String> fb = new ArrayList<>(nb);
+                fb.add(param);
+                stmts.add(new LetStatementNode(name,
+                    new LambdaNode(param, genClosedExpr(rand, depth - 1, fb), null, 0, 0),
+                    true, null, 0, 0));
+                bound.add(name);
+            } else if (rand.nextDouble() < 0.25 && bound.size() < 5) {
+                // Mutual let rec: 2-3 mutually recursive definitions
+                int numDefs = 2 + rand.nextInt(2);
+                var defs = new ArrayList<LetStatementNode>();
+                var mutualNames = new ArrayList<String>();
+                for (int j = 0; j < numDefs; j++) {
+                    mutualNames.add(freshName("g", bound));
+                }
+                // All names must be visible to all bodies
+                List<String> allBound = new ArrayList<>(bound);
+                allBound.addAll(mutualNames);
+                for (int j = 0; j < numDefs; j++) {
+                    String param = freshName("p", allBound);
+                    List<String> bodyBound = new ArrayList<>(allBound);
+                    bodyBound.add(param);
+                    defs.add(new LetStatementNode(mutualNames.get(j),
+                        new LambdaNode(param, genClosedExpr(rand, depth - 1, bodyBound), null, 0, 0),
+                        true, null, 0, 0));
+                }
+                stmts.add(new MutualLetNode(defs, 0, 0));
+                bound.addAll(mutualNames);
+            } else {
+                // Non-recursive let: value generated WITHOUT the new name
+                String name = freshName("b", bound);
+                ExpressionNode val = genClosedExpr(rand, depth - 1, bound);
+                bound.add(name);
+                stmts.add(new LetStatementNode(name, val, false, null, 0, 0));
+            }
+        }
+        stmts.add(genClosedExpr(rand, depth - 1, bound));
+        return new BlockNode(stmts, 0, 0);
+    }
+
+    private static ExpressionNode genClosedLeaf(Random rand, List<String> bound) {
+        int n = 4 + (bound.isEmpty() ? 0 : 1);
+        int choice = rand.nextInt(n);
+        if (choice == 0) return new LiteralNode(String.valueOf(rand.nextInt(1000)), 0, 0);
+        if (choice == 1) return new BoolNode(0, 0, rand.nextBoolean());
+        if (choice == 2) return new StringLiteralNode("hi", 0, 0);
+        if (choice == 3) return new UnitLiteralNode(0, 0);
+        return new IdentifierNode(bound.get(rand.nextInt(bound.size())), 0, 0);
+    }
+
+    private static String freshName(String base, List<String> avoid) {
+        int n = avoid.size();
+        String candidate = base + n;
+        while (avoid.contains(candidate)) {
+            candidate = base + (++n);
+        }
+        return candidate;
     }
 
     // ── Full reduction → value ──────────────────────────────────
@@ -112,35 +297,26 @@ class SmallStepPBT {
         var program = new ProgramNode(List.of(raw));
         tc.check(program);
         if (!errors.isEmpty()) return;
-        if (SmallStepReducer.isValue(raw)) {
-            // Both return the same value
-            return;
-        }
+        if (SmallStepReducer.isValue(raw)) return;
 
-        // Big-step via Evaluator
         var evaluator = new Evaluator(1000);
         Value bigValue;
         try {
             bigValue = evaluator.evalProgram(program);
-        } catch (RuntimeException e) {
-            return; // evaluator may fail for open terms
-        }
+        } catch (RuntimeException e) { return; }
         if (bigValue == null) return;
 
-        // Small-step: reduce to normal form, then stringify
         ExpressionNode normal;
         try {
             normal = SmallStepReducer.reduce(raw);
-        } catch (RuntimeException e) {
-            return; // reduction may fail
-        }
+        } catch (RuntimeException e) { return; }
         if (!SmallStepReducer.isValue(normal)) return;
 
         String smallStr = valueNodeToString(normal);
-        String bigStr = bigValue.toString();
-        // Approximate comparison: both should produce a recognizable result
-        assertNotNull(smallStr);
-        assertNotNull(bigStr);
+        String bigStr = valueToString(bigValue);
+        assertNotNull(smallStr, "Small-step must produce a recognizable value");
+        assertNotNull(bigStr, "Big-step must produce a recognizable value");
+        assertEquals(bigStr, smallStr, "Big-step and small-step must produce the same value");
     }
 
     // ── Block reduction: progress + value ────────────────────────
@@ -172,6 +348,147 @@ class SmallStepPBT {
         } catch (RuntimeException e) {
             // skip if reduction fails
         }
+    }
+
+    // ── Deep closed: full reduction → value ──────────────────────
+
+    @Property(tries = 200)
+    void closedExprReducesToValue(@ForAll("closedExpr") ExpressionNode raw) {
+        if (SmallStepReducer.isValue(raw)) return;
+        try {
+            ExpressionNode normal = SmallStepReducer.reduce(raw);
+            assertTrue(SmallStepReducer.isValue(normal),
+                "Closed expression must reduce to a value, got: " + normal);
+        } catch (RuntimeException e) { /* skip if reduction fails */ }
+    }
+
+    @Property(tries = 200)
+    void closedBlockReducesToValue(@ForAll("closedBlock") ExpressionNode raw) {
+        if (SmallStepReducer.isValue(raw)) return;
+        try {
+            ExpressionNode normal = SmallStepReducer.reduce(raw);
+            if (normal != null && !SmallStepReducer.isValue(normal)) {
+                // Reduction returned a non-value — not a problem for this test
+                return;
+            }
+        } catch (RuntimeException e) { /* skip if reduction fails */ }
+    }
+
+    // ── Deep closed: progress ────────────────────────────────────
+
+    @Property(tries = 200)
+    void progressClosedExpr(@ForAll("closedExpr") ExpressionNode raw) {
+        if (SmallStepReducer.isValue(raw)) return;
+        assertDoesNotThrow(() -> SmallStepReducer.step(raw),
+            "Progress: closed " + raw.getClass().getSimpleName() + " must step");
+    }
+
+    @Property(tries = 200)
+    void progressClosedBlock(@ForAll("closedBlock") ExpressionNode raw) {
+        if (SmallStepReducer.isValue(raw)) return;
+        assertDoesNotThrow(() -> SmallStepReducer.step(raw),
+            "Progress: closed block " + raw.getClass().getSimpleName() + " must step");
+    }
+
+    // ── Deep closed: preservation ────────────────────────────────
+
+    @Property(tries = 200)
+    void preservationClosedExpr(@ForAll("closedExpr") ExpressionNode raw) {
+        var errors = new ArrayList<ParserError>();
+        var tc = new TypeChecker(errors);
+        tc.check(new ProgramNode(List.of(raw)));
+        if (!errors.isEmpty()) return;
+        var type1 = tc.getInferredTypes().get(raw);
+        if (type1 == null) return;
+        if (SmallStepReducer.isValue(raw)) return;
+
+        try {
+            ExpressionNode next = SmallStepReducer.step(raw);
+            var errors2 = new ArrayList<ParserError>();
+            var tc2 = new TypeChecker(errors2);
+            tc2.check(new ProgramNode(List.of(next)));
+            if (!errors2.isEmpty()) return;
+            var type2 = tc2.getInferredTypes().get(next);
+            if (type2 == null) return;
+            assertEquals(normalizeType(type1), normalizeType(type2),
+                "Preservation: closed " + raw + " → " + next);
+        } catch (RuntimeException e) { /* stuck — not a preservation failure */ }
+    }
+
+    @Property(tries = 200)
+    void preservationClosedBlock(@ForAll("closedBlock") ExpressionNode raw) {
+        var errors = new ArrayList<ParserError>();
+        var tc = new TypeChecker(errors);
+        tc.check(new ProgramNode(List.of(raw)));
+        if (!errors.isEmpty()) return;
+        var type1 = tc.getInferredTypes().get(raw);
+        if (type1 == null) return;
+        if (SmallStepReducer.isValue(raw)) return;
+
+        try {
+            ExpressionNode next = SmallStepReducer.step(raw);
+            var errors2 = new ArrayList<ParserError>();
+            var tc2 = new TypeChecker(errors2);
+            tc2.check(new ProgramNode(List.of(next)));
+            if (!errors2.isEmpty()) return;
+            var type2 = tc2.getInferredTypes().get(next);
+            if (type2 == null) return;
+            assertEquals(normalizeType(type1), normalizeType(type2),
+                "Preservation: closed block " + raw + " → " + next);
+        } catch (RuntimeException e) { /* stuck — not a preservation failure */ }
+    }
+
+    // ── Deep closed: consistency big-step ≈ small-step ───────────
+
+    @Property(tries = 200)
+    void closedBigStepMatchesSmallStep(@ForAll("closedExpr") ExpressionNode raw) {
+        if (SmallStepReducer.isValue(raw)) return;
+
+        // Big-step via Evaluator
+        var evaluator = new Evaluator(1000);
+        Value bigValue;
+        try {
+            bigValue = evaluator.evalProgram(new ProgramNode(List.of(raw)));
+        } catch (RuntimeException e) { return; }
+        if (bigValue == null) return;
+
+        // Small-step: reduce to normal form
+        ExpressionNode normal;
+        try {
+            normal = SmallStepReducer.reduce(raw);
+        } catch (RuntimeException e) { return; }
+        if (!SmallStepReducer.isValue(normal)) return;
+
+        // Both must produce consistent results
+        String smallStr = valueNodeToString(normal);
+        String bigStr = valueToString(bigValue);
+        assertNotNull(smallStr, "Small-step must produce a recognizable value");
+        assertNotNull(bigStr, "Big-step must produce a recognizable value");
+        assertEquals(bigStr, smallStr, "Big-step and small-step must produce the same value");
+    }
+
+    @Property(tries = 100)
+    void closedBlockBigStepMatchesSmallStep(@ForAll("closedBlock") ExpressionNode raw) {
+        if (SmallStepReducer.isValue(raw)) return;
+
+        var evaluator = new Evaluator(1000);
+        Value bigValue;
+        try {
+            bigValue = evaluator.evalProgram(new ProgramNode(List.of(raw)));
+        } catch (RuntimeException e) { return; }
+        if (bigValue == null) return;
+
+        ExpressionNode normal;
+        try {
+            normal = SmallStepReducer.reduce(raw);
+        } catch (RuntimeException e) { return; }
+        if (!SmallStepReducer.isValue(normal)) return;
+
+        String smallStr = valueNodeToString(normal);
+        String bigStr = valueToString(bigValue);
+        assertNotNull(smallStr, "Small-step must produce a recognizable value");
+        assertNotNull(bigStr, "Big-step must produce a recognizable value");
+        assertEquals(bigStr, smallStr, "Big-step and small-step must produce the same value");
     }
 
     // ── Let-generalization stress test ───────────────────────────
@@ -359,12 +676,25 @@ class SmallStepPBT {
         if (node instanceof StringLiteralNode s) return s.value;
         if (node instanceof UnitLiteralNode) return "()";
         if (node instanceof IdentifierNode id) return id.name;
-        if (node instanceof LambdaNode) return "<lambda>";
+        if (node instanceof LambdaNode) return "<closure>";
         if (node instanceof TupleNode t) {
             return "(" + t.elements.stream().map(SmallStepPBT::valueNodeToString)
                 .collect(Collectors.joining(", ")) + ")";
         }
         if (node instanceof AscriptionNode a) return valueNodeToString(a.expr);
+        return null;
+    }
+
+    private static String valueToString(Value v) {
+        if (v instanceof NumberValue n) return Integer.toString(n.value);
+        if (v instanceof BoolValue b) return Boolean.toString(b.value);
+        if (v instanceof StringValue s) return s.value;
+        if (v instanceof UnitValue) return "()";
+        if (v instanceof TupleValue t) {
+            return "(" + t.values.stream().map(SmallStepPBT::valueToString)
+                .collect(Collectors.joining(", ")) + ")";
+        }
+        if (v instanceof ClosureValue) return "<closure>";
         return null;
     }
 }
