@@ -214,8 +214,8 @@ public class TypeChecker {
             TypeScheme scheme = generalize(targetEnv, type);
             targetEnv.put(def.name, scheme);
             inferredTypes.put(def.value, type);
-            inferredTypes.put(def, scheme.body());
-            lastType = scheme.body();
+            inferredTypes.put(def, type);
+            lastType = type;
         }
         return lastType;
     }
@@ -255,7 +255,7 @@ public class TypeChecker {
             TypeScheme scheme = generalize(targetEnv, type);
             targetEnv.put(let.name, scheme);
             inferredTypes.put(let.value, type);
-            inferredTypes.put(let, scheme.body());
+            inferredTypes.put(let, type);
             return true;
         } else {
             InferResult result = inferExpr(targetEnv, let.value);
