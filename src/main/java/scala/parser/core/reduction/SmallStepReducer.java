@@ -299,6 +299,7 @@ public class SmallStepReducer {
         }
         if (bin.left instanceof StringLiteralNode l && bin.right instanceof StringLiteralNode r) {
             return switch (bin.operator) {
+                case "+" -> new StringLiteralNode(l.value + r.value, l.line, l.column);
                 case "==" -> bln(l.value.equals(r.value), l);
                 case "!=" -> bln(!l.value.equals(r.value), l);
                 default -> throw new RuntimeException("Unknown string op: " + bin.operator);
