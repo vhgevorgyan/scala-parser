@@ -275,3 +275,8 @@ Gesamterkennungsrate: **37,2%** (mit Output-Vergleich). Schwachstellen sind sema
 27. ✅ Gradual Typing: Dynamischer Typ `?` (`TypeDynamic`) konsistent mit allen konkreten Typen via Unifikation, Laufzeit-Checks bei `(e: T)`-Ascription, Fehlschlag mit `RuntimeException`, SmallStepReducer erased Ascription (10 Tests)
 28. ✅ Coverage-Guided PBT: Gezielte Generatoren für SwapIfBranches/SwapOperator/RemoveLetBinding/UndefinedVariable (6 Properties)
 29. ✅ Type Error Diagnosis Benchmark: Systematische Qualitätsmessung der Fehlermeldungen (18 Testprogramme, Standalone via `runTypeErrorBenchmark`)
+30. ✅ BenchmarkSuite: 4 Auswertungskomponenten in einem Durchlauf (`gradlew runBenchmarkSuite`):
+    - **PBT-Property-vs-Mutation-Matrix**: Welche Mutationsklasse wird von welcher PBT-Property-Kategorie erfasst?
+    - **Scalability Benchmark**: Laufzeit (ns) + Reduktionsschritte für Programme von 2–32 AST-Knoten
+    - **Type Error Recovery Benchmark**: Systematische Error-Injektion analog MutationAnalysis
+    - **AST Node Coverage**: Abdeckungsmatrix (20 Knotentypen × 4 Komponenten)

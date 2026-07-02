@@ -29,6 +29,9 @@
 
 # Benchmarks ausführen
 .\gradlew.bat run -Dmain=scala.parser.ScalingBenchmarks
+
+# Benchmark Suite (4 Auswertungen)
+.\gradlew.bat runBenchmarkSuite
 ```
 
 ## Wichtige Dateien
@@ -43,6 +46,7 @@
 | Substitution | `src/main/java/scala/parser/core/reduction/Substitution.java` |
 | MutationAnalysis | `src/main/java/scala/parser/MutationAnalysis.java` |
 | TypeErrorBenchmark | `src/main/java/scala/parser/TypeErrorDiagnosisBenchmark.java` |
+| BenchmarkSuite | `src/main/java/scala/parser/BenchmarkSuite.java` |
 | TypeDynamic | `src/main/java/scala/parser/core/types/TypeDynamic.java` |
 | LSP-Server | `src/main/java/scala/parser/lsp/` |
 | Tests | `src/test/java/scala/parser/core/` |
