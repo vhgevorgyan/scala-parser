@@ -20,25 +20,28 @@ flowchart TB
     subgraph PIPELINE["CompilerPipeline"]
         TOK["Tokenizer<br/>Source -> Token[]"]
         PAR["Parser<br/>Token[] -> ProgramNode"]
-        TC["TypeChecker<br/>HM Algorithm W<br/>let-polymorphism<br/>ADT registration<br/>Exhaustiveness check"]
-        EVAL["Evaluator<br/>Tree-walking interpreter<br/>Closures / ConstructorBuilder"]
+        TC["TypeChecker<br/>HM Algorithm W<br/>let-polymorphism<br/>ADT registration<br/>Exhaustiveness check<br/>Gradual typing (TypeDynamic)"]
+        EVAL["Evaluator<br/>Tree-walking interpreter<br/>Closures / ConstructorBuilder<br/>Runtime type checks on ascription"]
+        RED["SmallStepReducer<br/>step-by-step reduction<br/>FixpointNode / MutualRecursion<br/>Builtins (succ/pred/iszero/print)"]
     end
 
-    subgraph AST["Abstract Syntax Tree"]
+    subgraph AST["Abstract Syntax Tree (21 types)"]
         LIT["LiteralNode / BoolNode / StringLiteralNode / UnitLiteralNode"]
         ID["IdentifierNode"]
         BIN["BinaryExprNode / UnaryExprNode"]
         IF["IfNode"]
         LAM["LambdaNode"]
         APP["ApplicationNode"]
-        LET["LetStatementNode"]
-        ENUM["EnumDeclNode"]
+        LET["LetStatementNode / MutualLetNode"]
+        ENUM["EnumDeclNode / TypeAliasNode"]
         CASE["CaseNode / CaseBranch"]
         BLOCK["BlockNode"]
         ASC["AscriptionNode"]
+        TUP["TupleNode"]
+        FIX["FixpointNode"]
     end
 
-    subgraph TYPES["Type System"]
+    subgraph TYPES["Type System (9 types)"]
         TNUM["TypeNumber"]
         TBOOL["TypeBool"]
         TSTR["TypeString"]
@@ -47,6 +50,8 @@ flowchart TB
         TVAR["TypeVar (t0, t1, ...)"]
         TCTOR["TypeConstructor (Maybe a)"]
         SCHEME["TypeScheme (forall a. ...)"]
+        TDYN["TypeDynamic (gradual ?)"]
+        TTUP["TypeTuple"]
     end
 
     subgraph VALUES["Runtime Values"]
@@ -54,10 +59,11 @@ flowchart TB
         VBOOL["BoolValue"]
         VSTR["StringValue"]
         VUNIT["UnitValue"]
-        CLOSURE["ClosureValue"]
-        BUILTIN["BuiltinValue"]
-        CTORVAL["ConstructorValue"]
-        CTORBLD["ConstructorBuilder"]
+        VCLOSURE["ClosureValue"]
+        VBUILTIN["BuiltinValue"]
+        VCTORVAL["ConstructorValue"]
+        VCTORBLD["ConstructorBuilder"]
+        VTUPLE["TupleValue"]
     end
 
     EXT -- "stdin/stdout JSON-RPC" --> LS
@@ -69,6 +75,7 @@ flowchart TB
     TOK --> PAR
     PAR --> TC
     TC --> EVAL
+    TC --> RED
 
     PAR -.-> AST
     TC -.-> TYPES
@@ -126,6 +133,9 @@ flowchart LR
         ParserApplication --> LanguageServerLauncher
         REPL --> CompilerPipeline
         Benchmarks --> CompilerPipeline
+        MutationAnalysis --> CompilerPipeline
+        TypeErrorDiagnosisBenchmark --> CompilerPipeline
+        BenchmarkSuite --> CompilerPipeline
     end
 
     LanguageServerLauncher --> MyLanguageServer
@@ -155,26 +165,39 @@ flowchart LR
     Parser --> ProgramNode
     Parser --> ParserError
     Parser --> ParserResult
+
+    subgraph REDUCTION["Small-Step Reduction"]
+        SR[SmallStepReducer] --> Substitution
+        SR --> FixpointNode
+    end
 ```
 
 ## Package Structure
 
 ```
 scala.parser
-├── ParserApplication.java       -- LSP entry point
-├── REPL.java                    -- Interactive REPL
-├── Benchmarks.java              -- Performance benchmarks
+├── ParserApplication.java              -- LSP entry point
+├── REPL.java                           -- Interactive REPL
+├── Benchmarks.java                     -- Performance benchmarks
+├── MutationAnalysis.java               -- 12-op mutation analysis (37.2% detection)
+├── TypeErrorDiagnosisBenchmark.java    -- 18 curated type-error programs
+├── BenchmarkSuite.java                 -- 4-in-1 evaluation (mutation matrix, scalability, error recovery, coverage)
 ├── core
-│   ├── ParserError.java         -- Error record (message, line, col, length)
-│   ├── ParserResult.java        -- AST + error list container
-│   ├── ast/                     -- ~18 AST node types
-│   ├── lexer/                   -- Tokenizer + Token + TokenType
-│   ├── parser/                  -- Recursive-descent Parser
-│   ├── types/                   -- Type hierarchy + TypeChecker + TypeErrorException
-│   ├── interpreter/             -- Evaluator + Values + Env
-│   └── semantic/                -- ScopeAnalyzer + SemanticTokenProvider
-│   └── hover/                   -- HoverProvider
-└── lsp/                         -- LSP4J implementations
+│   ├── ParserError.java                -- Error record (message, line, col, length)
+│   ├── ParserResult.java               -- AST + error list container
+│   ├── ast/                            -- 21 AST node types (incl. FixpointNode, TupleNode, MutualLetNode)
+│   ├── lexer/                          -- Tokenizer + Token + TokenType (incl. QUESTION token for `?`)
+│   ├── parser/                         -- Recursive-descent Parser
+│   ├── types/                          -- 9 type kinds + HM TypeChecker + TypeErrorException (incl. TypeDynamic)
+│   ├── interpreter/                    -- Evaluator + 9 Value types + Env (incl. TupleValue)
+│   ├── reduction/                      -- SmallStepReducer + Substitution (step, reduce, beta-reduction, let-substitution)
+│   ├── semantic/                       -- ScopeAnalyzer + SemanticTokenProvider
+│   └── hover/                          -- HoverProvider
+├── test/java/scala/parser/core/reduction/
+│   ├── SmallStepPBT.java               -- 26 PBT properties (progress, preservation, determinism, values-irreducible, CaseNode)
+│   ├── CoverageGuidedPBT.java          -- 6 targeted properties for hard-to-detect mutations
+│   └── TypeSoundnessFormalTest.java    -- ~60+ formal tests (builtins, gradual typing, regression)
+└── lsp/                                -- LSP4J implementations
     ├── LanguageServerLauncher.java
     ├── MyLanguageServer.java
     ├── MyTextDocumentService.java

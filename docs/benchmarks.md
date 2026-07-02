@@ -1,4 +1,6 @@
-# Scaling Benchmarks
+# Benchmarks
+
+## Scaling Benchmarks (`ScalingBenchmarks.java`)
 
 Gemessen mit `ScalingBenchmarks.java` (500 Iterationen, 300 Warmup-Runden,
 5 Stichproben pro Szenario: n = 10, 50, 100, 500, 1000).
@@ -90,3 +92,90 @@ mit konstantem Startwert `f(100)`.
 selbst bei n=1000). Teuerste ist Typecheck mit O(n²) für tiefe let-Ketten
 (~90ms bei 1000 Bindungen), was für den erwarteten Gebrauch
 (Studierendencode < 100 Zeilen, < 1ms) völlig ausreichend ist.
+
+---
+
+## Benchmark Suite (`BenchmarkSuite.java`)
+
+Vier Analyse-Module in einem Durchlauf via `gradlew runBenchmarkSuite`:
+
+### 1. PBT-Property-vs-Mutation Matrix
+
+Klassifiziert jeden der 12 Mutationsoperatoren nach Pipeline-Detektionsstufe und
+ordnet die passende PBT-Property-Kategorie zu.
+
+| Operator | Parse | Type | RTE | Output | Esc | PBT-Property |
+|---|---|---|---|---|---|---|
+| ReplaceLiteralType | 0 | 0 | 0 | 35 | 165 | preservationClosed* |
+| SwapOperator | 0 | 0 | 0 | 0 | 200 | bigStepMatchesSmallStep |
+| SwapIfBranches | 0 | 0 | 0 | 1 | 199 | swapIfBranchesChangesOutput |
+| RemoveCaseBranch | 0 | 2 | 0 | 0 | 0 | progressClosedCase |
+| SelfReference | 0 | 183 | 0 | 16 | 1 | preservationClosed* |
+| UndefinedVariable | 2 | 0 | 0 | 0 | 198 | undefinedVariableCausesError |
+| DivideByZero | 0 | 0 | 21 | 0 | 179 | progressClosed* (RTE) |
+| BoolNegate | 0 | 50 | 0 | 0 | 150 | preservationClosed* |
+| NotOnNumber | 0 | 24 | 0 | 0 | 176 | preservationClosed* |
+| UndeclaredConstructor | 0 | 200 | 0 | 0 | 0 | preservationClosed* |
+| TypeAnnotationMismatch | 200 | 0 | 0 | 0 | 0 | preservationClosed* |
+| RemoveLetBinding | 0 | 11 | 0 | 0 | 189 | removeLetBindingCausesError |
+
+**Detektionskategorien:**
+- **Parse** — Fehler vor PBT (Tokenizer/Parser)
+- **Type** — preservationClosed* prüft Wohlgetyptheit nach step
+- **RTE** — progressClosed* prüft step() wirft nicht für Nicht-Values
+- **Output** — bigStepMatchesSmallStep / coverage-guided Output-Properties
+- **Escaped** — keine existierende Property erkennt die Mutation
+
+### 2. Scalability (Hand-Crafted Programs)
+
+Laufzeit + Reduktionsschritte für 24 geschlossene Programme (2–32 AST-Knoten):
+
+| Größe | parseNs | tcNs | evalNs | reduceNs | steps | Beispiel |
+|---|---|---|---|---|---|---|
+| 2 | 1.600 | 1.000 | 2.600 | 200 | 0 | `42` |
+| 4 | 22.900 | 9.500 | 12.600 | 41.900 | 1 | `1 + 2` |
+| 5 | 24.300 | 11.400 | 3.500 | 8.500 | 1 | `if (true) 1 else 2` |
+| 5 | 36.600 | 36.600 | 12.700 | 2.411.000 | 1 | `((x: Int) => x)(5)` (JIT-Warmup) |
+| 8 | 20.500 | 11.400 | 6.000 | 16.300 | 3 | `(1 + 2) * (3 + 4)` |
+| 12 | 23.600 | 17.700 | 8.200 | 32.400 | 4 | `((x) => x+1)(((y) => y*2)(5))` |
+| 16 | 18.700 | 14.100 | 5.300 | 116.600 | 7 | complex arith |
+| 19 | 103.400 | 56.800 | 11.400 | 19.600 | 7 | complex if |
+| 32 | 34.300 | 98.600 | 10.700 | 44.100 | 15 | deep arith chain |
+
+**Beobachtung:** Typecheck-Zeit wächst mit Programmgröße (O(n) für unabhängige Ausdrücke,
+O(n²) für let-Ketten). Reduktionsschritte korrelieren linear mit AST-Tiefe.
+
+### 3. Type Error Recovery
+
+Systematische Error-Injektion für 12 Operatoren × 200 Trials. Gleiche Methodik wie
+MutationAnalysis, aber mit Ausgabe der durchschnittlichen Erkennungsrate.
+
+Durchschnittliche Erkennung: **39,6%** (vergleichbar mit MutationAnalysis).
+
+### 4. AST Node Coverage
+
+Abdeckungsmatrix: Welche Komponente handhabt welchen AST-Knotentyp (per `instanceof`/`new`-Scan):
+
+| Node Type | Eval | Reducer | Checker | Parser |
+|---|---|---|---|---|
+| LiteralNode | Y | Y | Y | Y |
+| BoolNode | Y | Y | Y | Y |
+| IdentifierNode | Y | Y | Y | Y |
+| LambdaNode | Y | Y | Y | Y |
+| ApplicationNode | Y | Y | Y | Y |
+| IfNode | Y | Y | Y | Y |
+| BinaryExprNode | Y | Y | Y | Y |
+| FixpointNode | N | Y | Y | N |
+| CaseNode | Y | Y | Y | Y |
+| BlockNode | Y | Y | Y | Y |
+| LetStatementNode | Y | Y | Y | Y |
+| EnumDeclNode | Y | N | Y | Y |
+| TypeAliasNode | Y | N | Y | Y |
+| ProgramNode | N | N | Y | Y |
+
+**Lücken:**
+- `FixpointNode` nur in Reducer/Checker (in Evaluator durch Fixpoint-Semantik inline ersetzt)
+- `EnumDeclNode`/`TypeAliasNode` fehlen im Reducer (werden beim TypeCheck verarbeitet, nicht zur Laufzeit)
+- `ProgramNode` nur in Checker/Parser (Evaluator hat separate `evalProgram`-Methode ohne `instanceof`)
+
+Aufruf: `gradlew runBenchmarkSuite` (alle 4) oder `gradlew runBenchmarkSuite --args="scalability"` (einzeln).
