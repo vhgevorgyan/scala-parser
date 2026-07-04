@@ -197,34 +197,42 @@ public class Evaluator {
         if (node instanceof CaseNode caseNode) {
             Value expr = evalExpr(caseNode.expr, env);
             if (!(expr instanceof ConstructorValue cv)) {
-                // Allow matching on literals (for literal patterns)
                 for (CaseNode.CaseBranch branch : caseNode.branches) {
                     if (branch.literalPattern() != null) {
                         Value pat = evalLiteralPattern(branch.literalPattern());
                         if (valuesEqual(expr, pat)) {
-                            return evalExpr(branch.body(), env);
+                            Env be = new Env(env);
+                            if (branch.asName() != null) be.define(branch.asName(), expr);
+                            if (branch.guard() != null && !guardPasses(be, branch.guard())) continue;
+                            return evalExpr(branch.body(), be);
                         }
                     }
                     if (branch.constructor() == null && branch.literalPattern() == null) {
-                        // Wildcard
-                        return evalExpr(branch.body(), env);
+                        Env be = new Env(env);
+                        if (branch.asName() != null) be.define(branch.asName(), expr);
+                        if (branch.guard() != null && !guardPasses(be, branch.guard())) continue;
+                        return evalExpr(branch.body(), be);
                     }
                 }
                 throw new RuntimeException("No matching branch for value: " + expr);
             }
 
             for (CaseNode.CaseBranch branch : caseNode.branches) {
-                // Wildcard before constructor patterns
                 if (branch.constructor() == null && branch.literalPattern() == null) {
-                    return evalExpr(branch.body(), env);
+                    Env be = new Env(env);
+                    if (branch.asName() != null) be.define(branch.asName(), expr);
+                    if (branch.guard() != null && !guardPasses(be, branch.guard())) continue;
+                    return evalExpr(branch.body(), be);
                 }
 
                 if (branch.constructor() != null && branch.constructor().equals(cv.name)) {
-                    Env branchEnv = new Env(env);
+                    Env be = new Env(env);
+                    if (branch.asName() != null) be.define(branch.asName(), expr);
                     for (int i = 0; i < branch.bindings().size() && i < cv.args.size(); i++) {
-                        branchEnv.define(branch.bindings().get(i).name(), cv.args.get(i));
+                        be.define(branch.bindings().get(i).name(), cv.args.get(i));
                     }
-                    return evalExpr(branch.body(), branchEnv);
+                    if (branch.guard() != null && !guardPasses(be, branch.guard())) continue;
+                    return evalExpr(branch.body(), be);
                 }
             }
 
@@ -360,5 +368,11 @@ public class Evaluator {
             return new TypeConstructor(cv.name, cv.args.stream().map(a -> (Type) new TypeDynamic()).toList());
         }
         return new TypeDynamic();
+    }
+
+    private boolean guardPasses(Env env, ExpressionNode guard) {
+        Value v = evalExpr(guard, env);
+        if (v instanceof BoolValue bv) return bv.value;
+        return true;
     }
 }

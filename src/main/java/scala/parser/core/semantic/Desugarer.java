@@ -88,7 +88,7 @@ public class Desugarer {
                 .map(br -> {
                     ExpressionNode newBody = desugarExpr(br.body());
                     if (newBody != br.body()) {
-                        return new CaseNode.CaseBranch(br.constructor(), br.bindings(), newBody, br.literalPattern());
+                        return new CaseNode.CaseBranch(br.constructor(), br.bindings(), newBody, br.literalPattern(), br.asName(), br.guard());
                     }
                     return br;
                 })

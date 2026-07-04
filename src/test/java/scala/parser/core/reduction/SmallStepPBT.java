@@ -195,10 +195,10 @@ class SmallStepPBT {
             return new TupleNode(elems, 0, 0);
         }
         if (choice == 8) {
+            List<Type> types = List.of(new TypeNumber(), new TypeBool(), new TypeString(), new TypeUnit());
             return new AscriptionNode(
                 genClosedExpr(rand, depth - 1, bound),
-                List.of(new TypeNumber(), new TypeBool(), new TypeString(), new TypeUnit())
-                    .get(rand.nextInt(4)), 0, 0);
+                types.get(rand.nextInt(types.size())), 0, 0);
         }
         if (choice == 9) {
             int idx = rand.nextInt(4);
@@ -214,8 +214,8 @@ class SmallStepPBT {
         int numStmts = 1 + rand.nextInt(3);
         var stmts = new ArrayList<ASTNode>();
         for (int i = 0; i < numStmts - 1; i++) {
-            if (rand.nextDouble() < 0.25) {
-                // Recursive let: λ-body can reference own name
+            double r = rand.nextDouble();
+            if (r < 0.25) {
                 String name = freshName("f", bound);
                 List<String> nb = new ArrayList<>(bound);
                 nb.add(name);
@@ -226,15 +226,13 @@ class SmallStepPBT {
                     new LambdaNode(param, genClosedExpr(rand, depth - 1, fb), null, 0, 0),
                     true, null, 0, 0));
                 bound.add(name);
-            } else if (rand.nextDouble() < 0.25 && bound.size() < 5) {
-                // Mutual let rec: 2-3 mutually recursive definitions
+            } else if (r < 0.45 && bound.size() < 5) {
                 int numDefs = 2 + rand.nextInt(2);
                 var defs = new ArrayList<LetStatementNode>();
                 var mutualNames = new ArrayList<String>();
                 for (int j = 0; j < numDefs; j++) {
                     mutualNames.add(freshName("g", bound));
                 }
-                // All names must be visible to all bodies
                 List<String> allBound = new ArrayList<>(bound);
                 allBound.addAll(mutualNames);
                 for (int j = 0; j < numDefs; j++) {
@@ -248,7 +246,6 @@ class SmallStepPBT {
                 stmts.add(new MutualLetNode(defs, 0, 0));
                 bound.addAll(mutualNames);
             } else {
-                // Non-recursive let: value generated WITHOUT the new name
                 String name = freshName("b", bound);
                 ExpressionNode val = genClosedExpr(rand, depth - 1, bound);
                 bound.add(name);
@@ -345,10 +342,26 @@ class SmallStepPBT {
         var branches = new ArrayList<String>();
         for (int j = 0; j < numCtors; j++) {
             String pattern = ctorNames.get(j) + (hasArg.get(j) ? "(x)" : "");
-            branches.add("case " + pattern + " => " + rand.nextInt(1000));
+            String asPat = "";
+            if (rand.nextDouble() < 0.2) {
+                asPat = "v" + j + " @ ";
+            }
+            String guard = "";
+            if (hasArg.get(j) && rand.nextDouble() < 0.25) {
+                guard = " if x > " + rand.nextInt(10);
+            }
+            branches.add("case " + asPat + pattern + guard + " => " + rand.nextInt(1000));
         }
         if (rand.nextDouble() < 0.3) {
-            branches.add("case _ => " + rand.nextInt(1000));
+            String asPat = "";
+            if (rand.nextDouble() < 0.2) {
+                asPat = "v_ @ ";
+            }
+            String guard = "";
+            if (rand.nextDouble() < 0.2) {
+                guard = " if " + rand.nextBoolean();
+            }
+            branches.add("case " + asPat + "_" + guard + " => " + rand.nextInt(1000));
         }
 
         return enumDecl + "\n" + scrutinee + " match { " + String.join("; ", branches) + " }";
@@ -851,7 +864,7 @@ class SmallStepPBT {
                 genExpr(rand, depth - 1), 0, 0);
             case 9 -> genRandomBlock(rand, depth);
             case 10 -> {
-                int arity = 2 + rand.nextInt(2); // 2-3 elements
+                int arity = 2 + rand.nextInt(2);
                 var elems = new ArrayList<ExpressionNode>();
                 for (int i = 0; i < arity; i++)
                     elems.add(genExpr(rand, depth - 1));

@@ -352,36 +352,60 @@ public class SmallStepReducer {
     }
 
     private static ExpressionNode reduceMatch(ExpressionNode scrutinee, List<CaseNode.CaseBranch> branches, int line, int col) {
-        for (CaseNode.CaseBranch branch : branches) {
-            // Wildcard
+        for (int bi = 0; bi < branches.size(); bi++) {
+            CaseNode.CaseBranch branch = branches.get(bi);
+            boolean patternMatches = false;
+            ExpressionNode body = branch.body();
+            ExpressionNode guard = branch.guard();
+
             if (branch.constructor() == null && branch.literalPattern() == null) {
-                return branch.body();
-            }
-            // Literal pattern
-            if (branch.literalPattern() != null) {
+                patternMatches = true;
+            } else if (branch.literalPattern() != null) {
                 if (astEqual(scrutinee, branch.literalPattern())) {
-                    return branch.body();
+                    patternMatches = true;
                 }
-                continue;
-            }
-            // Constructor name
-            if (branch.constructor() != null) {
+            } else if (branch.constructor() != null) {
                 String ctorName = branch.constructor();
-                // Check if scrutinee starts with matching constructor (curried form)
                 if (scrutinee instanceof ApplicationNode app) {
                     ExpressionNode ctor = getConstructor(app);
                     if (ctor instanceof IdentifierNode id && id.name.equals(ctorName)) {
-                        // Extract bindings
+                        patternMatches = true;
                         List<ExpressionNode> args = getConstructorArgs(app);
-                        // Substitute bindings into body
-                        return SubstBindings(branch, args, branch.body());
+                        body = SubstBindings(branch, args, body);
+                        if (guard != null) guard = SubstBindings(branch, args, guard);
                     }
-                }
-                if (scrutinee instanceof IdentifierNode id && id.name.equals(ctorName)) {
-                    // Zero-arg constructor matches
-                    return branch.body();
+                } else if (scrutinee instanceof IdentifierNode id && id.name.equals(ctorName)) {
+                    patternMatches = true;
                 }
             }
+
+            if (!patternMatches) continue;
+
+            if (branch.asName() != null) {
+                body = Substitution.subst(branch.asName(), scrutinee, body);
+                if (guard != null) guard = Substitution.subst(branch.asName(), scrutinee, guard);
+            }
+
+            if (guard != null) {
+                // Try stepping the guard one step
+                ExpressionNode steppedGuard;
+                try {
+                    steppedGuard = step(guard);
+                } catch (Exception e) {
+                    continue;
+                }
+                if (!steppedGuard.equals(guard)) {
+                    List<CaseNode.CaseBranch> remaining = new ArrayList<>();
+                    remaining.add(new CaseNode.CaseBranch(null, List.of(), body, null, null, steppedGuard));
+                    remaining.addAll(branches.subList(bi + 1, branches.size()));
+                    return new CaseNode(scrutinee, remaining, line, col);
+                }
+                // Guard is a value — check truthiness
+                if (guard instanceof BoolNode bn && !bn.value) {
+                    continue;
+                }
+            }
+            return body;
         }
         throw new RuntimeException("Match failed: no branch matches " + scrutinee);
     }

@@ -477,7 +477,6 @@ public class TypeChecker {
                 // Wildcard or literal pattern
                 if (branch.constructor() == null) {
                     if (branch.literalPattern() != null) {
-                        // Literal pattern: verify type matches scrutinee
                         InferResult patResult = inferExpr(apply(s, env), branch.literalPattern());
                         s = compose(patResult.sub, s);
                         Type patType = apply(s, patResult.type);
@@ -488,8 +487,21 @@ public class TypeChecker {
                             return new InferResult(new Substitution(), new TypeVar("?"));
                         }
                     }
-                    // Wildcard (no literal pattern): always matches, no bindings
-                    InferResult branchResult = inferExpr(new HashMap<>(apply(s, env)), branch.body());
+                    Map<String, TypeScheme> brEnv = new HashMap<>(apply(s, env));
+                    if (branch.asName() != null) {
+                        brEnv.put(branch.asName(), new TypeScheme(List.of(), apply(s, exprType)));
+                    }
+                    if (branch.guard() != null) {
+                        InferResult guardResult = inferExpr(brEnv, branch.guard());
+                        s = compose(guardResult.sub, s);
+                        try {
+                            s = compose(unify(apply(s, guardResult.type), apply(s, new TypeBool())), s);
+                        } catch (TypeErrorException e) {
+                            reportTypeError("Guard must be Bool", branch.guard(), apply(s, guardResult.type), new TypeBool());
+                            return new InferResult(new Substitution(), new TypeVar("?"));
+                        }
+                    }
+                    InferResult branchResult = inferExpr(brEnv, branch.body());
                     s = compose(branchResult.sub, s);
                     Type branchType = apply(s, branchResult.type);
                     if (resultType == null) {
@@ -546,6 +558,19 @@ public class TypeChecker {
                     branchEnv.put(binding, new TypeScheme(List.of(), bindingType));
                 }
 
+                if (branch.asName() != null) {
+                    branchEnv.put(branch.asName(), new TypeScheme(List.of(), apply(compose(matchSub, s), exprType)));
+                }
+                if (branch.guard() != null) {
+                    InferResult guardResult = inferExpr(branchEnv, branch.guard());
+                    s = compose(guardResult.sub, s);
+                    try {
+                        s = compose(unify(apply(s, guardResult.type), apply(s, new TypeBool())), s);
+                    } catch (TypeErrorException e) {
+                        reportTypeError("Guard must be Bool", branch.guard(), apply(s, guardResult.type), new TypeBool());
+                        return new InferResult(new Substitution(), new TypeVar("?"));
+                    }
+                }
                 InferResult branchResult = inferExpr(branchEnv, branch.body());
                 s = compose(branchResult.sub, compose(matchSub, s));
                 Type branchType = branchResult.type;
@@ -795,6 +820,10 @@ public class TypeChecker {
                 lastType = inferredTypes.get(let);
             } else if (stmt instanceof MutualLetNode mutual) {
                 lastType = inferMutualGroup(mutual.defs, localEnv);
+            } else if (stmt instanceof EnumDeclNode data) {
+                registerEnumDecl(data);
+            } else if (stmt instanceof TypeAliasNode alias) {
+                typeAliases.put(alias.name, alias.aliasType);
             } else if (stmt instanceof ExpressionNode e) {
                 InferResult ir = inferExpr(localEnv, e);
                 s = compose(ir.sub, s);

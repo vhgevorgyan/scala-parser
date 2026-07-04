@@ -54,6 +54,7 @@ public class Parser {
     private Token peek() { return tokens.get(pos); }
     private Token advance() { if (!isAtEnd()) { lastLine = peek().line; pos++; } return previous(); }
     private Token previous() { return tokens.get(pos - 1); }
+    private Token peek(int ahead) { int idx = pos + ahead; return idx < tokens.size() ? tokens.get(idx) : tokens.get(tokens.size() - 1); }
 
     private boolean match(TokenType type) {
         if (peek().type == type) { advance(); return true; }
@@ -322,52 +323,61 @@ public class Parser {
             if (match(TokenType.SEMICOLON)) continue;
             expect(TokenType.CASE, "Expected 'case' in match branch");
 
+            // Optional as-pattern: case x @ pattern =>
+            String asName = null;
+            if (peek().type == TokenType.IDENT && peek(1).type == TokenType.AT) {
+                asName = advance().text;
+                advance(); // consume @
+            }
+
+            String ctorName = null;
+            ExpressionNode literalPattern = null;
+            List<CaseNode.Binding> bindings = List.of();
+
             // Wildcard pattern: case _ =>
             if (match(TokenType.UNDERSCORE)) {
-                expect(TokenType.ARROW, "Expected '=>' after wildcard pattern");
-                ExpressionNode body = parseExpression();
-                branches.add(new CaseNode.CaseBranch(null, List.of(), body, null));
-                continue;
+                // ctorName stays null (wildcard)
             }
-
             // Literal pattern: case 0 =>  or  case true =>
-            if (peek().type == TokenType.NUMBER || peek().type == TokenType.TRUE || peek().type == TokenType.FALSE) {
-                ExpressionNode literal = parsePrimary();
-                expect(TokenType.ARROW, "Expected '=>' after literal pattern");
-                ExpressionNode body = parseExpression();
-                branches.add(new CaseNode.CaseBranch(null, List.of(), body, literal));
-                continue;
+            else if (peek().type == TokenType.NUMBER || peek().type == TokenType.TRUE || peek().type == TokenType.FALSE) {
+                literalPattern = parsePrimary();
+            }
+            else {
+                Token ctor = expect(TokenType.IDENT, "Expected constructor name in match branch");
+                if (ctor.type != TokenType.IDENT) { synchronize(); return new LiteralNode("0", ctor.line, ctor.column); }
+
+                // Infix pattern: x :: xs =>  desugars to  ::(x, xs)
+                if (peek().type == TokenType.IDENT && peek().text.equals("::")) {
+                    requireFeature(LanguageFeature.INFIX_CONS, peek());
+                    advance(); // consume ::
+                    Token right = expect(TokenType.IDENT, "Expected binding name after '::'");
+                    ctorName = "::";
+                    bindings = List.of(
+                        new CaseNode.Binding(ctor.text, ctor.line, ctor.column),
+                        new CaseNode.Binding(right.text, right.line, right.column));
+                } else {
+                    ctorName = ctor.text;
+                    List<CaseNode.Binding> b = new ArrayList<>();
+                    if (match(TokenType.LPAREN)) {
+                        do {
+                            Token t = expect(TokenType.IDENT, "Expected binding name");
+                            b.add(new CaseNode.Binding(t.text, t.line, t.column));
+                        } while (match(TokenType.COMMA));
+                        expect(TokenType.RPAREN, "Expected ')' after pattern bindings");
+                    }
+                    bindings = b;
+                }
             }
 
-            Token ctor = expect(TokenType.IDENT, "Expected constructor name in match branch");
-            if (ctor.type != TokenType.IDENT) { synchronize(); return new LiteralNode("0", ctor.line, ctor.column); }
-
-            // Infix pattern: x :: xs =>  desugars to  ::(x, xs)
-            if (peek().type == TokenType.IDENT && peek().text.equals("::")) {
-                requireFeature(LanguageFeature.INFIX_CONS, peek());
-                advance(); // consume ::
-                Token right = expect(TokenType.IDENT, "Expected binding name after '::'");
-                List<CaseNode.Binding> bindings = List.of(
-                    new CaseNode.Binding(ctor.text, ctor.line, ctor.column),
-                    new CaseNode.Binding(right.text, right.line, right.column));
-                expect(TokenType.ARROW, "Expected '=>' after pattern");
-                ExpressionNode body = parseExpression();
-                branches.add(new CaseNode.CaseBranch("::", bindings, body));
-                continue;
-            }
-
-            List<CaseNode.Binding> bindings = new ArrayList<>();
-            if (match(TokenType.LPAREN)) {
-                do {
-                    Token t = expect(TokenType.IDENT, "Expected binding name");
-                    bindings.add(new CaseNode.Binding(t.text, t.line, t.column));
-                } while (match(TokenType.COMMA));
-                expect(TokenType.RPAREN, "Expected ')' after pattern bindings");
+            // Optional guard: case P if cond =>
+            ExpressionNode guard = null;
+            if (match(TokenType.IF)) {
+                guard = parseExpression();
             }
 
             expect(TokenType.ARROW, "Expected '=>' after match pattern");
             ExpressionNode body = parseExpression();
-            branches.add(new CaseNode.CaseBranch(ctor.text, bindings, body));
+            branches.add(new CaseNode.CaseBranch(ctorName, bindings, body, literalPattern, asName, guard));
         }
 
         expect(TokenType.RBRACE, "Expected '}' after match body");

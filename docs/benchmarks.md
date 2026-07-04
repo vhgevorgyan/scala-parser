@@ -256,3 +256,20 @@ Measures pipeline stage times (ns) for 97 random well-typed programs (rejection-
 **Pipeline bottleneck:** `TypeCheck` dominates for complex programs (up to 245µs at size 11–17).
 **Reduction** is consistently fast (< 2µs typical) because most expressions are already values (0 steps).
 Output: CSV with columns `size,parseNs,tcNs,evalNs,reduceNs` for external analysis.
+
+---
+
+### 9. Guard & As-Pattern Generation (PBT)
+
+`genEnumSource` in `SmallStepPBT.java` now generates match expressions with:
+- **As-patterns** (`20%`): `case x @ Ctor(y) => ...` — binds the matched value to `x`
+- **Guards** (`25%` on arg-bearing branches): `case Ctor(x) if x > N => ...` — condition must hold
+- Generated via `Parser` (string → AST), then type-checked; used by `closedCase`/`caseSource` providers (200 tries each)
+- All CaseBranch records now carry `asName` and `guard` fields (nullable)
+
+### 10. Fuzz Testing
+
+`FuzzPBT.java` (5000 tokenizer + 2000 parser + 500 pipeline tries):
+- Random byte sequences (1–200 bytes) exercise tokenizer and parser error recovery
+- Printable ASCII strings (1–100 chars) exercise full pipeline (tokenize → parse → type-check)
+- Verifies no crashes: all parsing/type-checking failures must be reported as errors, not exceptions

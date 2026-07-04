@@ -186,7 +186,7 @@ scala.parser
 │   ├── ParserError.java                -- Error record (message, line, col, length)
 │   ├── ParserResult.java               -- AST + error list container
 │   ├── ast/                            -- 21 AST node types (incl. FixpointNode, TupleNode, MutualLetNode)
-│   ├── lexer/                          -- Tokenizer + Token + TokenType (incl. QUESTION token for `?`)
+│   ├── lexer/                          -- Tokenizer + Token + TokenType (QUESTION for `?`, AT for `@`)
 │   ├── parser/                         -- Recursive-descent Parser
 │   ├── types/                          -- 9 type kinds + HM TypeChecker + TypeErrorException (incl. TypeDynamic)
 │   ├── interpreter/                    -- Evaluator + 9 Value types + Env (incl. TupleValue)

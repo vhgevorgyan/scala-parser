@@ -138,6 +138,7 @@ public class Tokenizer {
                 case '?' -> { tokens.add(makeToken(TokenType.QUESTION)); advance(); }
                 case '[' -> { tokens.add(makeToken(TokenType.LBRACKET)); advance(); }
                 case ']' -> { tokens.add(makeToken(TokenType.RBRACKET)); advance(); }
+                case '@' -> { tokens.add(makeToken(TokenType.AT)); advance(); }
                 default -> {
                     // Skip unknown character and continue
                     advance();

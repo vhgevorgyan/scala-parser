@@ -83,7 +83,8 @@ public class Substitution {
         if (expr instanceof CaseNode c) {
             var newBranches = c.branches.stream()
                 .map(br -> new CaseNode.CaseBranch(br.constructor(), br.bindings(),
-                    subst(var, replacement, br.body()), br.literalPattern()))
+                    subst(var, replacement, br.body()), br.literalPattern(),
+                    br.asName(), br.guard() != null ? subst(var, replacement, br.guard()) : null))
                 .toList();
             // scrutinee is always a value, but subst to be safe
             return new CaseNode(subst(var, replacement, c.expr), newBranches, c.line, c.column);

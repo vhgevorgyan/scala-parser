@@ -291,3 +291,10 @@ Gesamterkennungsrate: **37,2%** (mit Output-Vergleich). Schwachstellen sind sema
     - **Parser Error Recovery**: Cascade-Rate nach Ein-Zeichen-Mutationen (4 Injektoren × 50 Trials)
     - **Empirical PBT-vs-Mutation Matrix**: Tatsächliche PBT-Erkennungsraten per Mutationsoperator (7 Ops × 100 Trials, seed-basierte Generierung)
     - **Runtime Breakdown**: Pipeline-Laufzeiten (parseNs, tcNs, evalNs, reduceNs) für 100 Zufallsprogramme als CSV
+
+33. ✅ **Match Guards + As-Patterns**: Parser (AT-Token), TypeChecker, Evaluator, Reducer, Substitution unterstützen `case x @ P if cond => body`.
+    - `CaseBranch`-Record um nullable `asName`/`guard`-Felder erweitert (2 neue Konstruktoren für Rückwärtskompatibilität)
+    - PBT-Generatoren (`genEnumSource`) erzeugen As-Patterns (20%) und Guards (25%) in Match-Branches
+    - **FuzzPBT.java**: 5000 Tokenizer + 2000 Parser + 500 Pipeline-Tries gegen zufällige Byte-Sequenzen
+    - **TypeAliasNode/EnumDeclNode** in `inferBlock` des TypeCheckers registriert (Block-Lokalität)
+    - **Dashboard-Skript**: `scripts/dashboard.py` — wandelt CSV-Benchmark-Daten in HTML-Charts um
