@@ -171,7 +171,7 @@ Aufruf: `gradlew runTestParser --args="<file.sp>"`
 
 ## 4. Testing
 
-### 4.1 Unit Tests (JUnit 5) – 375 Tests
+### 4.1 Unit Tests (JUnit 5) – 408+ Tests
 
 | Testklasse | Tests | Abdeckung |
 |---|---|---|
@@ -182,7 +182,7 @@ Aufruf: `gradlew runTestParser --args="<file.sp>"`
 | `TypeSoundnessFormalTest` | ~60+ | Progress/Preservation für SmallStepReducer, Block-Reduktion, Case/Match, rekursive defs, mutual recursion, String-Vergleich |
 | `LanguageConfigTest` | 20 | Language-Feature-Flags, Unicode-Operatoren |
 
-### 4.2 Property-Based Tests (jqwik) – 17 Properties, ~13000+ Tries
+### 4.2 Property-Based Tests (jqwik) – 32 Properties, ~13000+ Tries
 
 | Property | Tries | Beschreibung |
 |---|---|---|
@@ -275,8 +275,16 @@ Gesamterkennungsrate: **37,2%** (mit Output-Vergleich). Schwachstellen sind sema
 27. ✅ Gradual Typing: Dynamischer Typ `?` (`TypeDynamic`) konsistent mit allen konkreten Typen via Unifikation, Laufzeit-Checks bei `(e: T)`-Ascription, Fehlschlag mit `RuntimeException`, SmallStepReducer erased Ascription (10 Tests)
 28. ✅ Coverage-Guided PBT: Gezielte Generatoren für SwapIfBranches/SwapOperator/RemoveLetBinding/UndefinedVariable (6 Properties)
 29. ✅ Type Error Diagnosis Benchmark: Systematische Qualitätsmessung der Fehlermeldungen (18 Testprogramme, Standalone via `runTypeErrorBenchmark`)
-30. ✅ BenchmarkSuite: 4 Auswertungskomponenten in einem Durchlauf (`gradlew runBenchmarkSuite`):
+30. ✅ BenchmarkSuite: 8 Analyse-Module in einem Durchlauf (`gradlew runBenchmarkSuite`):
+    Seed-basierte Generierung im Empirical-Matrix-Modul für deterministischere Ergebnisse.
+
+31. ✅ Empirische Analyse abgeschlossen: PBT erkennt Typ-/Laufzeitfehler (BoolNegate 100%, DivideByZero 87%) aber keine semantischen Änderungen (SwapOperator 0%). Key finding für Thesis: PBT sichert **interne Type Soundness**, nicht **semantische Äquivalenz**.
+    Begleitdokumentation: `docs/benchmarks.md` (alle 8 Module mit Tabellen), `docs/architecture.md` (Package Structure aktualisiert), `projektuebersicht.md` (Meilensteine 30–31).
     - **PBT-Property-vs-Mutation-Matrix**: Welche Mutationsklasse wird von welcher PBT-Property-Kategorie erfasst?
     - **Scalability Benchmark**: Laufzeit (ns) + Reduktionsschritte für Programme von 2–32 AST-Knoten
     - **Type Error Recovery Benchmark**: Systematische Error-Injektion analog MutationAnalysis
     - **AST Node Coverage**: Abdeckungsmatrix (20 Knotentypen × 4 Komponenten)
+    - **Reduction Step Distribution**: Histogramm der Reduktionsschritte für 200 zufällige Ausdrücke
+    - **Parser Error Recovery**: Cascade-Rate nach Ein-Zeichen-Mutationen (4 Injektoren × 50 Trials)
+    - **Empirical PBT-vs-Mutation Matrix**: Tatsächliche PBT-Erkennungsraten per Mutationsoperator (7 Ops × 100 Trials, seed-basierte Generierung)
+    - **Runtime Breakdown**: Pipeline-Laufzeiten (parseNs, tcNs, evalNs, reduceNs) für 100 Zufallsprogramme als CSV

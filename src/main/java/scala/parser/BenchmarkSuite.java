@@ -1,5 +1,6 @@
 package scala.parser;
 
+import java.io.PrintStream;
 import java.util.*;
 import java.util.stream.*;
 import scala.parser.core.*;
@@ -23,6 +24,11 @@ public class BenchmarkSuite {
 
     // ── Shared random generator (seeded for reproducibility) ─────────
     private static final Random SHARED = new Random(42);
+
+    // Suppress System.out during evaluator calls (print builtin would pollute output)
+    private static PrintStream SAVED_OUT;
+    private static void silencePrint() { SAVED_OUT = System.out; System.setOut(new PrintStream(java.io.OutputStream.nullOutputStream())); }
+    private static void restorePrint() { System.setOut(SAVED_OUT); }
 
     // ── AST helpers ──────────────────────────────────────────────────
 
@@ -877,11 +883,458 @@ public class BenchmarkSuite {
     }
 
     // ─────────────────────────────────────────────────────────────────
+    //  5. Reduction Step Distribution (Histogram)
+    // ─────────────────────────────────────────────────────────────────
+
+    private static void runStepDistribution() {
+        System.out.println("=== 5. Reduction Step Distribution ===\n");
+        System.out.println("Counts reduction steps for 200 random closed well-typed expressions.\n");
+
+        var stepCounts = new int[21]; // 0..19, 20+
+        int total = 0, attempts = 0;
+        while (total < 200 && attempts < 5000) {
+            attempts++;
+            var expr = genClosedExpr(SHARED, 4, new ArrayList<>());
+            String src = stringify(new ProgramNode(List.of(expr)));
+            var tokens = new Tokenizer(src).tokenize();
+            var result = new Parser(tokens).parse();
+            if (!result.errors.isEmpty()) continue;
+            var errors = new ArrayList<ParserError>();
+            new TypeChecker(errors).check(result.ast);
+            if (!errors.isEmpty()) continue;
+            try {
+                silencePrint(); new Evaluator().evalProgram(result.ast); restorePrint();
+            } catch (Exception e) { restorePrint(); continue; }
+
+            int steps = countReductionSteps(expr);
+            if (steps < 0) continue;
+            total++;
+            if (steps >= 20) stepCounts[20]++;
+            else stepCounts[steps]++;
+        }
+
+        System.out.println("steps,count");
+        for (int s = 0; s <= 20; s++) {
+            if (stepCounts[s] > 0) {
+                String label = s == 20 ? "20+" : String.valueOf(s);
+                System.out.println(label + "," + stepCounts[s]);
+            }
+        }
+        int totalSteps = 0;
+        for (int s = 0; s <= 20; s++) totalSteps += stepCounts[s] * s;
+        double avg = total > 0 ? (double) totalSteps / total : 0;
+        System.out.println("\nTotal programs: " + total);
+        System.out.println("Average steps: " + String.format("%.2f", avg));
+        System.out.println("Programs with 0 steps (already values): " + stepCounts[0]);
+        System.out.println();
+    }
+
+    private static ExpressionNode genClosedExpr(Random rand, int depth, List<String> bound) {
+        if (depth <= 0 || rand.nextDouble() < 0.15) {
+            if (bound.isEmpty() || rand.nextBoolean()) {
+                return switch (rand.nextInt(4)) {
+                    case 0 -> new LiteralNode(String.valueOf(rand.nextInt(100)), 0, 0);
+                    case 1 -> new BoolNode(0, 0, rand.nextBoolean());
+                    case 2 -> new StringLiteralNode("x", 0, 0);
+                    default -> new UnitLiteralNode(0, 0);
+                };
+            }
+            return new IdentifierNode(bound.get(rand.nextInt(bound.size())), 0, 0);
+        }
+        int choice = rand.nextInt(8);
+        if (choice == 0) {
+            String p = "x" + rand.nextInt(1000);
+            var nb = new ArrayList<>(bound); nb.add(p);
+            return new LambdaNode(p, genClosedExpr(rand, depth - 1, nb), 0, 0);
+        }
+        if (choice == 1)
+            return new ApplicationNode(genClosedExpr(rand, depth - 1, bound),
+                genClosedExpr(rand, depth - 1, bound), 0, 0);
+        if (choice == 2)
+            return new IfNode(genClosedExpr(rand, depth - 1, bound),
+                genClosedExpr(rand, depth - 1, bound),
+                genClosedExpr(rand, depth - 1, bound));
+        if (choice == 3) {
+            String op = List.of("+", "-", "*", "/", "==", "!=", "<", ">").get(rand.nextInt(8));
+            return new BinaryExprNode(genClosedExpr(rand, depth - 1, bound), op,
+                genClosedExpr(rand, depth - 1, bound), 0, 0);
+        }
+        if (choice == 4)
+            return new UnaryExprNode(rand.nextBoolean() ? "!" : "-",
+                genClosedExpr(rand, depth - 1, bound), 0, 0);
+        if (rand.nextDouble() < 0.3 && !bound.isEmpty()) {
+            String id = bound.get(rand.nextInt(bound.size()));
+            return new ApplicationNode(new IdentifierNode(id, 0, 0),
+                genClosedExpr(rand, depth - 1, bound), 0, 0);
+        }
+        // Builtin applications that tend to need steps
+        var builtinNames = List.of("succ", "pred", "iszero");
+        String bn = builtinNames.get(rand.nextInt(builtinNames.size()));
+        var arg = genClosedExpr(rand, depth - 1, bound);
+        return new ApplicationNode(new IdentifierNode(bn, 0, 0), arg, 0, 0);
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    //  6. Parser Error Recovery Quality (Cascade)
+    // ─────────────────────────────────────────────────────────────────
+
+    private static void runParserErrorRecovery() {
+        System.out.println("=== 6. Parser Error Recovery Quality ===\n");
+        System.out.println("Injects single-character mutations into well-typed source code\n");
+        System.out.println("and measures cascade: how many (bogus) follow-up errors result.\n");
+
+        var sources = List.of(
+            "val x: Int = 42; x + 1",
+            "if (true) 1 else 0",
+            "((x: Int) => x + 1)(5)",
+            "val f = (x: Int) => x * 2; f(10)",
+            "val a: Int = 1 + 2; val b: Int = a * 3; b",
+            "{ val x: Int = 5; x + 1 }",
+            "succ(5)",
+            "if ((1 + 2) * 3 > 10) (4 - 1) else (2 + 3) * (5 - 1)",
+            "((x: Int) => x + 1)(((y: Int) => y * 2)(5))",
+            "val x: Int = { val y: Int = 1 + 2; y * 3 }; x - 1"
+        );
+
+        record Inj(String label, java.util.function.UnaryOperator<String> fn) {}
+        var injectors = List.of(
+            new Inj("delete-char", s -> { int p = s.isEmpty() ? 0 : SHARED.nextInt(s.length()); return s.substring(0, p) + s.substring(Math.min(p + 1, s.length())); }),
+            new Inj("insert-!", s -> { int p = s.isEmpty() ? 0 : SHARED.nextInt(s.length() + 1); return s.substring(0, p) + "!" + s.substring(p); }),
+            new Inj("replace->#", s -> { if (s.isEmpty()) return s; int p = SHARED.nextInt(s.length()); return s.substring(0, p) + "#" + s.substring(p + 1); }),
+            new Inj("delete-digit", s -> { for (int i = 0; i < 20; i++) { int p = SHARED.nextInt(s.length()); if (Character.isDigit(s.charAt(p))) return s.substring(0, p) + s.substring(p + 1); } return s; })
+        );
+
+        int TRIALS = 50;
+        System.out.printf("%-16s %8s %8s %8s %8s %10s%n",
+            "Injector", "Total", "Cascade", "MaxCasc", "ParseErr", "CascadeRate");
+        System.out.println("-".repeat(66));
+
+        for (var inj : injectors) {
+            int total = 0, cascadeSum = 0, maxCascade = 0, parseErrCount = 0;
+            for (int t = 0; t < TRIALS; t++) {
+                String src = sources.get(SHARED.nextInt(sources.size()));
+                // Verify original is parseable
+                var origTokens = new Tokenizer(src).tokenize();
+                var origResult = new Parser(origTokens).parse();
+                if (!origResult.errors.isEmpty()) continue;
+
+                String mutated = inj.fn.apply(src);
+                if (mutated.equals(src)) continue;
+                total++;
+                var mutTokens = new Tokenizer(mutated).tokenize();
+                var mutResult = new Parser(mutTokens).parse();
+                int errCount = mutResult.errors.size();
+                if (errCount > 0) parseErrCount++;
+                if (errCount > 0) {
+                    cascadeSum += (errCount - 1);
+                    if ((errCount - 1) > maxCascade) maxCascade = errCount - 1;
+                }
+            }
+            double rate = total > 0 ? cascadeSum * 100.0 / total : 0;
+            System.out.printf("%-16s %8d %8d %8d %8d %9.1f%%%n",
+                inj.label, total, cascadeSum, maxCascade, parseErrCount, rate);
+        }
+        System.out.println("\nCascade = total parser errors - 1 (bogus follow-up errors from a single injection)");
+        System.out.println("Lower cascade rate = better error recovery\n");
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    //  7. Empirical PBT-vs-Mutation Matrix
+    // ─────────────────────────────────────────────────────────────────
+
+    /** Runs actual PBT property checks against each mutated closed expression. */
+    private static void runEmpiricalMatrix() {
+        System.out.println("=== 7. Empirical PBT-vs-Mutation Matrix ===\n");
+        System.out.println("For each mutation operator, runs actual PBT property checks\n");
+        System.out.println("against 100 mutated closed well-typed expressions.\n");
+
+        var ops = List.of(
+            new ReplaceLiteralTypeOp(), new SwapOperatorOp(), new SwapIfBranchesOp(),
+            new SelfReferenceOp(), new BoolNegateOp(), new NotOnNumberOp(),
+            new DivideByZeroOp()
+        );
+
+        System.out.printf("%-22s %8s %8s %8s %8s %8s %8s%n",
+            "Operator", "Progress", "Preserv", "Determ", "BigStep", "ValueIrred", "AnyPBT");
+        System.out.println("-".repeat(78));
+
+        // Expression-level mutation adapters
+        record Mut(String name, java.util.function.BiFunction<ExpressionNode, Random, ExpressionNode> apply) {}
+        var exprOps = List.of(
+            new Mut("ReplaceLiteralType", (e, r) -> { var p = new ReplaceLiteralTypeOp().apply(new ProgramNode(List.of(e)), r); return p != null && p.statements.get(0) instanceof ExpressionNode x ? x : e; }),
+            new Mut("SwapOperator", (e, r) -> { var p = new SwapOperatorOp().apply(new ProgramNode(List.of(e)), r); return p != null && p.statements.get(0) instanceof ExpressionNode x ? x : e; }),
+            new Mut("SwapIfBranches", (e, r) -> { var p = new SwapIfBranchesOp().apply(new ProgramNode(List.of(e)), r); return p != null && p.statements.get(0) instanceof ExpressionNode x ? x : e; }),
+            new Mut("SelfReference", (e, r) -> e), // self-ref adds a let, not applicable to single expr
+            new Mut("BoolNegate", (e, r) -> { var p = new BoolNegateOp().apply(new ProgramNode(List.of(e)), r); return p != null && p.statements.get(0) instanceof ExpressionNode x ? x : e; }),
+            new Mut("NotOnNumber", (e, r) -> { var p = new NotOnNumberOp().apply(new ProgramNode(List.of(e)), r); return p != null && p.statements.get(0) instanceof ExpressionNode x ? x : e; }),
+            new Mut("DivideByZero", (e, r) -> { var p = new DivideByZeroOp().apply(new ProgramNode(List.of(e)), r); return p != null && p.statements.get(0) instanceof ExpressionNode x ? x : e; })
+        );
+
+        // Generate expressions that are more likely to trigger each mutation
+        // Pre-built sub-expressions with known structure
+        var seedExprs = new HashMap<String, List<ExpressionNode>>();
+        seedExprs.put("ReplaceLiteralType", List.of(
+            new LiteralNode("42", 0, 0), new BoolNode(0, 0, true), new StringLiteralNode("hello", 0, 0),
+            new BinaryExprNode(new LiteralNode("1", 0, 0), "+", new LiteralNode("2", 0, 0), 0, 0),
+            new IfNode(new BoolNode(0, 0, true), new LiteralNode("1", 0, 0), new LiteralNode("0", 0, 0))
+        ));
+        seedExprs.put("SwapOperator", List.of(
+            new BinaryExprNode(new LiteralNode("1", 0, 0), "+", new LiteralNode("2", 0, 0), 0, 0),
+            new BinaryExprNode(new LiteralNode("5", 0, 0), "-", new LiteralNode("3", 0, 0), 0, 0),
+            new BinaryExprNode(new LiteralNode("3", 0, 0), "*", new LiteralNode("4", 0, 0), 0, 0),
+            new BinaryExprNode(new LiteralNode("10", 0, 0), "/", new LiteralNode("2", 0, 0), 0, 0)
+        ));
+        seedExprs.put("SwapIfBranches", List.of(
+            new IfNode(new BoolNode(0, 0, true), new LiteralNode("1", 0, 0), new LiteralNode("0", 0, 0)),
+            new IfNode(new BoolNode(0, 0, false), new LiteralNode("42", 0, 0), new LiteralNode("7", 0, 0)),
+            new IfNode(new BinaryExprNode(new LiteralNode("1", 0, 0), "<", new LiteralNode("2", 0, 0), 0, 0),
+                new LiteralNode("1", 0, 0), new LiteralNode("0", 0, 0))
+        ));
+        seedExprs.put("SelfReference", List.of(
+            new LiteralNode("0", 0, 0) // dummy — self-ref not applicable to single expr
+        ));
+        seedExprs.put("BoolNegate", List.of(
+            new BoolNode(0, 0, true), new BoolNode(0, 0, false),
+            new BinaryExprNode(new BoolNode(0, 0, true), "&&", new BoolNode(0, 0, false), 0, 0),
+            new BinaryExprNode(new BoolNode(0, 0, true), "||", new BoolNode(0, 0, true), 0, 0)
+        ));
+        seedExprs.put("NotOnNumber", List.of(
+            new LiteralNode("42", 0, 0), new LiteralNode("0", 0, 0),
+            new BinaryExprNode(new LiteralNode("1", 0, 0), "+", new LiteralNode("2", 0, 0), 0, 0)
+        ));
+        seedExprs.put("DivideByZero", List.of(
+            new BinaryExprNode(new LiteralNode("10", 0, 0), "/", new LiteralNode("2", 0, 0), 0, 0),
+            new LiteralNode("5", 0, 0) // injectDivZero may wrap this as 5/0
+        ));
+
+        int TRIALS = 100;
+        for (var m : exprOps) {
+            var rand = new Random(SHARED.nextInt());
+            int progressFail = 0, preservFail = 0, determinFail = 0, bigStepFail = 0, valueIrredFail = 0, anyFail = 0;
+            int total = 0, retries = 0;
+            var seeds = seedExprs.getOrDefault(m.name, List.of());
+            while (total < TRIALS && retries < TRIALS * 10) {
+                retries++;
+                ExpressionNode expr;
+                if (!seeds.isEmpty() && rand.nextDouble() < 0.6) {
+                    expr = seeds.get(rand.nextInt(seeds.size()));
+                } else {
+                    expr = genClosedExpr(rand, 4, new ArrayList<>());
+                }
+                String src0 = stringify(new ProgramNode(List.of(expr)));
+                var tok0 = new Tokenizer(src0).tokenize();
+                var res0 = new Parser(tok0).parse();
+                if (!res0.errors.isEmpty()) continue;
+                var err0 = new ArrayList<ParserError>();
+                new TypeChecker(err0).check(res0.ast);
+                if (!err0.isEmpty()) continue;
+                try { silencePrint(); new Evaluator().evalProgram(res0.ast); restorePrint(); } catch (Exception e) { restorePrint(); continue; }
+
+                var mutated = m.apply.apply(expr, rand);
+                if (mutated == expr && !m.name.equals("SelfReference")) continue;
+                total++;
+                String src = stringify(new ProgramNode(List.of(mutated)));
+                var tok = new Tokenizer(src).tokenize();
+                var res = new Parser(tok).parse();
+                boolean parseErr = !res.errors.isEmpty();
+
+                var tcErrs = new ArrayList<ParserError>();
+                new TypeChecker(tcErrs).check(res.ast);
+                boolean typeErr = !tcErrs.isEmpty();
+
+                Value bigVal = null; boolean rte = false;
+                if (!parseErr && !typeErr) {
+                    try { silencePrint(); bigVal = new Evaluator().evalProgram(res.ast); restorePrint(); } catch (Exception e) { restorePrint(); rte = true; }
+                }
+
+                boolean caught = false;
+
+                // Progress: if not a value, step must not throw
+                if (parseErr || typeErr || rte) { progressFail++; caught = true; }
+                else if (!SmallStepReducer.isValue(mutated)) {
+                    try { SmallStepReducer.step(mutated); } catch (Exception e) { progressFail++; caught = true; }
+                }
+
+                // Preservation: after step, result must be well-typed
+                if (!parseErr && !typeErr && !rte) {
+                    try {
+                        var stepped = SmallStepReducer.step(mutated);
+                        String stepSrc = stringify(new ProgramNode(List.of(stepped)));
+                        var stepTok = new Tokenizer(stepSrc).tokenize();
+                        var stepRes = new Parser(stepTok).parse();
+                        if (!stepRes.errors.isEmpty()) { preservFail++; caught = true; }
+                        else {
+                            var stepErrs = new ArrayList<ParserError>();
+                            new TypeChecker(stepErrs).check(stepRes.ast);
+                            if (!stepErrs.isEmpty()) { preservFail++; caught = true; }
+                        }
+                    } catch (Exception e) { /* stuck — not a preservation failure */ }
+                } else { preservFail++; caught = true; }
+
+                // Determinism: step twice, compare
+                if (!parseErr && !typeErr && !rte) {
+                    try {
+                        var s1 = SmallStepReducer.step(mutated);
+                        var s2 = SmallStepReducer.step(mutated);
+                        if (!exprEquals(s1, s2)) { determinFail++; caught = true; }
+                    } catch (Exception e) { /* stuck */ }
+                } else { determinFail++; caught = true; }
+
+                // BigStep matches SmallStep
+                if (!parseErr && !typeErr && !rte) {
+                    boolean match = false;
+                    try {
+                        var normal = SmallStepReducer.reduce(mutated);
+                        if (bigVal != null && SmallStepReducer.isValue(normal)) {
+                            String nStr = valueNodeToString(normal);
+                            String bStr = valueToString(bigVal);
+                            match = nStr != null && bStr != null && nStr.equals(bStr);
+                        }
+                    } catch (Exception e) { match = false; }
+                    if (!match) { bigStepFail++; caught = true; }
+                } else { bigStepFail++; caught = true; }
+
+                // ValueIrreducible: if value, step must throw
+                if (SmallStepReducer.isValue(mutated)) {
+                    try { SmallStepReducer.step(mutated); valueIrredFail++; caught = true; }
+                    catch (Exception e) { /* expected — value is irreducible */ }
+                }
+
+                if (caught) anyFail++;
+            }
+            System.out.printf("%-22s %8d %8d %8d %8d %8d %8d%n",
+                m.name, progressFail, preservFail, determinFail, bigStepFail, valueIrredFail, anyFail);
+        }
+        System.out.println("\nEach column shows how many times out of " + TRIALS + " that property caught the mutation.\n");
+    }
+
+    private static String valueNodeToString(ExpressionNode node) {
+        if (node instanceof LiteralNode l) return l.value;
+        if (node instanceof BoolNode b) return String.valueOf(b.value);
+        if (node instanceof StringLiteralNode s) return "\"" + s.value + "\"";
+        if (node instanceof UnitLiteralNode) return "()";
+        if (node instanceof IdentifierNode id) return id.name;
+        if (node instanceof TupleNode t) {
+            return t.elements.stream().map(BenchmarkSuite::valueNodeToString)
+                .collect(Collectors.joining(", ", "(", ")"));
+        }
+        return null;
+    }
+
+    private static String valueToString(Value v) {
+        if (v instanceof NumberValue n) return String.valueOf(n.value);
+        if (v instanceof BoolValue b) return String.valueOf(b.value);
+        if (v instanceof StringValue s) return "\"" + s.value + "\"";
+        if (v instanceof UnitValue) return "()";
+        if (v instanceof TupleValue t) {
+            return t.values.stream().map(BenchmarkSuite::valueToString)
+                .collect(Collectors.joining(", ", "(", ")"));
+        }
+        return null;
+    }
+
+    private static boolean exprEquals(ExpressionNode a, ExpressionNode b) {
+        if (a == b) return true;
+        if (a == null || b == null) return false;
+        if (a.getClass() != b.getClass()) return false;
+        if (a instanceof LiteralNode la && b instanceof LiteralNode lb) return la.value.equals(lb.value);
+        if (a instanceof BoolNode ba && b instanceof BoolNode bb) return ba.value == bb.value;
+        if (a instanceof StringLiteralNode sa && b instanceof StringLiteralNode sb) return sa.value.equals(sb.value);
+        if (a instanceof UnitLiteralNode) return true;
+        if (a instanceof IdentifierNode ia && b instanceof IdentifierNode ib) return ia.name.equals(ib.name);
+        if (a instanceof LambdaNode la && b instanceof LambdaNode lb) return la.param.equals(lb.param) && exprEquals(la.body, lb.body);
+        if (a instanceof ApplicationNode aa && b instanceof ApplicationNode ab) return exprEquals(aa.function, ab.function) && exprEquals(aa.argument, ab.argument);
+        if (a instanceof IfNode ia && b instanceof IfNode ib) return exprEquals(ia.condition, ib.condition) && exprEquals(ia.thenBranch, ib.thenBranch) && exprEquals(ia.elseBranch, ib.elseBranch);
+        if (a instanceof BinaryExprNode ba && b instanceof BinaryExprNode bb) return ba.operator.equals(bb.operator) && exprEquals(ba.left, bb.left) && exprEquals(ba.right, bb.right);
+        if (a instanceof UnaryExprNode ua && b instanceof UnaryExprNode ub) return ua.operator.equals(ub.operator) && exprEquals(ua.operand, ub.operand);
+        if (a instanceof TupleNode ta && b instanceof TupleNode tb) { if (ta.elements.size() != tb.elements.size()) return false; for (int i = 0; i < ta.elements.size(); i++) if (!exprEquals(ta.elements.get(i), tb.elements.get(i))) return false; return true; }
+        if (a instanceof AscriptionNode aa && b instanceof AscriptionNode ab) return exprEquals(aa.expr, ab.expr) && aa.declaredType.toString().equals(ab.declaredType.toString());
+        if (a instanceof FixpointNode fa && b instanceof FixpointNode fb) return exprEquals(fa.body, fb.body);
+        if (a instanceof CaseNode ca && b instanceof CaseNode cb) {
+            if (!exprEquals(ca.expr, cb.expr)) return false;
+            if (ca.branches.size() != cb.branches.size()) return false;
+            for (int i = 0; i < ca.branches.size(); i++) {
+                var ba = ca.branches.get(i); var bb = cb.branches.get(i);
+                if (!Objects.equals(ba.constructor(), bb.constructor())) return false;
+                if (!Objects.equals(ba.literalPattern(), bb.literalPattern())) return false;
+                if (!exprEquals(ba.body(), bb.body())) return false;
+            }
+            return true;
+        }
+        if (a instanceof BlockNode ba && b instanceof BlockNode bb) {
+            if (ba.statements.size() != bb.statements.size()) return false;
+            for (int i = 0; i < ba.statements.size(); i++) {
+                var sa = ba.statements.get(i); var sb = bb.statements.get(i);
+                if (sa instanceof ExpressionNode ea && sb instanceof ExpressionNode eb) { if (!exprEquals(ea, eb)) return false; }
+                else if (!sa.toString().equals(sb.toString())) return false;
+            }
+            return true;
+        }
+        return false;
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    //  8. Laufzeit-Breakdown (Box-Plot Data)
+    // ─────────────────────────────────────────────────────────────────
+
+    private static void runRuntimeBreakdown() {
+        System.out.println("=== 8. Laufzeit-Breakdown ===\n");
+        System.out.println("Measures pipeline stage times (ns) for 100 random well-typed programs.\n");
+        System.out.println("size,parseNs,tcNs,evalNs,reduceNs");
+
+        int total = 0, attempts = 0;
+        while (total < 100 && attempts < 2000) {
+            attempts++;
+            var prog = generateWellTyped(SHARED, 20);
+            String src = stringify(prog);
+            int size = countASTNodes(prog);
+            var tokens = new Tokenizer(src).tokenize();
+            var result = new Parser(tokens).parse();
+            if (!result.errors.isEmpty()) continue;
+            var errors = new ArrayList<ParserError>();
+            var tc = new TypeChecker(errors);
+            tc.check(result.ast);
+            if (!errors.isEmpty()) continue;
+            Value val;
+            try { val = new Evaluator().evalProgram(result.ast); } catch (Exception e) { continue; }
+            if (val == null) continue;
+            ExpressionNode lastExpr = findLastExpr(result.ast);
+            if (lastExpr == null) continue;
+            int steps = countReductionSteps(lastExpr);
+            if (steps < 0) continue;
+
+            long t0, t1;
+            t0 = System.nanoTime();
+            var t2 = new Tokenizer(src).tokenize();
+            var r2 = new Parser(t2).parse();
+            t1 = System.nanoTime();
+            long parseNs = t1 - t0;
+            var e2 = new ArrayList<ParserError>();
+            t0 = System.nanoTime();
+            new TypeChecker(e2).check(r2.ast);
+            t1 = System.nanoTime();
+            long tcNs = t1 - t0;
+            t0 = System.nanoTime();
+            try { new Evaluator().evalProgram(r2.ast); } catch (Exception ex) {}
+            t1 = System.nanoTime();
+            long evalNs = t1 - t0;
+            t0 = System.nanoTime();
+            countReductionSteps(findLastExpr(r2.ast));
+            t1 = System.nanoTime();
+            long reduceNs = t1 - t0;
+
+            System.out.println(size + "," + parseNs + "," + tcNs + "," + evalNs + "," + reduceNs);
+            total++;
+        }
+        System.out.println("\nTotal: " + total + " programs in " + attempts + " attempts\n");
+    }
+
+    // ─────────────────────────────────────────────────────────────────
     //  Main
     // ─────────────────────────────────────────────────────────────────
 
     public static void main(String[] args) {
-        var selected = args.length > 0 ? Set.of(args) : Set.of("mutation", "property", "scalability", "typeerror", "coverage");
+        var selected = args.length > 0 ? Set.of(args) : Set.of("mutation", "property", "scalability", "typeerror", "coverage", "steps", "parser", "empirical", "breakdown");
 
         if (selected.contains("mutation") || selected.contains("property"))
             runMutationPropertyMatrix();
@@ -891,5 +1344,13 @@ public class BenchmarkSuite {
             runTypeErrorRecovery();
         if (selected.contains("coverage"))
             runASTCoverage();
+        if (selected.contains("steps"))
+            runStepDistribution();
+        if (selected.contains("parser"))
+            runParserErrorRecovery();
+        if (selected.contains("empirical"))
+            runEmpiricalMatrix();
+        if (selected.contains("breakdown"))
+            runRuntimeBreakdown();
     }
 }

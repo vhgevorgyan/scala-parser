@@ -97,7 +97,7 @@ selbst bei n=1000). Teuerste ist Typecheck mit O(n²) für tiefe let-Ketten
 
 ## Benchmark Suite (`BenchmarkSuite.java`)
 
-Vier Analyse-Module in einem Durchlauf via `gradlew runBenchmarkSuite`:
+Acht Analyse-Module in einem Durchlauf via `gradlew runBenchmarkSuite`:
 
 ### 1. PBT-Property-vs-Mutation Matrix
 
@@ -128,22 +128,24 @@ ordnet die passende PBT-Property-Kategorie zu.
 
 ### 2. Scalability (Hand-Crafted Programs)
 
-Laufzeit + Reduktionsschritte für 24 geschlossene Programme (2–32 AST-Knoten):
+Laufzeit + Reduktionsschritte für 29 geschlossene Programme (2–32 AST-Knoten):
 
 | Größe | parseNs | tcNs | evalNs | reduceNs | steps | Beispiel |
 |---|---|---|---|---|---|---|
-| 2 | 1.600 | 1.000 | 2.600 | 200 | 0 | `42` |
-| 4 | 22.900 | 9.500 | 12.600 | 41.900 | 1 | `1 + 2` |
-| 5 | 24.300 | 11.400 | 3.500 | 8.500 | 1 | `if (true) 1 else 2` |
-| 5 | 36.600 | 36.600 | 12.700 | 2.411.000 | 1 | `((x: Int) => x)(5)` (JIT-Warmup) |
-| 8 | 20.500 | 11.400 | 6.000 | 16.300 | 3 | `(1 + 2) * (3 + 4)` |
-| 12 | 23.600 | 17.700 | 8.200 | 32.400 | 4 | `((x) => x+1)(((y) => y*2)(5))` |
-| 16 | 18.700 | 14.100 | 5.300 | 116.600 | 7 | complex arith |
-| 19 | 103.400 | 56.800 | 11.400 | 19.600 | 7 | complex if |
-| 32 | 34.300 | 98.600 | 10.700 | 44.100 | 15 | deep arith chain |
+| 2 | 8.800 | 4.000 | 2.500 | 1.100 | 0 | `42` |
+| 4 | 19.700 | 17.500 | 92.700 | 51.100 | 1 | `succ(5)` |
+| 5 | 20.600 | 11.300 | 16.900 | 4.900 | 1 | `if (false) 1 else 2` |
+| 8 | 38.900 | 31.400 | 15.100 | 41.200 | 3 | `(1 + 2) * (3 + 4)` |
+| 12 | 31.600 | 26.900 | 14.000 | 25.800 | 4 | nested if |
+| 16 | 62.700 | 54.300 | 26.000 | 339.600 | 7 | complex arith |
+| 17 | 581.000 | 115.200 | 45.100 | 79.200 | 6 | nested beta deep |
+| 19 | 56.300 | 175.800 | 33.900 | 54.100 | 7 | complex if |
+| 32 | 248.700 | 314.600 | 43.100 | 143.200 | 15 | deep arith chain |
+| *block* | ~20–45k | ~56–107k | ~10–20k | ~10–63k | 1–3 | block with val/if/beta |
 
 **Beobachtung:** Typecheck-Zeit wächst mit Programmgröße (O(n) für unabhängige Ausdrücke,
 O(n²) für let-Ketten). Reduktionsschritte korrelieren linear mit AST-Tiefe.
+5 Block-Programme (Größe 3–8) zeigen ähnliches Verhalten mit Schritten 1–3.
 
 ### 3. Type Error Recovery
 
@@ -178,4 +180,72 @@ Abdeckungsmatrix: Welche Komponente handhabt welchen AST-Knotentyp (per `instanc
 - `EnumDeclNode`/`TypeAliasNode` fehlen im Reducer (werden beim TypeCheck verarbeitet, nicht zur Laufzeit)
 - `ProgramNode` nur in Checker/Parser (Evaluator hat separate `evalProgram`-Methode ohne `instanceof`)
 
-Aufruf: `gradlew runBenchmarkSuite` (alle 4) oder `gradlew runBenchmarkSuite --args="scalability"` (einzeln).
+Aufruf: `gradlew runBenchmarkSuite` (alle 8) oder `gradlew runBenchmarkSuite --args="scalability steps"` (einzeln).
+
+### 5. Reduction Step Distribution
+
+Counts reduction steps via SmallStepReducer for 200 random closed well-typed expressions.
+Rejection-sampled: must be well-typed and evaluate without error.
+
+| Steps | Count |
+|-------|-------|
+| 0     | 175   |
+| 1     | 18    |
+| 2     | 3     |
+| 3     | 2     |
+| 4     | 2     |
+
+**Average steps: 0.19** — 87.5% of random expressions are already values (literals, bools, lambdas).
+Only 12.5% require ≥1 reduction step. This confirms that random expression generation heavily skews toward trivial (atomic) values.
+
+### 6. Parser Error Recovery Quality
+
+Injects single-character mutations into well-typed programs and measures **cascade rate**:
+how many bogus follow-up errors result from one injection. 4 injectors × 50 trials.
+
+| Injector | Total | Cascade | MaxCasc | ParseErr | CascadeRate |
+|---|---|---|---|---|---|
+| delete-char | 50 | 12 | 2 | 23 | 24.0% |
+| insert-! | 50 | 38 | 5 | 31 | 76.0% |
+| replace→# | 50 | 10 | 4 | 19 | 20.0% |
+| delete-digit | 42 | 14 | 4 | 27 | 33.3% |
+
+**Cascade rates 20–76%.** `insert-!` causes the most cascade (76%) because `!` in prefix position
+introduces unexpected unary-not expressions, confusing the recursive-descent parser.
+`replace→#` shows best recovery (20%), since `#` is a syntax error that localizes well.
+
+### 7. Empirical PBT-vs-Mutation Matrix
+
+For each expression-level mutation operator, runs actual PBT property checks against 100 mutated
+closed well-typed expressions. Properties tested: progress, preservation, determinism,
+bigStepMatchesSmallStep, valueIsIrreducible.
+
+| Operator | Progress | Preserv | Determ | BigStep | ValueIrred | AnyPBT |
+|---|---|---|---|---|---|---|
+| ReplaceLiteralType | 33 | 33 | 33 | 33 | 0 | 33 |
+| SwapOperator | 0 | 0 | 0 | 0 | 0 | 0 |
+| SwapIfBranches | 0 | 0 | 0 | 0 | 0 | 0 |
+| SelfReference | 0 | 0 | 0 | 0 | 0 | 0 |
+| BoolNegate | 100 | 100 | 100 | 100 | 0 | 100 |
+| NotOnNumber | 100 | 100 | 100 | 100 | 0 | 100 |
+| DivideByZero | 87 | 87 | 87 | 87 | 0 | 87 |
+
+**Key findings:**
+- **PBT catches type errors** (BoolNegate: `-true` type error, NotOnNumber: `!42` type error) and **runtime errors** (DivideByZero: RTE on `x/0`).
+- **PBT does NOT catch semantic diffs** (SwapOperator: `1+2 → 1-2` both evaluate deterministically to different values; bigStepMatchesSmallStep checks reducer↔evaluator consistency, not original vs. mutated).
+- **ReplaceLiteralType** caught 33% via bigStepMatchesSmallStep: mutated literals of different type cause reducer/evaluator disagreement.
+- These results confirm the method: PBT ensures **internal type soundness**, not **semantic equivalence against a reference implementation**.
+
+### 8. Runtime Breakdown
+
+Measures pipeline stage times (ns) for 97 random well-typed programs (rejection-sampled from 2000 attempts).
+
+| Metric | Tokenize | Parse | TypeCheck | Evaluate | Reduce |
+|---|---|---|---|---|---|
+| Min (ns) | 8,400 | 2,700 | 1,500 | 500 | 500 |
+| Max (ns) | 285,000 | 245,600 | 46,600 | 46,600 | 11,000 |
+| Typical | 15–30k | 10–20k | 2–5k | 2–5k | 500–2k |
+
+**Pipeline bottleneck:** `TypeCheck` dominates for complex programs (up to 245µs at size 11–17).
+**Reduction** is consistently fast (< 2µs typical) because most expressions are already values (0 steps).
+Output: CSV with columns `size,parseNs,tcNs,evalNs,reduceNs` for external analysis.

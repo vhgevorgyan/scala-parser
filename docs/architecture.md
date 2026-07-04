@@ -181,7 +181,7 @@ scala.parser
 ├── Benchmarks.java                     -- Performance benchmarks
 ├── MutationAnalysis.java               -- 12-op mutation analysis (37.2% detection)
 ├── TypeErrorDiagnosisBenchmark.java    -- 18 curated type-error programs
-├── BenchmarkSuite.java                 -- 4-in-1 evaluation (mutation matrix, scalability, error recovery, coverage)
+├── BenchmarkSuite.java                 -- 8 analysis modules (mutation matrix, scalability, error recovery, coverage, step-distribution, parser recovery, empirical matrix, runtime-breakdown)
 ├── core
 │   ├── ParserError.java                -- Error record (message, line, col, length)
 │   ├── ParserResult.java               -- AST + error list container
