@@ -181,7 +181,7 @@ scala.parser
 ├── Benchmarks.java                     -- Performance benchmarks
 ├── MutationAnalysis.java               -- 12-op mutation analysis (37.2% detection)
 ├── TypeErrorDiagnosisBenchmark.java    -- 18 curated type-error programs
-├── BenchmarkSuite.java                 -- 8 analysis modules (mutation matrix, scalability, error recovery, coverage, step-distribution, parser recovery, empirical matrix, runtime-breakdown)
+├── BenchmarkSuite.java                 -- 8 analysis modules (mutation matrix, scalability, error recovery, coverage, step-distribution, parser recovery, empirical matrix, runtime-breakdown); CLI: --runs N, --csv
 ├── core
 │   ├── ParserError.java                -- Error record (message, line, col, length)
 │   ├── ParserResult.java               -- AST + error list container
@@ -195,7 +195,7 @@ scala.parser
 │   └── hover/                          -- HoverProvider
 ├── test/java/scala/parser/core/reduction/
 │   ├── SmallStepPBT.java               -- 26 PBT properties (progress, preservation, determinism, values-irreducible, CaseNode)
-│   ├── CoverageGuidedPBT.java          -- 6 targeted properties for hard-to-detect mutations
+│   ├── CoverageGuidedPBT.java          -- 8 targeted properties for hard-to-detect mutations (swap, let, undefined, inkl. chained/complex)
 │   └── TypeSoundnessFormalTest.java    -- ~60+ formal tests (builtins, gradual typing, regression)
 └── lsp/                                -- LSP4J implementations
     ├── LanguageServerLauncher.java

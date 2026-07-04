@@ -220,21 +220,28 @@ For each expression-level mutation operator, runs actual PBT property checks aga
 closed well-typed expressions. Properties tested: progress, preservation, determinism,
 bigStepMatchesSmallStep, valueIsIrreducible.
 
-| Operator | Progress | Preserv | Determ | BigStep | ValueIrred | AnyPBT |
-|---|---|---|---|---|---|---|
-| ReplaceLiteralType | 33 | 33 | 33 | 33 | 0 | 33 |
-| SwapOperator | 0 | 0 | 0 | 0 | 0 | 0 |
-| SwapIfBranches | 0 | 0 | 0 | 0 | 0 | 0 |
-| SelfReference | 0 | 0 | 0 | 0 | 0 | 0 |
-| BoolNegate | 100 | 100 | 100 | 100 | 0 | 100 |
-| NotOnNumber | 100 | 100 | 100 | 100 | 0 | 100 |
-| DivideByZero | 87 | 87 | 87 | 87 | 0 | 87 |
+| Operator | Progress | Preserv | Determ | BigStep | ValueIrred | VsOrig | AnyPBT |
+|---|---|---|---|---|---|---|---|---|
+| ReplaceLiteralType | 33 | 33 | 33 | 33 | 0 | 67 | 100 |
+| SwapOperator | 0 | 0 | 0 | 0 | 0 | 100 | 100 |
+| SwapIfBranches | 0 | 0 | 0 | 0 | 0 | 100 | 100 |
+| SelfReference | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| BoolNegate | 100 | 100 | 100 | 100 | 0 | 0 | 100 |
+| NotOnNumber | 100 | 100 | 100 | 100 | 0 | 0 | 100 |
+| DivideByZero | 87 | 87 | 87 | 87 | 0 | 0 | 87 |
 
 **Key findings:**
-- **PBT catches type errors** (BoolNegate: `-true` type error, NotOnNumber: `!42` type error) and **runtime errors** (DivideByZero: RTE on `x/0`).
-- **PBT does NOT catch semantic diffs** (SwapOperator: `1+2 → 1-2` both evaluate deterministically to different values; bigStepMatchesSmallStep checks reducer↔evaluator consistency, not original vs. mutated).
-- **ReplaceLiteralType** caught 33% via bigStepMatchesSmallStep: mutated literals of different type cause reducer/evaluator disagreement.
-- These results confirm the method: PBT ensures **internal type soundness**, not **semantic equivalence against a reference implementation**.
+- **VsOrig (Original-vs-Mutated output comparison) ist die mächtigste Property** — schließt die Lücken für SwapOperator (0% → 100%) und SwapIfBranches (0% → 100%).
+- **PBT catches type errors** (BoolNegate: `-true` type error, NotOnNumber: `!42` type error) und **runtime errors** (DivideByZero: RTE on `x/0`).
+- **VsOrig allein reicht nicht** für BoolNegate/NotOnNumber/DivideByZero — diese erzeugen Parse/Type/RTE-Fehler, keinen Output. Soundness-Properties fangen sie.
+- **SelfReference** bleibt bei 0% (single expression): `let f = f` ändert Output nicht, da kein freies `f` existiert.
+
+### CLI Options
+
+`gradlew runBenchmarkSuite` unterstützt:
+- `--runs N` — Multipliziert Trial-Anzahl (z.B. `empirical --runs 5` → 500 Trials)
+- `--csv` — Maschinenlesbare CSV-Ausgabe (prefix `#` für Kommentare)
+- Kombination: `scalability breakdown --runs 3 --csv` für reproduzierbare Rohdaten
 
 ### 8. Runtime Breakdown
 

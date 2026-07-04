@@ -280,6 +280,9 @@ Gesamterkennungsrate: **37,2%** (mit Output-Vergleich). Schwachstellen sind sema
 
 31. ✅ Empirische Analyse abgeschlossen: PBT erkennt Typ-/Laufzeitfehler (BoolNegate 100%, DivideByZero 87%) aber keine semantischen Änderungen (SwapOperator 0%). Key finding für Thesis: PBT sichert **interne Type Soundness**, nicht **semantische Äquivalenz**.
     Begleitdokumentation: `docs/benchmarks.md` (alle 8 Module mit Tabellen), `docs/architecture.md` (Package Structure aktualisiert), `projektuebersicht.md` (Meilensteine 30–31).
+
+32. ✅ **Empirical Matrix um VsOrig-Property erweitert**: Output-Vergleich (Original vs. Mutated) via `valueEquals`. SwapOperator/SwapIfBranches jetzt 100% erkannt (vorher 0%). Neue `--runs N` und `--csv` CLI-Flags für reproduzierbare Thesis-Daten.
+    **CoverageGuidedPBT erweitert**: Zwei neue Properties (`undefinedVariableInComplexExpr`, `removeChainedLetBindingCausesError`) mit komplexeren Generatoren (chained lets, multiple vars, function application).
     - **PBT-Property-vs-Mutation-Matrix**: Welche Mutationsklasse wird von welcher PBT-Property-Kategorie erfasst?
     - **Scalability Benchmark**: Laufzeit (ns) + Reduktionsschritte für Programme von 2–32 AST-Knoten
     - **Type Error Recovery Benchmark**: Systematische Error-Injektion analog MutationAnalysis

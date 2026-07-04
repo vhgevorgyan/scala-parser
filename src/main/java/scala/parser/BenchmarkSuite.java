@@ -678,10 +678,14 @@ public class BenchmarkSuite {
         new ProgCase("block_if", "{ if (true) 1 else 2 }")
     );
 
-    private static void runScalabilityBenchmark() {
-        System.out.println("=== 2. Scalability Benchmark ===\n");
-        System.out.println("Measures time (ns) and step count for hand-crafted programs of increasing size.\n");
-        System.out.println("size,parseNs,tcNs,evalNs,reduceNs,steps,name");
+    private static void runScalabilityBenchmark() { runScalabilityBenchmark(false, 0); }
+
+    private static void runScalabilityBenchmark(boolean csv, int runId) {
+        if (!csv) {
+            System.out.println("=== 2. Scalability Benchmark ===\n");
+            System.out.println("Measures time (ns) and step count for hand-crafted programs of increasing size.\n");
+        }
+        if (!csv) System.out.println("size,parseNs,tcNs,evalNs,reduceNs,steps,name");
 
         // Warmup with first few
         for (int w = 0; w < Math.min(3, HAND_CRAFTED.size()); w++) {
@@ -691,11 +695,16 @@ public class BenchmarkSuite {
         for (var c : HAND_CRAFTED) {
             var m = measureScalability(c);
             if (m != null) {
-                System.out.println(m.size + "," + m.parseNs + "," + m.tcNs + ","
-                    + m.evalNs + "," + m.reduceNs + "," + m.steps + "," + c.name);
+                if (csv) {
+                    System.out.println(m.size + "," + m.parseNs + "," + m.tcNs + ","
+                        + m.evalNs + "," + m.reduceNs + "," + m.steps + "," + c.name + "," + runId);
+                } else {
+                    System.out.println(m.size + "," + m.parseNs + "," + m.tcNs + ","
+                        + m.evalNs + "," + m.reduceNs + "," + m.steps + "," + c.name);
+                }
             }
         }
-        System.out.println();
+        if (!csv) System.out.println();
     }
 
     private static class Meas {
@@ -886,9 +895,13 @@ public class BenchmarkSuite {
     //  5. Reduction Step Distribution (Histogram)
     // ─────────────────────────────────────────────────────────────────
 
-    private static void runStepDistribution() {
-        System.out.println("=== 5. Reduction Step Distribution ===\n");
-        System.out.println("Counts reduction steps for 200 random closed well-typed expressions.\n");
+    private static void runStepDistribution() { runStepDistribution(false, 0); }
+
+    private static void runStepDistribution(boolean csv, int runId) {
+        if (!csv) {
+            System.out.println("=== 5. Reduction Step Distribution ===\n");
+            System.out.println("Counts reduction steps for 200 random closed well-typed expressions.\n");
+        }
 
         var stepCounts = new int[21]; // 0..19, 20+
         int total = 0, attempts = 0;
@@ -913,20 +926,31 @@ public class BenchmarkSuite {
             else stepCounts[steps]++;
         }
 
-        System.out.println("steps,count");
-        for (int s = 0; s <= 20; s++) {
-            if (stepCounts[s] > 0) {
-                String label = s == 20 ? "20+" : String.valueOf(s);
-                System.out.println(label + "," + stepCounts[s]);
+        if (csv) {
+            for (int s = 0; s <= 20; s++) {
+                if (stepCounts[s] > 0) {
+                    String label = s == 20 ? "20+" : String.valueOf(s);
+                    System.out.println(runId + "," + label + "," + stepCounts[s]);
+                }
+            }
+        } else {
+            System.out.println("steps,count");
+            for (int s = 0; s <= 20; s++) {
+                if (stepCounts[s] > 0) {
+                    String label = s == 20 ? "20+" : String.valueOf(s);
+                    System.out.println(label + "," + stepCounts[s]);
+                }
             }
         }
         int totalSteps = 0;
         for (int s = 0; s <= 20; s++) totalSteps += stepCounts[s] * s;
         double avg = total > 0 ? (double) totalSteps / total : 0;
-        System.out.println("\nTotal programs: " + total);
-        System.out.println("Average steps: " + String.format("%.2f", avg));
-        System.out.println("Programs with 0 steps (already values): " + stepCounts[0]);
-        System.out.println();
+        if (!csv) {
+            System.out.println("\nTotal programs: " + total);
+            System.out.println("Average steps: " + String.format("%.2f", avg));
+            System.out.println("Programs with 0 steps (already values): " + stepCounts[0]);
+            System.out.println();
+        }
     }
 
     private static ExpressionNode genClosedExpr(Random rand, int depth, List<String> bound) {
@@ -1044,9 +1068,15 @@ public class BenchmarkSuite {
 
     /** Runs actual PBT property checks against each mutated closed expression. */
     private static void runEmpiricalMatrix() {
-        System.out.println("=== 7. Empirical PBT-vs-Mutation Matrix ===\n");
-        System.out.println("For each mutation operator, runs actual PBT property checks\n");
-        System.out.println("against 100 mutated closed well-typed expressions.\n");
+        runEmpiricalMatrix(1, false);
+    }
+
+    private static void runEmpiricalMatrix(int runs, boolean csv) {
+        if (!csv) {
+            System.out.println("=== 7. Empirical PBT-vs-Mutation Matrix ===\n");
+            System.out.println("For each mutation operator, runs actual PBT property checks\n");
+            System.out.println("against " + (100 * runs) + " mutated closed well-typed expressions.\n");
+        }
 
         var ops = List.of(
             new ReplaceLiteralTypeOp(), new SwapOperatorOp(), new SwapIfBranchesOp(),
@@ -1054,9 +1084,11 @@ public class BenchmarkSuite {
             new DivideByZeroOp()
         );
 
-        System.out.printf("%-22s %8s %8s %8s %8s %8s %8s%n",
-            "Operator", "Progress", "Preserv", "Determ", "BigStep", "ValueIrred", "AnyPBT");
-        System.out.println("-".repeat(78));
+        if (!csv) {
+            System.out.printf("%-22s %8s %8s %8s %8s %8s %8s %8s%n",
+                "Operator", "Progress", "Preserv", "Determ", "BigStep", "ValueIrred", "VsOrig", "AnyPBT");
+            System.out.println("-".repeat(88));
+        }
 
         // Expression-level mutation adapters
         record Mut(String name, java.util.function.BiFunction<ExpressionNode, Random, ExpressionNode> apply) {}
@@ -1107,10 +1139,10 @@ public class BenchmarkSuite {
             new LiteralNode("5", 0, 0) // injectDivZero may wrap this as 5/0
         ));
 
-        int TRIALS = 100;
+        int TRIALS = 100 * runs;
         for (var m : exprOps) {
             var rand = new Random(SHARED.nextInt());
-            int progressFail = 0, preservFail = 0, determinFail = 0, bigStepFail = 0, valueIrredFail = 0, anyFail = 0;
+            int progressFail = 0, preservFail = 0, determinFail = 0, bigStepFail = 0, valueIrredFail = 0, outputFail = 0, anyFail = 0;
             int total = 0, retries = 0;
             var seeds = seedExprs.getOrDefault(m.name, List.of());
             while (total < TRIALS && retries < TRIALS * 10) {
@@ -1128,7 +1160,9 @@ public class BenchmarkSuite {
                 var err0 = new ArrayList<ParserError>();
                 new TypeChecker(err0).check(res0.ast);
                 if (!err0.isEmpty()) continue;
-                try { silencePrint(); new Evaluator().evalProgram(res0.ast); restorePrint(); } catch (Exception e) { restorePrint(); continue; }
+                Value originalBigVal;
+                try { silencePrint(); originalBigVal = new Evaluator().evalProgram(res0.ast); restorePrint(); } catch (Exception e) { restorePrint(); continue; }
+                if (originalBigVal == null) continue;
 
                 var mutated = m.apply.apply(expr, rand);
                 if (mutated == expr && !m.name.equals("SelfReference")) continue;
@@ -1200,12 +1234,27 @@ public class BenchmarkSuite {
                     catch (Exception e) { /* expected — value is irreducible */ }
                 }
 
+                // Output comparison: original vs mutated
+                boolean outputDiff = false;
+                if (!parseErr && !typeErr && !rte && bigVal != null) {
+                    if (!valueEquals(originalBigVal, bigVal)) outputDiff = true;
+                }
+                if (outputDiff) { outputFail++; caught = true; }
+
                 if (caught) anyFail++;
             }
-            System.out.printf("%-22s %8d %8d %8d %8d %8d %8d%n",
-                m.name, progressFail, preservFail, determinFail, bigStepFail, valueIrredFail, anyFail);
+            if (csv) {
+                System.out.println("empirical," + m.name + "," + progressFail + "," + preservFail + ","
+                    + determinFail + "," + bigStepFail + "," + valueIrredFail + "," + outputFail + "," + anyFail);
+            } else {
+                System.out.printf("%-22s %8d %8d %8d %8d %8d %8d %8d%n",
+                    m.name, progressFail, preservFail, determinFail, bigStepFail, valueIrredFail, outputFail, anyFail);
+            }
         }
-        System.out.println("\nEach column shows how many times out of " + TRIALS + " that property caught the mutation.\n");
+        if (!csv) {
+            System.out.println("\nEach column shows how many times out of " + TRIALS + " that property caught the mutation.");
+            System.out.println("VsOrig = original vs. mutated output comparison (valueEquals)\n");
+        }
     }
 
     private static String valueNodeToString(ExpressionNode node) {
@@ -1277,10 +1326,14 @@ public class BenchmarkSuite {
     //  8. Laufzeit-Breakdown (Box-Plot Data)
     // ─────────────────────────────────────────────────────────────────
 
-    private static void runRuntimeBreakdown() {
-        System.out.println("=== 8. Laufzeit-Breakdown ===\n");
-        System.out.println("Measures pipeline stage times (ns) for 100 random well-typed programs.\n");
-        System.out.println("size,parseNs,tcNs,evalNs,reduceNs");
+    private static void runRuntimeBreakdown() { runRuntimeBreakdown(false, 0); }
+
+    private static void runRuntimeBreakdown(boolean csv, int runId) {
+        if (!csv) {
+            System.out.println("=== 8. Laufzeit-Breakdown ===\n");
+            System.out.println("Measures pipeline stage times (ns) for 100 random well-typed programs.\n");
+        }
+        if (!csv) System.out.println("size,parseNs,tcNs,evalNs,reduceNs");
 
         int total = 0, attempts = 0;
         while (total < 100 && attempts < 2000) {
@@ -1323,10 +1376,14 @@ public class BenchmarkSuite {
             t1 = System.nanoTime();
             long reduceNs = t1 - t0;
 
-            System.out.println(size + "," + parseNs + "," + tcNs + "," + evalNs + "," + reduceNs);
+            if (csv) {
+                System.out.println(runId + "," + size + "," + parseNs + "," + tcNs + "," + evalNs + "," + reduceNs);
+            } else {
+                System.out.println(size + "," + parseNs + "," + tcNs + "," + evalNs + "," + reduceNs);
+            }
             total++;
         }
-        System.out.println("\nTotal: " + total + " programs in " + attempts + " attempts\n");
+        if (!csv) System.out.println("\nTotal: " + total + " programs in " + attempts + " attempts\n");
     }
 
     // ─────────────────────────────────────────────────────────────────
@@ -1334,23 +1391,40 @@ public class BenchmarkSuite {
     // ─────────────────────────────────────────────────────────────────
 
     public static void main(String[] args) {
-        var selected = args.length > 0 ? Set.of(args) : Set.of("mutation", "property", "scalability", "typeerror", "coverage", "steps", "parser", "empirical", "breakdown");
+        var argList = new ArrayList<>(List.of(args));
+        boolean csv = argList.remove("--csv");
+        int runs = 1;
+        int runIdx = argList.indexOf("--runs");
+        if (runIdx >= 0 && runIdx + 1 < argList.size()) {
+            runs = Integer.parseInt(argList.get(runIdx + 1));
+            argList.remove(runIdx + 1);
+            argList.remove(runIdx);
+        }
+        var selected = argList.isEmpty()
+            ? Set.of("mutation", "property", "scalability", "typeerror", "coverage", "steps", "parser", "empirical", "breakdown")
+            : Set.copyOf(argList);
 
         if (selected.contains("mutation") || selected.contains("property"))
             runMutationPropertyMatrix();
-        if (selected.contains("scalability"))
-            runScalabilityBenchmark();
+        if (selected.contains("scalability")) {
+            if (csv) System.out.println("# scalability: size,parseNs,tcNs,evalNs,reduceNs,steps,name,run");
+            for (int r = 0; r < runs; r++) runScalabilityBenchmark(csv, r);
+        }
         if (selected.contains("typeerror"))
             runTypeErrorRecovery();
         if (selected.contains("coverage"))
             runASTCoverage();
-        if (selected.contains("steps"))
-            runStepDistribution();
+        if (selected.contains("steps")) {
+            if (csv) System.out.println("# steps: run,steps,count");
+            for (int r = 0; r < runs; r++) runStepDistribution(csv, r);
+        }
         if (selected.contains("parser"))
             runParserErrorRecovery();
         if (selected.contains("empirical"))
-            runEmpiricalMatrix();
-        if (selected.contains("breakdown"))
-            runRuntimeBreakdown();
+            runEmpiricalMatrix(runs, csv);
+        if (selected.contains("breakdown")) {
+            if (csv) System.out.println("# breakdown: run,size,parseNs,tcNs,evalNs,reduceNs");
+            for (int r = 0; r < runs; r++) runRuntimeBreakdown(csv, r);
+        }
     }
 }

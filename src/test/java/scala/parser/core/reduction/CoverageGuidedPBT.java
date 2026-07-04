@@ -81,6 +81,19 @@ public class CoverageGuidedPBT {
         }).filter(Objects::nonNull);
     }
 
+    @Provide
+    Arbitrary<ProgramNode> letBindingChained() {
+        return Arbitraries.randomValue(rand -> {
+            int a = rand.nextInt(100), b = rand.nextInt(100);
+            return switch (rand.nextInt(4)) {
+                case 0 -> parseOrNull("val x = " + a + "; val y = x + " + b + "; y");
+                case 1 -> parseOrNull("val x = " + a + "; val y = " + b + "; x + y");
+                case 2 -> parseOrNull("val x = " + a + "; val y = x * 2; val z = y + " + b + "; z");
+                default -> parseOrNull("val f = (n: Int) => n + " + a + "; f(" + b + ") + " + a);
+            };
+        }).filter(Objects::nonNull);
+    }
+
     @Property(tries = 200)
     void removeLetBindingCausesError(@ForAll("letBindingUsedInBody") ProgramNode prog) {
         var removed = removeLetBinding(prog);
@@ -88,6 +101,15 @@ public class CoverageGuidedPBT {
         var mut = evaluate(removed);
         assertNull(mut,
             "Removing a used let-binding must cause an error (undefined variable)");
+    }
+
+    @Property(tries = 200)
+    void removeChainedLetBindingCausesError(@ForAll("letBindingChained") ProgramNode prog) {
+        var removed = removeLetBinding(prog);
+        if (removed == null) return;
+        var mut = evaluate(removed);
+        assertNull(mut,
+            "Removing a chained let-binding must cause an error (cascading undefined)");
     }
 
     // ── UndefinedVariable: replace used ident with bad name ───────
@@ -101,6 +123,20 @@ public class CoverageGuidedPBT {
         }).filter(Objects::nonNull);
     }
 
+    @Provide
+    Arbitrary<ProgramNode> exprWithIdentComplex() {
+        return Arbitraries.randomValue(rand -> {
+            int v = rand.nextInt(100), w = rand.nextInt(100);
+            return switch (rand.nextInt(5)) {
+                case 0 -> parseOrNull("val x = " + v + "; val y = x + " + w + "; y * 2");
+                case 1 -> parseOrNull("val x = " + v + "; if (x > 0) x else " + w);
+                case 2 -> parseOrNull("val f = (n: Int) => n + " + v + "; f(" + w + ")");
+                case 3 -> parseOrNull("val x = " + v + "; val y = " + w + "; x + y");
+                default -> parseOrNull("val x = " + v + "; (x: Int)");
+            };
+        }).filter(Objects::nonNull);
+    }
+
     @Property(tries = 200)
     void undefinedVariableCausesError(@ForAll("exprWithIdentifier") ProgramNode prog) {
         var broken = replaceIdentWithUndefined(prog);
@@ -108,6 +144,15 @@ public class CoverageGuidedPBT {
         var mut = evaluate(broken);
         assertNull(mut,
             "Replacing identifier with undefined name must cause an error");
+    }
+
+    @Property(tries = 200)
+    void undefinedVariableInComplexExpr(@ForAll("exprWithIdentComplex") ProgramNode prog) {
+        var broken = replaceIdentWithUndefined(prog);
+        if (broken == null) return;
+        var mut = evaluate(broken);
+        assertNull(mut,
+            "Replacing identifier with undefined name in complex expr must cause an error");
     }
 
     // ── Generic: mutation-specific PBT ───────────────────────────
