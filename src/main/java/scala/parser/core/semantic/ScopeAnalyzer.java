@@ -68,6 +68,11 @@ public class ScopeAnalyzer {
                 for (CaseNode.Binding b : br.bindings()) {
                     out.add(new Definition(b.name(), b.line(), b.column()));
                 }
+                if (br.asName() != null) {
+                    out.add(new Definition(br.asName(), c.line, c.column));
+                }
+                if (br.guard() != null) walkDefinitions(br.guard(), out);
+                if (br.literalPattern() != null) walkDefinitions(br.literalPattern(), out);
                 walkDefinitions(br.body(), out);
             }
             return;
@@ -130,6 +135,9 @@ public class ScopeAnalyzer {
                 for (CaseNode.Binding b : br.bindings()) {
                     if (b.name().equals(targetName)) return;
                 }
+                if (br.asName() != null && br.asName().equals(targetName)) return;
+                if (br.guard() != null) walkReferences(br.guard(), targetName, out);
+                if (br.literalPattern() != null) walkReferences(br.literalPattern(), targetName, out);
                 walkReferences(br.body(), targetName, out);
             }
             return;

@@ -109,6 +109,7 @@ public class SmallStepReducer {
                 if (b.value) return i.thenBranch;
                 return i.elseBranch != null ? i.elseBranch : new UnitLiteralNode(i.line, i.column);
             }
+            throw new RuntimeException("If condition must be Bool, got: " + i.condition);
         }
 
         // Binary operators
@@ -176,11 +177,7 @@ public class SmallStepReducer {
         ExpressionNode current = expr;
         int limit = 10000;
         while (!isValue(current) && limit-- > 0) {
-            try {
-                current = step(current);
-            } catch (RuntimeException e) {
-                break;
-            }
+            current = step(current);
         }
         return current;
     }

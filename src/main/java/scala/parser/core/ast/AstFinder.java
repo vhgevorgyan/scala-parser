@@ -61,6 +61,14 @@ public class AstFinder {
                 ASTNode expr = findRecursive(c.expr, line, column);
                 if (expr != null) return expr;
                 for (CaseNode.CaseBranch br : c.branches) {
+                    if (br.guard() != null) {
+                        ASTNode guard = findRecursive(br.guard(), line, column);
+                        if (guard != null) return guard;
+                    }
+                    if (br.literalPattern() != null) {
+                        ASTNode lp = findRecursive(br.literalPattern(), line, column);
+                        if (lp != null) return lp;
+                    }
                     ASTNode body = findRecursive(br.body(), line, column);
                     if (body != null) return body;
                 }

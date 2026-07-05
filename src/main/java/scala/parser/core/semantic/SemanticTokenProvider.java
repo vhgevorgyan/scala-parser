@@ -91,6 +91,11 @@ public class SemanticTokenProvider {
                 for (CaseNode.Binding b : br.bindings()) {
                     out.add(new SemanticToken(b.line(), b.column(), b.name().length(), "variable"));
                 }
+                if (br.asName() != null) {
+                    out.add(new SemanticToken(c.line, c.column, br.asName().length(), "variable"));
+                }
+                if (br.guard() != null) walk(br.guard(), out);
+                if (br.literalPattern() != null) walk(br.literalPattern(), out);
                 walk(br.body(), out);
             }
             return;

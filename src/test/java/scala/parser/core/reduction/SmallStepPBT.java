@@ -154,7 +154,7 @@ class SmallStepPBT {
 
     private static ExpressionNode genClosedExpr(Random rand, int depth, List<String> bound) {
         if (depth <= 0 || rand.nextDouble() < 0.2) return genClosedLeaf(rand, bound);
-        int choice = rand.nextInt(13);
+        int choice = rand.nextInt(14);
         if (choice == 0) return genClosedLeaf(rand, bound);
         if (choice == 1) {
             String p = freshName("p", bound);
@@ -195,7 +195,7 @@ class SmallStepPBT {
             return new TupleNode(elems, 0, 0);
         }
         if (choice == 8) {
-            List<Type> types = List.of(new TypeNumber(), new TypeBool(), new TypeString(), new TypeUnit());
+            List<Type> types = List.of(new TypeNumber(), new TypeBool(), new TypeString(), new TypeUnit(), new TypeDynamic());
             return new AscriptionNode(
                 genClosedExpr(rand, depth - 1, bound),
                 types.get(rand.nextInt(types.size())), 0, 0);
@@ -206,6 +206,16 @@ class SmallStepPBT {
             return new ApplicationNode(new IdentifierNode(name, 0, 0),
                 genClosedExpr(rand, depth - 1, bound), 0, 0);
         }
+        if (choice == 10) {
+            String fname = freshName("fix", bound);
+            List<String> fb = new ArrayList<>(bound);
+            fb.add(fname);
+            String pname = freshName("n", fb);
+            List<String> pb = new ArrayList<>(fb);
+            pb.add(pname);
+            return new FixpointNode(
+                new LambdaNode(fname, new LambdaNode(pname, genClosedExpr(rand, depth - 1, pb), null, 0, 0), null, 0, 0), 0, 0);
+        }
         return genClosedLeaf(rand, bound);
     }
 
@@ -215,18 +225,27 @@ class SmallStepPBT {
         var stmts = new ArrayList<ASTNode>();
         for (int i = 0; i < numStmts - 1; i++) {
             double r = rand.nextDouble();
-            if (r < 0.25) {
-                String name = freshName("f", bound);
+            if (r < 0.15) {
+                String name = freshName("T", bound);
+                stmts.add(new TypeAliasNode(name, randomType(), 0, 0));
+            } else if (r < 0.25) {
+                String name = freshName("E", bound);
+                stmts.add(new EnumDeclNode(name, List.of(), List.of(
+                    new EnumDeclNode.ConstructorDef(freshName("C", new ArrayList<>()), List.of()),
+                    new EnumDeclNode.ConstructorDef(freshName("D", new ArrayList<>()), List.of())
+                ), 0, 0));
+            } else if (r < 0.45) {
+                String fname = freshName("f", bound);
                 List<String> nb = new ArrayList<>(bound);
-                nb.add(name);
+                nb.add(fname);
                 String param = freshName("x", nb);
                 List<String> fb = new ArrayList<>(nb);
                 fb.add(param);
-                stmts.add(new LetStatementNode(name,
+                stmts.add(new LetStatementNode(fname,
                     new LambdaNode(param, genClosedExpr(rand, depth - 1, fb), null, 0, 0),
                     true, null, 0, 0));
-                bound.add(name);
-            } else if (r < 0.45 && bound.size() < 5) {
+                bound.add(fname);
+            } else if (r < 0.60 && bound.size() < 5) {
                 int numDefs = 2 + rand.nextInt(2);
                 var defs = new ArrayList<LetStatementNode>();
                 var mutualNames = new ArrayList<String>();
@@ -246,14 +265,25 @@ class SmallStepPBT {
                 stmts.add(new MutualLetNode(defs, 0, 0));
                 bound.addAll(mutualNames);
             } else {
-                String name = freshName("b", bound);
+                String bname = freshName("b", bound);
                 ExpressionNode val = genClosedExpr(rand, depth - 1, bound);
-                bound.add(name);
-                stmts.add(new LetStatementNode(name, val, false, null, 0, 0));
+                bound.add(bname);
+                stmts.add(new LetStatementNode(bname, val, false, null, 0, 0));
             }
         }
         stmts.add(genClosedExpr(rand, depth - 1, bound));
         return new BlockNode(stmts, 0, 0);
+    }
+
+    private static Type randomType() {
+        int r = new Random().nextInt(4);
+        return switch (r) {
+            case 0 -> new TypeNumber();
+            case 1 -> new TypeBool();
+            case 2 -> new TypeString();
+            case 3 -> new TypeUnit();
+            default -> new TypeNumber();
+        };
     }
 
     private static ExpressionNode genClosedLeaf(Random rand, List<String> bound) {
@@ -514,6 +544,9 @@ class SmallStepPBT {
 
     @Property(tries = 200)
     void preservationClosedExpr(@ForAll("closedExpr") ExpressionNode raw) {
+        if (raw instanceof FixpointNode) return;
+        if (containsTypeDynamic(raw)) return;
+        if (containsFixpoint(raw)) return;
         var errors = new ArrayList<ParserError>();
         var tc = new TypeChecker(errors);
         tc.check(new ProgramNode(List.of(raw)));
@@ -532,6 +565,8 @@ class SmallStepPBT {
 
     @Property(tries = 200)
     void preservationClosedBlock(@ForAll("closedBlock") ExpressionNode raw) {
+        if (containsTypeDynamic(raw)) return;
+        if (containsFixpoint(raw)) return;
         var errors = new ArrayList<ParserError>();
         var tc = new TypeChecker(errors);
         tc.check(new ProgramNode(List.of(raw)));
@@ -841,7 +876,7 @@ class SmallStepPBT {
 
     private static ExpressionNode genExpr(Random rand, int depth) {
         if (depth <= 0) return genLeaf(rand);
-        return switch (rand.nextInt(13)) {
+        return switch (rand.nextInt(14)) {
             case 0, 1 -> genLeaf(rand);
             case 2 -> new LiteralNode(String.valueOf(rand.nextInt(1000)), 0, 0);
             case 3 -> new BoolNode(0, 0, rand.nextBoolean());
@@ -871,8 +906,14 @@ class SmallStepPBT {
                 yield new TupleNode(elems, 0, 0);
             }
             case 11 -> new AscriptionNode(genExpr(rand, depth - 1),
-                List.of(new TypeNumber(), new TypeBool(), new TypeString(), new TypeUnit())
-                    .get(rand.nextInt(4)), 0, 0);
+                List.of(new TypeNumber(), new TypeBool(), new TypeString(), new TypeUnit(), new TypeDynamic())
+                    .get(rand.nextInt(5)), 0, 0);
+            case 12 -> {
+                String fname = freshName("fix", new ArrayList<>());
+                String pname = freshName("n", new ArrayList<>());
+                yield new FixpointNode(
+                    new LambdaNode(fname, new LambdaNode(pname, genExpr(rand, depth - 1), null, 0, 0), null, 0, 0), 0, 0);
+            }
             default -> genLeaf(rand);
         };
     }
@@ -881,7 +922,15 @@ class SmallStepPBT {
         int numStmts = 1 + rand.nextInt(4); // 1-4 statements
         var stmts = new ArrayList<ASTNode>();
         for (int i = 0; i < numStmts - 1; i++) {
-            if (rand.nextBoolean()) {
+            double r = rand.nextDouble();
+            if (r < 0.15) {
+                stmts.add(new TypeAliasNode("T_" + i, randomType(), 0, 0));
+            } else if (r < 0.25) {
+                stmts.add(new EnumDeclNode("E_" + i, List.of(), List.of(
+                    new EnumDeclNode.ConstructorDef("C", List.of()),
+                    new EnumDeclNode.ConstructorDef("D", List.of())
+                ), 0, 0));
+            } else if (r < 0.65) {
                 String name = IDENTS.get(rand.nextInt(IDENTS.size())) + "_" + i;
                 stmts.add(new LetStatementNode(name,
                     genExpr(rand, depth - 1), rand.nextBoolean(),
@@ -907,7 +956,15 @@ class SmallStepPBT {
         int numStmts = 1 + rand.nextInt(3);
         var stmts = new ArrayList<ASTNode>();
         for (int i = 0; i < numStmts - 1; i++) {
-            if (rand.nextBoolean()) {
+            double r = rand.nextDouble();
+            if (r < 0.15) {
+                stmts.add(new TypeAliasNode("T", randomType(), 0, 0));
+            } else if (r < 0.25) {
+                stmts.add(new EnumDeclNode("E", List.of(), List.of(
+                    new EnumDeclNode.ConstructorDef("C", List.of()),
+                    new EnumDeclNode.ConstructorDef("D", List.of())
+                ), 0, 0));
+            } else if (r < 0.65) {
                 String name = "b" + depth + "_" + i + "_" + rand.nextInt(10000);
                 stmts.add(new LetStatementNode(name,
                     genClosedLeaf(rand), false, null, 0, 0));
@@ -965,5 +1022,47 @@ class SmallStepPBT {
         }
         if (v instanceof ClosureValue) return "<closure>";
         return null;
+    }
+
+    private static boolean containsTypeDynamic(ExpressionNode expr) {
+        if (expr instanceof AscriptionNode asc && asc.declaredType instanceof TypeDynamic) return true;
+        if (expr instanceof ApplicationNode app) return containsTypeDynamic(app.function) || containsTypeDynamic(app.argument);
+        if (expr instanceof LambdaNode lam) return containsTypeDynamic(lam.body);
+        if (expr instanceof IfNode i) return containsTypeDynamic(i.condition) || containsTypeDynamic(i.thenBranch) || (i.elseBranch != null && containsTypeDynamic(i.elseBranch));
+        if (expr instanceof BinaryExprNode bin) return containsTypeDynamic(bin.left) || containsTypeDynamic(bin.right);
+        if (expr instanceof UnaryExprNode un) return containsTypeDynamic(un.operand);
+        if (expr instanceof TupleNode tup) { for (ExpressionNode e : tup.elements) if (containsTypeDynamic(e)) return true; }
+        if (expr instanceof BlockNode blk) { for (ASTNode s : blk.statements) if (containsTypeDynamic(s)) return true; }
+        if (expr instanceof CaseNode c) { if (containsTypeDynamic(c.expr)) return true; }
+        if (expr instanceof FixpointNode fp) return containsTypeDynamic(fp.body);
+        return false;
+    }
+
+    private static boolean containsTypeDynamic(ASTNode node) {
+        if (node instanceof ExpressionNode e) return containsTypeDynamic(e);
+        if (node instanceof scala.parser.core.ast.LetStatementNode l) return containsTypeDynamic(l.value);
+        if (node instanceof scala.parser.core.ast.MutualLetNode m) { for (var d : m.defs) if (containsTypeDynamic(d.value)) return true; }
+        return false;
+    }
+
+    private static boolean containsFixpoint(ExpressionNode expr) {
+        if (expr instanceof FixpointNode) return true;
+        if (expr instanceof ApplicationNode app) return containsFixpoint(app.function) || containsFixpoint(app.argument);
+        if (expr instanceof LambdaNode lam) return containsFixpoint(lam.body);
+        if (expr instanceof IfNode i) return containsFixpoint(i.condition) || containsFixpoint(i.thenBranch) || (i.elseBranch != null && containsFixpoint(i.elseBranch));
+        if (expr instanceof BinaryExprNode bin) return containsFixpoint(bin.left) || containsFixpoint(bin.right);
+        if (expr instanceof UnaryExprNode un) return containsFixpoint(un.operand);
+        if (expr instanceof TupleNode tup) { for (ExpressionNode e : tup.elements) if (containsFixpoint(e)) return true; }
+        if (expr instanceof BlockNode blk) { for (ASTNode s : blk.statements) if (containsFixpointAux(s)) return true; }
+        if (expr instanceof CaseNode c) { if (containsFixpoint(c.expr)) return true; }
+        if (expr instanceof AscriptionNode asc) return containsFixpoint(asc.expr);
+        return false;
+    }
+
+    private static boolean containsFixpointAux(ASTNode node) {
+        if (node instanceof ExpressionNode e) return containsFixpoint(e);
+        if (node instanceof scala.parser.core.ast.LetStatementNode l) return containsFixpoint(l.value);
+        if (node instanceof scala.parser.core.ast.MutualLetNode m) { for (var d : m.defs) if (containsFixpoint(d.value)) return true; }
+        return false;
     }
 }
