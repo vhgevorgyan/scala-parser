@@ -169,6 +169,7 @@ flowchart LR
     subgraph REDUCTION["Small-Step Reduction"]
         SR[SmallStepReducer] --> Substitution
         SR --> FixpointNode
+        SR -->|Runtime type checks| IfNode
     end
 ```
 
@@ -194,7 +195,7 @@ scala.parser
 │   ├── semantic/                       -- ScopeAnalyzer + SemanticTokenProvider
 │   └── hover/                          -- HoverProvider
 ├── test/java/scala/parser/core/reduction/
-│   ├── SmallStepPBT.java               -- 26 PBT properties (progress, preservation, determinism, values-irreducible, CaseNode)
+│   ├── SmallStepPBT.java               -- 26 PBT properties (TypeDynamic, FixpointNode, TypeAliasNode, EnumDeclNode in generators; containsTypeDynamic/containsFixpoint guards)
 │   ├── CoverageGuidedPBT.java          -- 8 targeted properties for hard-to-detect mutations (swap, let, undefined, inkl. chained/complex)
 │   └── TypeSoundnessFormalTest.java    -- ~60+ formal tests (builtins, gradual typing, regression)
 └── lsp/                                -- LSP4J implementations

@@ -171,7 +171,7 @@ Aufruf: `gradlew runTestParser --args="<file.sp>"`
 
 ## 4. Testing
 
-### 4.1 Unit Tests (JUnit 5) – 408+ Tests
+### 4.1 Unit Tests (JUnit 5) – 413 Tests
 
 | Testklasse | Tests | Abdeckung |
 |---|---|---|
@@ -179,10 +179,10 @@ Aufruf: `gradlew runTestParser --args="<file.sp>"`
 | `ParserTests` | ~50 | Alle AST-Knoten, Präzedenz, Fehlerrecovery |
 | `TypeCheckerTests` | ~40 | HM-Inferenz, let-Poly, ADTs, Fehlererkennung |
 | `EvaluatorTests` | ~30 | Alle Values, Builtins, Rekursion, Pattern Matching |
-| `TypeSoundnessFormalTest` | ~60+ | Progress/Preservation für SmallStepReducer, Block-Reduktion, Case/Match, rekursive defs, mutual recursion, String-Vergleich |
+| `TypeSoundnessFormalTest` | ~75+ | Progress/Preservation für SmallStepReducer, Block-Reduktion, Case/Match, rekursive defs, mutual recursion, String-Vergleich, 9 Builtin-Tests, 10 Gradual-Typing-Tests |
 | `LanguageConfigTest` | 20 | Language-Feature-Flags, Unicode-Operatoren |
 
-### 4.2 Property-Based Tests (jqwik) – 32 Properties, ~13000+ Tries
+### 4.2 Property-Based Tests (jqwik) – 34 Properties, ~13000+ Tries
 
 | Property | Tries | Beschreibung |
 |---|---|---|
@@ -298,3 +298,13 @@ Gesamterkennungsrate: **37,2%** (mit Output-Vergleich). Schwachstellen sind sema
     - **FuzzPBT.java**: 5000 Tokenizer + 2000 Parser + 500 Pipeline-Tries gegen zufällige Byte-Sequenzen
     - **TypeAliasNode/EnumDeclNode** in `inferBlock` des TypeCheckers registriert (Block-Lokalität)
     - **Dashboard-Skript**: `scripts/dashboard.py` — wandelt CSV-Benchmark-Daten in HTML-Charts um
+
+34. ✅ **PBT Generator-Expansion + LSP-Semantik-Lücke geschlossen**:
+    - **PBT-Generatoren** (`SmallStepPBT.java`): `genClosedExpr`/`genClosedBlockExpr`/`genExpr`/`genRandomBlock` erzeugen `TypeDynamic` in Ascription (choice 8: `(e : ?)`), `FixpointNode` (choice 10: `fix(λf. λx. body)`), `TypeAliasNode`/`EnumDeclNode` in Block-Kontext
+    - **Preservation-Guards**: `containsTypeDynamic()`/`containsFixpoint()` rekursive Helper erlauben Skippen der Preservation-Assertion für Ausdrücke mit unvermeidbaren Typänderungen nach Reduktion (TypeDynamic bricht Soundness per Design, FixpointNode-Unrolling ändert Typ-Struktur)
+    - **IfNode-Runtime-Check**: `SmallStepReducer` wirft `RuntimeException("If condition must be Bool")` bei Nicht-Bool-Condition (Gradual Typing Laufzeit-Sicherheit)
+    - **`reduce()`-Exception-Propagation**: RuntimeExceptions propagieren jetzt statt stuck terms — Tests behandeln sie als "erwartete Runtime Error"
+    - **ScopeAnalyzer**: `asName` wird als Definition registriert, `guard`+`literalPattern` in `walkDefinitions`/`walkReferences` traversiert
+    - **SemanticTokenProvider**: Emittiert Variable-Token für `asName`, traversiert `guard`+`literalPattern`
+    - **AstFinder**: Durchsucht `guard`+`literalPattern` für Node-at-Position
+    - **Alle 413 Tests grün** (vorher 408+)

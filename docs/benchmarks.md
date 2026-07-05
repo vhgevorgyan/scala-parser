@@ -266,8 +266,23 @@ Output: CSV with columns `size,parseNs,tcNs,evalNs,reduceNs` for external analys
 - **Guards** (`25%` on arg-bearing branches): `case Ctor(x) if x > N => ...` — condition must hold
 - Generated via `Parser` (string → AST), then type-checked; used by `closedCase`/`caseSource` providers (200 tries each)
 - All CaseBranch records now carry `asName` and `guard` fields (nullable)
+- **ScopeAnalyzer/SemanticTokenProvider/AstFinder** traversieren `guard`, `asName` und `literalPattern` vollständig (Definitionen, Referenzen, Token, Node-Findung)
 
-### 10. Fuzz Testing
+### 10. PBT Generator Expansion
+
+`genClosedExpr`/`genClosedBlockExpr`/`genExpr`/`genRandomBlock` in `SmallStepPBT.java` erzeugen jetzt zusätzlich:
+- **TypeDynamic in Ascription** (choice 8): `(e : ?)` — ascription mit dynamischem Typ; Preservation-Tests skipen diese (TypeDynamic bricht Typ-Soundness per Design)
+- **FixpointNode** (choice 10): `fix(λf. λx. body)` — auch in Preservation-Tests geskippt (Unrolling ändert Typ-Struktur von `Tf→Tx→Tbody` → `Tx→Tbody`)
+- **TypeAliasNode/EnumDeclNode** in Block-Generatoren: `type T = Int`, `enum E { C, D }` — keine Auswirkung auf Wohlgetyptheit nach Reduction
+- **`containsTypeDynamic`/`containsFixpoint`** rekursive Helper skipen Preservation-Assertions wo Typänderungen unvermeidbar sind
+
+### 11. Runtime Type Checks
+
+SmallStepReducer erhält Runtime-Typ-Prüfungen für Gradual Typing:
+- **IfNode**: Nicht-Bool-Wert als Condition → `RuntimeException("If condition must be Bool")` (verhindert `if(6)`-Stuck)
+- **`reduce()`**: Lässt RuntimeExceptions propagieren statt stuck terms zurückzugeben; Test-Catch-Block skiped sie dann als "erwarteter Runtime Error"
+
+### 12. Fuzz Testing
 
 `FuzzPBT.java` (5000 tokenizer + 2000 parser + 500 pipeline tries):
 - Random byte sequences (1–200 bytes) exercise tokenizer and parser error recovery
