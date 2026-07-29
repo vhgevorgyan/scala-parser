@@ -30,7 +30,7 @@ export function activate(context: vscode.ExtensionContext) {
     const clientOptions: LanguageClientOptions = {
         documentSelector: [{ scheme: 'file', language: 'scala-parser' }],
         synchronize: {
-            fileEvents: vscode.workspace.createFileSystemWatcher('**/*.sp')
+            fileEvents: vscode.workspace.createFileSystemWatcher('**/*.{sp,scala}')
         }
     };
 

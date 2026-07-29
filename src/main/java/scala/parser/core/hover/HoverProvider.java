@@ -68,6 +68,14 @@ public class HoverProvider {
             return "Unit literal: ()";
         }
 
+        if (node instanceof CharLiteralNode c) {
+            return "Char: '" + escapeChar(c.value) + "'";
+        }
+
+        if (node instanceof WhileNode w) {
+            return "While loop";
+        }
+
         if (node instanceof AscriptionNode asc) {
             return "Type ascription: " + asc.declaredType;
         }
@@ -79,6 +87,16 @@ public class HoverProvider {
         }
 
         return null;
+    }
+
+    private static String escapeChar(char c) {
+        return switch (c) {
+            case '\n' -> "\\n";
+            case '\t' -> "\\t";
+            case '\'' -> "\\'";
+            case '\\' -> "\\\\";
+            default -> String.valueOf(c);
+        };
     }
 
     private static String typeToString(Type t) {

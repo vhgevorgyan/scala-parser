@@ -25,7 +25,8 @@
           "scala-parser"
         ],
         "extensions": [
-          ".sp"
+          ".sp",
+          ".scala"
         ],
         "configuration": "./language-configuration.json"
       }

@@ -13,4 +13,6 @@ public enum LanguageFeature {
     RANGE_SUGAR,
     UNICODE_OPS,
     INFIX_CONS,
+    WHILE_LOOP,
+    CHAR_LITERAL,
 }

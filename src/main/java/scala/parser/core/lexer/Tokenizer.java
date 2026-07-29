@@ -40,6 +40,11 @@ public class Tokenizer {
                 continue;
             }
 
+            if (c == '\'') {
+                tokens.add(readChar());
+                continue;
+            }
+
             if (c == '"') {
                 tokens.add(readString());
                 continue;
@@ -126,6 +131,7 @@ public class Tokenizer {
                 case '<' -> { tokens.add(makeToken(TokenType.LT)); advance(); }
                 case '>' -> { tokens.add(makeToken(TokenType.GT)); advance(); }
                 case '!' -> { tokens.add(makeToken(TokenType.NOT)); advance(); }
+                case '.' -> { tokens.add(makeToken(TokenType.DOT)); advance(); }
                 case '(' -> { tokens.add(makeToken(TokenType.LPAREN)); advance(); }
                 case ')' -> { tokens.add(makeToken(TokenType.RPAREN)); advance(); }
                 case '{' -> { tokens.add(makeToken(TokenType.LBRACE)); advance(); }
@@ -221,6 +227,37 @@ public class Tokenizer {
         return new Token(TokenType.STRING, sb.toString(), startLine, startCol);
     }
 
+    private Token readChar() {
+        int startCol = column;
+        int startLine = line;
+        advance(); // consume opening '
+        char value;
+        if (isAtEnd()) {
+            return new Token(TokenType.CHAR, "'", startLine, startCol);
+        }
+        if (peek() == '\\') {
+            advance();
+            if (isAtEnd()) { value = '\\'; }
+            else {
+                value = switch (peek()) {
+                    case 'n' -> '\n';
+                    case 't' -> '\t';
+                    case '\'' -> '\'';
+                    case '\\' -> '\\';
+                    default -> peek();
+                };
+                advance();
+            }
+        } else {
+            value = peek();
+            advance();
+        }
+        if (!isAtEnd() && peek() == '\'') {
+            advance();
+        }
+        return new Token(TokenType.CHAR, String.valueOf(value), startLine, startCol);
+    }
+
     private Token readIdentifierOrKeyword() {
         int start = pos;
         int startCol = column;
@@ -239,6 +276,10 @@ public class Tokenizer {
             case "false" -> new Token(TokenType.FALSE, text, line, startCol);
             case "if" -> new Token(TokenType.IF, text, line, startCol);
             case "else" -> new Token(TokenType.ELSE, text, line, startCol);
+            case "while" -> new Token(TokenType.WHILE, text, line, startCol);
+            case "package" -> new Token(TokenType.PACKAGE, text, line, startCol);
+            case "import" -> new Token(TokenType.IMPORT, text, line, startCol);
+            case "sealed" -> new Token(TokenType.SEALED, text, line, startCol);
             default -> new Token(TokenType.IDENT, text, line, startCol);
         };
     }

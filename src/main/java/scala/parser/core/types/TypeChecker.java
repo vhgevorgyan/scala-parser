@@ -65,6 +65,7 @@ public class TypeChecker {
         if (node instanceof BoolNode) return 5;
         if (node instanceof StringLiteralNode s) return Math.max(2, s.value.length() + 2);
         if (node instanceof UnitLiteralNode) return 2;
+        if (node instanceof CharLiteralNode) return 3;
         return 1;
     }
 
@@ -139,6 +140,7 @@ public class TypeChecker {
             case "Int", "Number" -> new TypeNumber();
             case "Boolean", "Bool" -> new TypeBool();
             case "String" -> new TypeString();
+            case "Char" -> new TypeChar();
             case "Unit" -> new TypeUnit();
             default -> {
                 Type alias = typeAliases.get(name);
@@ -285,6 +287,10 @@ public class TypeChecker {
             return new InferResult(new Substitution(), new TypeUnit());
         }
 
+        if (expr instanceof CharLiteralNode) {
+            return new InferResult(new Substitution(), new TypeChar());
+        }
+
         if (expr instanceof StringLiteralNode) {
             return new InferResult(new Substitution(), new TypeString());
         }
@@ -376,6 +382,23 @@ public class TypeChecker {
             } else {
                 return new InferResult(compose(s3, compose(s2, s1)), apply(s3, tThen));
             }
+        }
+
+        if (expr instanceof WhileNode w) {
+            InferResult cond = inferExpr(env, w.condition);
+            Substitution s1 = cond.sub;
+            Type t1 = cond.type;
+            Substitution s2;
+            try { s2 = unify(apply(s1, t1), new TypeBool()); }
+            catch (TypeErrorException e) {
+                reportTypeError("While condition", w.condition, new TypeBool(), apply(s1, t1));
+                s2 = new Substitution();
+            }
+            Map<String, TypeScheme> envAfterCond = apply(compose(s2, s1), env);
+            InferResult body = inferExpr(envAfterCond, w.body);
+            Substitution s3 = body.sub;
+            Type bodyType = body.type;
+            return new InferResult(compose(s3, compose(s2, s1)), new TypeUnit());
         }
 
         if (expr instanceof BinaryExprNode bin) {
@@ -673,6 +696,7 @@ public class TypeChecker {
         if (a instanceof TypeNumber && b instanceof TypeNumber) return new Substitution();
         if (a instanceof TypeBool && b instanceof TypeBool) return new Substitution();
         if (a instanceof TypeString && b instanceof TypeString) return new Substitution();
+        if (a instanceof TypeChar && b instanceof TypeChar) return new Substitution();
         if (a instanceof TypeUnit && b instanceof TypeUnit) return new Substitution();
         if (a instanceof TypeTuple ta && b instanceof TypeTuple tb) {
             if (ta.members().size() != tb.members().size()) {

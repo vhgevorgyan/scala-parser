@@ -81,6 +81,13 @@ public class AstFinder {
                 }
             }
 
+            if (node instanceof WhileNode w) {
+                ASTNode cond = findRecursive(w.condition, line, column);
+                if (cond != null) return cond;
+                ASTNode body = findRecursive(w.body, line, column);
+                if (body != null) return body;
+            }
+
             if (node instanceof AscriptionNode asc) {
                 ASTNode inner = findRecursive(asc.expr, line, column);
                 if (inner != null) return inner;

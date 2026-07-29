@@ -4,11 +4,12 @@ public enum TokenType {
     // Keywords
     VAL, DEF,
     ENUM, CASE, MATCH,
-    TYPE,
+    TYPE, WHILE, PACKAGE, IMPORT, SEALED,
     // Identifiers & literals
     IDENT,
     NUMBER,
     STRING,
+    CHAR,
     // Operators
     PLUS, MINUS, STAR, SLASH,
     EQUAL,
@@ -20,7 +21,7 @@ public enum TokenType {
     LPAREN, RPAREN,
     LBRACE, RBRACE,
     LBRACKET, RBRACKET,
-    PIPE,
+    PIPE, DOT,
     ARROW,
     EOF,
     TRUE, FALSE,

@@ -1,4 +1,4 @@
 package scala.parser.core.types;
 
-public sealed interface Type permits TypeNumber, TypeBool, TypeString, TypeUnit, TypeFun, TypeVar, TypeConstructor, TypeTuple, TypeDynamic {
+public sealed interface Type permits TypeNumber, TypeBool, TypeString, TypeUnit, TypeChar, TypeFun, TypeVar, TypeConstructor, TypeTuple, TypeDynamic {
 }

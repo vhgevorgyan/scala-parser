@@ -129,6 +129,10 @@ public class Evaluator {
             return new UnitValue();
         }
 
+        if (node instanceof CharLiteralNode c) {
+            return new CharValue(c.value);
+        }
+
         if (node instanceof StringLiteralNode s) {
             return new StringValue(s.value);
         }
@@ -171,6 +175,16 @@ public class Evaluator {
             if (!(cond instanceof BoolValue b)) throw new RuntimeException("Condition must be boolean");
             if (b.value) return evalExpr(i.thenBranch, env);
             if (i.elseBranch != null) return evalExpr(i.elseBranch, env);
+            return new UnitValue();
+        }
+
+        if (node instanceof WhileNode w) {
+            while (true) {
+                Value cond = evalExpr(w.condition, env);
+                if (!(cond instanceof BoolValue b)) throw new RuntimeException("While condition must be boolean");
+                if (!b.value) break;
+                evalExpr(w.body, env);
+            }
             return new UnitValue();
         }
 
@@ -339,6 +353,7 @@ public class Evaluator {
         if (t instanceof TypeNumber) return v instanceof NumberValue;
         if (t instanceof TypeBool) return v instanceof BoolValue;
         if (t instanceof TypeString) return v instanceof StringValue;
+        if (t instanceof TypeChar) return v instanceof CharValue;
         if (t instanceof TypeUnit) return v instanceof UnitValue;
         if (t instanceof TypeTuple tt) {
             if (!(v instanceof TupleValue tv)) return false;
@@ -357,6 +372,7 @@ public class Evaluator {
         if (v instanceof NumberValue) return new TypeNumber();
         if (v instanceof BoolValue) return new TypeBool();
         if (v instanceof StringValue) return new TypeString();
+        if (v instanceof CharValue) return new TypeChar();
         if (v instanceof UnitValue) return new TypeUnit();
         if (v instanceof TupleValue tv) {
             return new TypeTuple(tv.values.stream().map(this::runtimeTypeOf).toList());

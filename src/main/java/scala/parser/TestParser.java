@@ -12,8 +12,8 @@ import scala.parser.core.types.TypeChecker;
 import scala.parser.core.interpreter.*;
 
 /**
- * CLI tool: parse, typecheck, and evaluate a .sp file.
- * Usage: java TestParser <file.sp>
+ * CLI tool: parse, typecheck, and evaluate a .sp or .scala file.
+ * Usage: java TestParser <file>
  */
 public class TestParser {
 
@@ -165,6 +165,11 @@ public class TestParser {
             return pad + "Ascription(" + asc.declaredType + ")\n" + astToString(asc.expr, indent + 1);
         }
         if (node instanceof StringLiteralNode s) return pad + "Str(\"" + s.value + "\")";
+        if (node instanceof CharLiteralNode c) return pad + "Char('" + c.value + "')";
+        if (node instanceof WhileNode w) {
+            return pad + "While\n" + pad + "  Cond: " + astToString(w.condition, indent + 1)
+                + "\n" + pad + "  Body: " + astToString(w.body, indent + 1);
+        }
         if (node instanceof IdentifierNode id) return pad + "Ident(" + id.name + ")";
         return pad + node.getClass().getSimpleName() + "@" + System.identityHashCode(node);
     }

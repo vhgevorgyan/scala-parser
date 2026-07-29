@@ -52,6 +52,11 @@ public class SemanticTokenProvider {
             walk(asc.expr, out); return;
         }
 
+        if (node instanceof WhileNode w) {
+            out.add(new SemanticToken(w.line, w.column, 5, "keyword"));
+            walk(w.condition, out); walk(w.body, out); return;
+        }
+
         if (node instanceof LambdaNode lam) {
             out.add(new SemanticToken(lam.line, lam.column, 1, "keyword"));
             walk(lam.body, out); return;
