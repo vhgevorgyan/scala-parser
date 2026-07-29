@@ -142,4 +142,37 @@ class TokenizerTests {
         assertEquals(TokenType.RPAREN, tokens.get(7).type);
         assertEquals(TokenType.ARROW, tokens.get(8).type);
     }
+
+    @Test
+    void newKeywords() {
+        List<Token> tokens = tokenize("while package import sealed");
+        assertEquals(5, tokens.size());
+        assertEquals(TokenType.WHILE, tokens.get(0).type);
+        assertEquals(TokenType.PACKAGE, tokens.get(1).type);
+        assertEquals(TokenType.IMPORT, tokens.get(2).type);
+        assertEquals(TokenType.SEALED, tokens.get(3).type);
+    }
+
+    @Test
+    void charLiteral() {
+        List<Token> tokens = tokenize("'a' '\\n' '\\''");
+        assertEquals(4, tokens.size());
+        assertEquals(TokenType.CHAR, tokens.get(0).type);
+        assertEquals("a", tokens.get(0).text);
+        assertEquals(TokenType.CHAR, tokens.get(1).type);
+        assertEquals("\n", tokens.get(1).text);
+        assertEquals(TokenType.CHAR, tokens.get(2).type);
+        assertEquals("'", tokens.get(2).text);
+    }
+
+    @Test
+    void dotToken() {
+        List<Token> tokens = tokenize("foo.bar");
+        assertEquals(4, tokens.size());
+        assertEquals(TokenType.IDENT, tokens.get(0).type);
+        assertEquals("foo", tokens.get(0).text);
+        assertEquals(TokenType.DOT, tokens.get(1).type);
+        assertEquals(TokenType.IDENT, tokens.get(2).type);
+        assertEquals("bar", tokens.get(2).text);
+    }
 }

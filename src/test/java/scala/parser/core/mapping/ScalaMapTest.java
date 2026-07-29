@@ -515,7 +515,75 @@ public class ScalaMapTest {
         assertEquals(0, ((NumberValue) v).value);
     }
 
-    // ── 17. Gesamtabdeckung: all_features.sp ─────────────────────
+    // ── 17. Char ─────────────────────────────────────────────────
+
+    @Test
+    void charLiteral() {
+        Value v = eval("val c: Char = 'A'; c");
+        assertInstanceOf(CharValue.class, v);
+        assertEquals('A', ((CharValue) v).value);
+    }
+
+    @Test
+    void charEscape() {
+        Value v = eval("val nl: Char = '\\n'; nl");
+        assertInstanceOf(CharValue.class, v);
+        assertEquals('\n', ((CharValue) v).value);
+    }
+
+    @Test
+    void charTypeInfer() {
+        EvaluationResult r = analyze("val c = 'a'");
+        assertTrue(r.parserResult().errors.isEmpty());
+    }
+
+    // ── 18. While-Schleife ───────────────────────────────────────
+
+    @Test
+    void whileLoop() {
+        Value v = eval("""
+            def loop(n: Int): Unit = if (n > 0) { print(n); loop(n - 1) }
+            loop(3)
+            """);
+        assertInstanceOf(UnitValue.class, v);
+    }
+
+    @Test
+    void whileConditionTypeError() {
+        EvaluationResult r = analyze("while (1) {}");
+        assertFalse(r.parserResult().errors.isEmpty());
+    }
+
+    // ── 19. Multi-Param-Lambda + Multi-Param-Listen ──────────────
+
+    @Test
+    void multiParamLambda() {
+        Value v = eval("((x: Int, y: Int) => x + y)(3)(4)");
+        assertInstanceOf(NumberValue.class, v);
+        assertEquals(7, ((NumberValue) v).value);
+    }
+
+    @Test
+    void multiParamDef() {
+        Value v = eval("""
+            def add(x: Int, y: Int): Int = x + y
+            add(3, 4)
+            """);
+        assertInstanceOf(NumberValue.class, v);
+        assertEquals(7, ((NumberValue) v).value);
+    }
+
+    @Test
+    void multiParameterLists() {
+        Value v = eval("""
+            def f(x: Int)(y: Int): Int = x * y
+            f(2)(3)
+            """);
+        assertInstanceOf(NumberValue.class, v);
+        assertEquals(6, ((NumberValue) v).value);
+    }
+
+    // ── 20. Gesamtabdeckung: all_features.sp ─────────────────────
 
     @Test
     void allFeaturesDemo() {

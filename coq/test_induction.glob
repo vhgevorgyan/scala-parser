@@ -1,0 +1,130 @@
+DIGEST 41aec0f4c4a6c5724974d2ff479a0a3b
+FLambdaCore.test_induction
+R15:20 Stdlib.Strings.String <> <> lib
+R22:25 Stdlib.Lists.List <> <> lib
+R27:30 Stdlib.Bool.Bool <> <> lib
+R32:36 Stdlib.Arith.Arith <> <> lib
+ind 50:52 <> exp
+constr 68:71 <> EVar
+ind 94:95 <> ty
+constr 111:114 <> TInt
+constr 125:129 <> TBool
+constr 140:143 <> TFun
+constr 166:169 <> TTup
+constr 191:196 <> TConst
+constr 228:235 <> TDynamic
+R81:84 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R75:80 Stdlib.Strings.String <> string ind
+R85:87 LambdaCore.test_induction <> exp:1 ind
+R118:119 LambdaCore.test_induction <> ty:2 ind
+R133:134 LambdaCore.test_induction <> ty:2 ind
+R149:152 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R147:148 LambdaCore.test_induction <> ty:2 ind
+R155:158 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R153:154 LambdaCore.test_induction <> ty:2 ind
+R159:160 LambdaCore.test_induction <> ty:2 ind
+R180:183 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R173:176 Corelib.Init.Datatypes <> list ind
+R178:179 LambdaCore.test_induction <> ty:2 ind
+R184:185 LambdaCore.test_induction <> ty:2 ind
+R206:209 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R200:205 Stdlib.Strings.String <> string ind
+R217:220 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R210:213 Corelib.Init.Datatypes <> list ind
+R215:216 LambdaCore.test_induction <> ty:2 ind
+R221:222 LambdaCore.test_induction <> ty:2 ind
+R239:240 LambdaCore.test_induction <> ty:2 ind
+scheme 50:52 <> exp_rect
+scheme 50:52 <> exp_ind
+scheme 50:52 <> exp_rec
+scheme 50:52 <> exp_sind
+scheme 94:95 <> ty_rect
+scheme 94:95 <> ty_ind
+scheme 94:95 <> ty_rec
+scheme 94:95 <> ty_sind
+ind 254:257 <> prec
+constr 285:291 <> PDynTop
+constr 325:329 <> PRefl
+constr 356:359 <> PFun
+constr 476:479 <> PTup
+constr 580:585 <> PConst
+R263:266 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R261:262 LambdaCore.test_induction <> ty ind
+R269:272 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R267:268 LambdaCore.test_induction <> ty ind
+binder 302:302 <> t:7
+R305:308 LambdaCore.test_induction <> prec:5 ind
+R312:319 LambdaCore.test_induction <> TDynamic constr
+R310:310 LambdaCore.test_induction <> t:7 var
+binder 340:340 <> t:8
+R343:346 LambdaCore.test_induction <> prec:5 ind
+R350:350 LambdaCore.test_induction <> t:8 var
+R348:348 LambdaCore.test_induction <> t:8 var
+binder 370:371 <> t1:9
+binder 373:375 <> t1':10
+binder 377:378 <> t2:11
+binder 380:382 <> t2':12
+R408:411 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R397:400 LambdaCore.test_induction <> prec:5 ind
+R406:407 LambdaCore.test_induction <> t1:9 var
+R402:404 LambdaCore.test_induction <> t1':10 var
+R423:438 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R412:415 LambdaCore.test_induction <> prec:5 ind
+R420:422 LambdaCore.test_induction <> t2':12 var
+R417:418 LambdaCore.test_induction <> t2:11 var
+R439:442 LambdaCore.test_induction <> prec:5 ind
+R458:461 LambdaCore.test_induction <> TFun constr
+R463:465 LambdaCore.test_induction <> t1':10 var
+R467:469 LambdaCore.test_induction <> t2':12 var
+R445:448 LambdaCore.test_induction <> TFun constr
+R450:451 LambdaCore.test_induction <> t1:9 var
+R453:454 LambdaCore.test_induction <> t2:11 var
+binder 490:491 <> ts:13
+binder 493:495 <> ts':14
+R534:549 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R510:521 Stdlib.Lists.List <> Forall2 ind
+R531:533 LambdaCore.test_induction <> ts':14 var
+R528:529 LambdaCore.test_induction <> ts:13 var
+R523:526 LambdaCore.test_induction <> prec:5 ind
+R550:553 LambdaCore.test_induction <> prec:5 ind
+R566:569 LambdaCore.test_induction <> TTup constr
+R571:573 LambdaCore.test_induction <> ts':14 var
+R556:559 LambdaCore.test_induction <> TTup constr
+R561:562 LambdaCore.test_induction <> ts:13 var
+binder 596:596 <> s:15
+binder 598:599 <> ts:16
+binder 601:603 <> ts':17
+R644:661 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R620:631 Stdlib.Lists.List <> Forall2 ind
+R641:643 LambdaCore.test_induction <> ts':17 var
+R638:639 LambdaCore.test_induction <> ts:16 var
+R633:636 LambdaCore.test_induction <> prec:5 ind
+R662:665 LambdaCore.test_induction <> prec:5 ind
+R682:687 LambdaCore.test_induction <> TConst constr
+R689:689 LambdaCore.test_induction <> s:15 var
+R691:693 LambdaCore.test_induction <> ts':17 var
+R668:673 LambdaCore.test_induction <> TConst constr
+R675:675 LambdaCore.test_induction <> s:15 var
+R677:678 LambdaCore.test_induction <> ts:16 var
+scheme 254:257 <> prec_ind
+scheme 254:257 <> prec_sind
+prf 704:713 <> prec_trans
+binder 724:725 <> t1:18
+binder 727:728 <> t2:19
+binder 730:731 <> t3:20
+R746:749 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R736:739 LambdaCore.test_induction <> prec ind
+R741:742 LambdaCore.test_induction <> t1:18 var
+R744:745 LambdaCore.test_induction <> t2:19 var
+R760:763 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R750:753 LambdaCore.test_induction <> prec ind
+R755:756 LambdaCore.test_induction <> t2:19 var
+R758:759 LambdaCore.test_induction <> t3:20 var
+R764:767 LambdaCore.test_induction <> prec ind
+R769:770 LambdaCore.test_induction <> t1:18 var
+R772:773 LambdaCore.test_induction <> t3:20 var
+R814:819 LambdaCore.test_induction <> ty_ind scheme
+R814:819 LambdaCore.test_induction <> ty_ind scheme
+R1091:1097 LambdaCore.test_induction <> PDynTop constr
+R1091:1097 LambdaCore.test_induction <> PDynTop constr
+R1091:1097 LambdaCore.test_induction <> PDynTop constr

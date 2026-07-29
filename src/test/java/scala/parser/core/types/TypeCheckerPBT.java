@@ -24,17 +24,18 @@ class TypeCheckerPBT {
     // ── Generators ───────────────────────────────────────────────
 
     private static ExpressionNode genClosedLeaf(Random rand) {
-        return switch (rand.nextInt(4)) {
+        return switch (rand.nextInt(5)) {
             case 0 -> new LiteralNode(String.valueOf(rand.nextInt(1000)), 0, 0);
             case 1 -> new BoolNode(0, 0, rand.nextBoolean());
             case 2 -> new UnitLiteralNode(0, 0);
+            case 3 -> new CharLiteralNode((char) (32 + rand.nextInt(95)), 0, 0);
             default -> new StringLiteralNode("s" + rand.nextInt(100), 0, 0);
         };
     }
 
     private static ExpressionNode genExpr(Random rand, int depth) {
         if (depth <= 0) return genClosedLeaf(rand);
-        return switch (rand.nextInt(11)) {
+        return switch (rand.nextInt(13)) {
             case 0, 1 -> genClosedLeaf(rand);
             case 2 -> {
                 String x = IDENTS.get(rand.nextInt(IDENTS.size()));
@@ -78,6 +79,9 @@ class TypeCheckerPBT {
                 stmts.add(genExpr(rand, depth - 1));
                 yield new BlockNode(stmts, 0, 0);
             }
+            case 10 -> new WhileNode(
+                new BoolNode(0, 0, false),
+                new UnitLiteralNode(0, 0), 0, 0);
             default -> genClosedLeaf(rand);
         };
     }

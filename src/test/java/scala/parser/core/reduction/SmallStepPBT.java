@@ -97,6 +97,7 @@ class SmallStepPBT {
     private static String normalizeRec(Type t, Map<String, String> renames) {
         if (t instanceof TypeNumber) return "Int";
         if (t instanceof TypeBool) return "Boolean";
+        if (t instanceof TypeChar) return "Char";
         if (t instanceof TypeString) return "String";
         if (t instanceof TypeUnit) return "Unit";
         if (t instanceof TypeVar v) {
@@ -154,7 +155,7 @@ class SmallStepPBT {
 
     private static ExpressionNode genClosedExpr(Random rand, int depth, List<String> bound) {
         if (depth <= 0 || rand.nextDouble() < 0.2) return genClosedLeaf(rand, bound);
-        int choice = rand.nextInt(14);
+        int choice = rand.nextInt(15);
         if (choice == 0) return genClosedLeaf(rand, bound);
         if (choice == 1) {
             String p = freshName("p", bound);
@@ -215,6 +216,11 @@ class SmallStepPBT {
             pb.add(pname);
             return new FixpointNode(
                 new LambdaNode(fname, new LambdaNode(pname, genClosedExpr(rand, depth - 1, pb), null, 0, 0), null, 0, 0), 0, 0);
+        }
+        if (choice == 11) {
+            return new WhileNode(
+                new BoolNode(0, 0, false),
+                new UnitLiteralNode(0, 0), 0, 0);
         }
         return genClosedLeaf(rand, bound);
     }
@@ -287,12 +293,13 @@ class SmallStepPBT {
     }
 
     private static ExpressionNode genClosedLeaf(Random rand, List<String> bound) {
-        int n = 4 + (bound.isEmpty() ? 0 : 1);
+        int n = 5 + (bound.isEmpty() ? 0 : 1);
         int choice = rand.nextInt(n);
         if (choice == 0) return new LiteralNode(String.valueOf(rand.nextInt(1000)), 0, 0);
         if (choice == 1) return new BoolNode(0, 0, rand.nextBoolean());
-        if (choice == 2) return new StringLiteralNode("hi", 0, 0);
-        if (choice == 3) return new UnitLiteralNode(0, 0);
+        if (choice == 2) return new CharLiteralNode((char) (32 + rand.nextInt(95)), 0, 0);
+        if (choice == 3) return new StringLiteralNode("hi", 0, 0);
+        if (choice == 4) return new UnitLiteralNode(0, 0);
         return new IdentifierNode(bound.get(rand.nextInt(bound.size())), 0, 0);
     }
 
@@ -687,6 +694,7 @@ class SmallStepPBT {
         if (a.getClass() != b.getClass()) return false;
         if (a instanceof LiteralNode la && b instanceof LiteralNode lb) return la.value.equals(lb.value);
         if (a instanceof BoolNode ba && b instanceof BoolNode bb) return ba.value == bb.value;
+        if (a instanceof CharLiteralNode ca && b instanceof CharLiteralNode cb) return ca.value == cb.value;
         if (a instanceof StringLiteralNode sa && b instanceof StringLiteralNode sb) return sa.value.equals(sb.value);
         if (a instanceof UnitLiteralNode) return true;
         if (a instanceof IdentifierNode ia && b instanceof IdentifierNode ib) return ia.name.equals(ib.name);
@@ -703,6 +711,7 @@ class SmallStepPBT {
         }
         if (a instanceof AscriptionNode aa && b instanceof AscriptionNode ab) return exprEquals(aa.expr, ab.expr) && aa.declaredType.toString().equals(ab.declaredType.toString());
         if (a instanceof FixpointNode fa && b instanceof FixpointNode fb) return exprEquals(fa.body, fb.body);
+        if (a instanceof WhileNode wa && b instanceof WhileNode wb) return exprEquals(wa.condition, wb.condition) && exprEquals(wa.body, wb.body);
         if (a instanceof CaseNode ca && b instanceof CaseNode cb) {
             if (!exprEquals(ca.expr, cb.expr)) return false;
             if (ca.branches.size() != cb.branches.size()) return false;
@@ -876,7 +885,7 @@ class SmallStepPBT {
 
     private static ExpressionNode genExpr(Random rand, int depth) {
         if (depth <= 0) return genLeaf(rand);
-        return switch (rand.nextInt(14)) {
+        return switch (rand.nextInt(15)) {
             case 0, 1 -> genLeaf(rand);
             case 2 -> new LiteralNode(String.valueOf(rand.nextInt(1000)), 0, 0);
             case 3 -> new BoolNode(0, 0, rand.nextBoolean());
@@ -913,6 +922,11 @@ class SmallStepPBT {
                 String pname = freshName("n", new ArrayList<>());
                 yield new FixpointNode(
                     new LambdaNode(fname, new LambdaNode(pname, genExpr(rand, depth - 1), null, 0, 0), null, 0, 0), 0, 0);
+            }
+            case 13 -> {
+                yield new WhileNode(
+                    new BoolNode(0, 0, false),
+                    new UnitLiteralNode(0, 0), 0, 0);
             }
             default -> genLeaf(rand);
         };
@@ -977,20 +991,22 @@ class SmallStepPBT {
     }
 
     private static ExpressionNode genClosedLeaf(Random rand) {
-        return switch (rand.nextInt(4)) {
+        return switch (rand.nextInt(5)) {
             case 0 -> new LiteralNode(String.valueOf(rand.nextInt(1000)), 0, 0);
             case 1 -> new BoolNode(0, 0, rand.nextBoolean());
-            case 2 -> new UnitLiteralNode(0, 0);
+            case 2 -> new CharLiteralNode((char) (32 + rand.nextInt(95)), 0, 0);
+            case 3 -> new UnitLiteralNode(0, 0);
             default -> new StringLiteralNode("hi", 0, 0);
         };
     }
 
     private static ExpressionNode genLeaf(Random rand) {
-        return switch (rand.nextInt(5)) {
+        return switch (rand.nextInt(6)) {
             case 0 -> new LiteralNode(String.valueOf(rand.nextInt(1000)), 0, 0);
             case 1 -> new BoolNode(0, 0, rand.nextBoolean());
-            case 2 -> new StringLiteralNode("hello", 0, 0);
-            case 3 -> new UnitLiteralNode(0, 0);
+            case 2 -> new CharLiteralNode((char) (32 + rand.nextInt(95)), 0, 0);
+            case 3 -> new StringLiteralNode("hello", 0, 0);
+            case 4 -> new UnitLiteralNode(0, 0);
             default -> new IdentifierNode(IDENTS.get(rand.nextInt(IDENTS.size())), 0, 0);
         };
     }
@@ -998,6 +1014,7 @@ class SmallStepPBT {
     private static String valueNodeToString(ExpressionNode node) {
         if (node instanceof LiteralNode l) return l.value;
         if (node instanceof BoolNode b) return String.valueOf(b.value);
+        if (node instanceof CharLiteralNode c) return String.valueOf(c.value);
         if (node instanceof StringLiteralNode s) return s.value;
         if (node instanceof UnitLiteralNode) return "()";
         if (node instanceof IdentifierNode id) return id.name;
@@ -1014,6 +1031,7 @@ class SmallStepPBT {
     private static String valueToString(Value v) {
         if (v instanceof NumberValue n) return Integer.toString(n.value);
         if (v instanceof BoolValue b) return Boolean.toString(b.value);
+        if (v instanceof CharValue c) return String.valueOf(c.value);
         if (v instanceof StringValue s) return s.value;
         if (v instanceof UnitValue) return "()";
         if (v instanceof TupleValue t) {
@@ -1035,6 +1053,7 @@ class SmallStepPBT {
         if (expr instanceof BlockNode blk) { for (ASTNode s : blk.statements) if (containsTypeDynamic(s)) return true; }
         if (expr instanceof CaseNode c) { if (containsTypeDynamic(c.expr)) return true; }
         if (expr instanceof FixpointNode fp) return containsTypeDynamic(fp.body);
+        if (expr instanceof WhileNode w) return containsTypeDynamic(w.condition) || containsTypeDynamic(w.body);
         return false;
     }
 
@@ -1056,6 +1075,7 @@ class SmallStepPBT {
         if (expr instanceof BlockNode blk) { for (ASTNode s : blk.statements) if (containsFixpointAux(s)) return true; }
         if (expr instanceof CaseNode c) { if (containsFixpoint(c.expr)) return true; }
         if (expr instanceof AscriptionNode asc) return containsFixpoint(asc.expr);
+        if (expr instanceof WhileNode w) return containsFixpoint(w.condition) || containsFixpoint(w.body);
         return false;
     }
 

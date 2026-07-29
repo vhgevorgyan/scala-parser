@@ -22,6 +22,7 @@ public class SmallStepReducer {
         if (expr instanceof LiteralNode) return true;
         if (expr instanceof BoolNode) return true;
         if (expr instanceof StringLiteralNode) return true;
+        if (expr instanceof CharLiteralNode) return true;
         if (expr instanceof UnitLiteralNode) return true;
         if (expr instanceof IdentifierNode id && isBuiltin(id.name)) return true;
         if (expr instanceof TupleNode tup) {
@@ -64,6 +65,7 @@ public class SmallStepReducer {
         if (expr instanceof LiteralNode l) return l.value;
         if (expr instanceof BoolNode b) return String.valueOf(b.value);
         if (expr instanceof StringLiteralNode s) return "\"" + s.value + "\"";
+        if (expr instanceof CharLiteralNode c) return "'" + c.value + "'";
         if (expr instanceof UnitLiteralNode) return "()";
         if (expr instanceof IdentifierNode id) return id.name;
         if (expr instanceof LambdaNode) return "<closure>";
@@ -160,6 +162,20 @@ public class SmallStepReducer {
         // Block: let x = e1; ...; en  →  step or substitute
         if (expr instanceof BlockNode block) {
             return reduceBlock(block);
+        }
+
+        // While: while cond do body
+        if (expr instanceof WhileNode w) {
+            if (!isValue(w.condition)) {
+                return new WhileNode(step(w.condition), w.body, w.line, w.column);
+            }
+            if (w.condition instanceof BoolNode b) {
+                if (b.value) {
+                    return new BlockNode(List.of(w.body, expr), w.line, w.column);
+                }
+                return new UnitLiteralNode(w.line, w.column);
+            }
+            throw new RuntimeException("While condition must be Bool, got: " + w.condition);
         }
 
         // Case / Pattern Match

@@ -1,0 +1,1922 @@
+DIGEST 0d9cfd1e9a9eb052bb24cac6b623f2ae
+FLambdaCore
+R235:240 Stdlib.Strings.String <> <> lib
+R270:273 Stdlib.Lists.List <> <> lib
+R303:306 Stdlib.Bool.Bool <> <> lib
+R336:340 Stdlib.Arith.Arith <> <> lib
+R350:362 Stdlib.Lists.List ListNotations <> mod
+ind 620:622 <> exp
+constr 638:641 <> EVar
+constr 668:671 <> EAbs
+constr 705:708 <> EApp
+constr 739:742 <> ELet
+constr 783:789 <> ELetRec
+constr 827:829 <> EIf
+constr 868:874 <> EIfUnit
+constr 938:942 <> EUnit
+constr 958:962 <> ETrue
+constr 978:983 <> EFalse
+constr 998:1001 <> ENum
+constr 1025:1028 <> EStr
+constr 1055:1060 <> EBinOp
+constr 1099:1106 <> EUnaryOp
+constr 1136:1139 <> ETup
+constr 1170:1177 <> EAscribe
+constr 1205:1208 <> EFix
+constr 1234:1239 <> EBlock
+constr 1275:1279 <> ECtor
+constr 1319:1323 <> ECase
+constr 1363:1375 <> ERuntimeError
+ind 1398:1407 <> block_stmt
+constr 1423:1426 <> BLet
+constr 1473:1477 <> BExpr
+ind 1506:1508 <> pat
+constr 1524:1528 <> PWild
+constr 1542:1545 <> PVar
+constr 1570:1573 <> PLit
+constr 1595:1599 <> PCtor
+ind 1639:1644 <> branch
+constr 1660:1666 <> EBranch
+ind 1696:1697 <> ty
+constr 1713:1716 <> TInt
+constr 1732:1736 <> TBool
+constr 1751:1757 <> TString
+constr 1770:1774 <> TUnit
+constr 1789:1792 <> TFun
+constr 1820:1823 <> TTup
+constr 1851:1856 <> TConst
+constr 1892:1899 <> TDynamic
+R656:659 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R650:655 Stdlib.Strings.String <> string ind
+R660:662 LambdaCore <> exp:1 ind
+R686:689 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R680:685 Stdlib.Strings.String <> string ind
+R693:696 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R690:692 LambdaCore <> exp:1 ind
+R697:699 LambdaCore <> exp:1 ind
+R720:723 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R717:719 LambdaCore <> exp:1 ind
+R727:730 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R724:726 LambdaCore <> exp:1 ind
+R731:733 LambdaCore <> exp:1 ind
+R757:760 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R751:756 Stdlib.Strings.String <> string ind
+R764:767 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R761:763 LambdaCore <> exp:1 ind
+R771:774 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R768:770 LambdaCore <> exp:1 ind
+R775:777 LambdaCore <> exp:1 ind
+R801:804 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R795:800 Stdlib.Strings.String <> string ind
+R808:811 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R805:807 LambdaCore <> exp:1 ind
+R815:818 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R812:814 LambdaCore <> exp:1 ind
+R819:821 LambdaCore <> exp:1 ind
+R842:845 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R839:841 LambdaCore <> exp:1 ind
+R849:852 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R846:848 LambdaCore <> exp:1 ind
+R856:859 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R853:855 LambdaCore <> exp:1 ind
+R860:862 LambdaCore <> exp:1 ind
+R883:886 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R880:882 LambdaCore <> exp:1 ind
+R890:893 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R887:889 LambdaCore <> exp:1 ind
+R894:896 LambdaCore <> exp:1 ind
+R950:952 LambdaCore <> exp:1 ind
+R970:972 LambdaCore <> exp:1 ind
+R990:992 LambdaCore <> exp:1 ind
+R1013:1016 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R1010:1012 Corelib.Init.Datatypes <> nat ind
+R1017:1019 LambdaCore <> exp:1 ind
+R1043:1046 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R1037:1042 Stdlib.Strings.String <> string ind
+R1047:1049 LambdaCore <> exp:1 ind
+R1073:1076 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R1067:1072 Stdlib.Strings.String <> string ind
+R1080:1083 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R1077:1079 LambdaCore <> exp:1 ind
+R1087:1090 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R1084:1086 LambdaCore <> exp:1 ind
+R1091:1093 LambdaCore <> exp:1 ind
+R1117:1120 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R1111:1116 Stdlib.Strings.String <> string ind
+R1124:1127 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R1121:1123 LambdaCore <> exp:1 ind
+R1128:1130 LambdaCore <> exp:1 ind
+R1156:1159 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R1148:1151 Corelib.Init.Datatypes <> list ind
+R1153:1155 LambdaCore <> exp:1 ind
+R1160:1162 LambdaCore <> exp:1 ind
+R1185:1188 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R1182:1184 LambdaCore <> exp:1 ind
+R1191:1194 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R1189:1190 LambdaCore <> ty:5 ind
+R1195:1197 LambdaCore <> exp:1 ind
+R1220:1223 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R1217:1219 LambdaCore <> exp:1 ind
+R1224:1226 LambdaCore <> exp:1 ind
+R1261:1264 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R1246:1249 Corelib.Init.Datatypes <> list ind
+R1251:1260 LambdaCore <> block_stmt:2 ind
+R1265:1267 LambdaCore <> exp:1 ind
+R1293:1296 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R1287:1292 Stdlib.Strings.String <> string ind
+R1305:1308 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R1297:1300 Corelib.Init.Datatypes <> list ind
+R1302:1304 LambdaCore <> exp:1 ind
+R1309:1311 LambdaCore <> exp:1 ind
+R1334:1337 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R1331:1333 LambdaCore <> exp:1 ind
+R1349:1352 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R1338:1341 Corelib.Init.Datatypes <> list ind
+R1343:1348 LambdaCore <> branch:4 ind
+R1353:1355 LambdaCore <> exp:1 ind
+R1385:1388 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R1379:1384 Stdlib.Strings.String <> string ind
+R1389:1391 LambdaCore <> exp:1 ind
+R1439:1442 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R1433:1438 Stdlib.Strings.String <> string ind
+R1447:1450 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R1443:1446 Corelib.Init.Datatypes <> bool ind
+R1454:1457 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R1451:1453 LambdaCore <> exp:1 ind
+R1458:1467 LambdaCore <> block_stmt:2 ind
+R1486:1489 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R1483:1485 LambdaCore <> exp:1 ind
+R1490:1499 LambdaCore <> block_stmt:2 ind
+R1534:1536 LambdaCore <> pat:3 ind
+R1558:1561 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R1552:1557 Stdlib.Strings.String <> string ind
+R1562:1564 LambdaCore <> pat:3 ind
+R1583:1586 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R1580:1582 LambdaCore <> exp:1 ind
+R1587:1589 LambdaCore <> pat:3 ind
+R1611:1614 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R1605:1610 Stdlib.Strings.String <> string ind
+R1626:1629 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R1615:1618 Corelib.Init.Datatypes <> list ind
+R1620:1625 Stdlib.Strings.String <> string ind
+R1630:1632 LambdaCore <> pat:3 ind
+R1673:1676 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R1670:1672 LambdaCore <> pat:3 ind
+R1680:1683 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R1677:1679 LambdaCore <> exp:1 ind
+R1684:1689 LambdaCore <> branch:4 ind
+R1725:1726 LambdaCore <> ty:5 ind
+R1744:1745 LambdaCore <> ty:5 ind
+R1763:1764 LambdaCore <> ty:5 ind
+R1782:1783 LambdaCore <> ty:5 ind
+R1803:1806 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R1801:1802 LambdaCore <> ty:5 ind
+R1809:1812 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R1807:1808 LambdaCore <> ty:5 ind
+R1813:1814 LambdaCore <> ty:5 ind
+R1839:1842 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R1832:1835 Corelib.Init.Datatypes <> list ind
+R1837:1838 LambdaCore <> ty:5 ind
+R1843:1844 LambdaCore <> ty:5 ind
+R1869:1872 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R1863:1868 Stdlib.Strings.String <> string ind
+R1880:1883 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R1873:1876 Corelib.Init.Datatypes <> list ind
+R1878:1879 LambdaCore <> ty:5 ind
+R1884:1885 LambdaCore <> ty:5 ind
+R1904:1905 LambdaCore <> ty:5 ind
+scheme 620:622 <> exp_rect
+scheme 620:622 <> exp_ind
+scheme 620:622 <> exp_rec
+scheme 620:622 <> exp_sind
+scheme 1398:1407 <> block_stmt_rect
+scheme 1398:1407 <> block_stmt_ind
+scheme 1398:1407 <> block_stmt_rec
+scheme 1398:1407 <> block_stmt_sind
+scheme 1506:1508 <> pat_rect
+scheme 1506:1508 <> pat_ind
+scheme 1506:1508 <> pat_rec
+scheme 1506:1508 <> pat_sind
+scheme 1639:1644 <> branch_rect
+scheme 1639:1644 <> branch_ind
+scheme 1639:1644 <> branch_rec
+scheme 1639:1644 <> branch_sind
+scheme 1696:1697 <> ty_rect
+scheme 1696:1697 <> ty_ind
+scheme 1696:1697 <> ty_rec
+scheme 1696:1697 <> ty_sind
+def 1918:1927 <> exp_eq_dec
+def 1973:1989 <> block_stmt_eq_dec
+def 2042:2051 <> pat_eq_dec
+def 2097:2109 <> branch_eq_dec
+def 2158:2166 <> ty_eq_dec
+R1938:1940 LambdaCore <> exp ind
+binder 1930:1931 <> e1:11
+binder 1933:1934 <> e2:12
+R2000:2009 LambdaCore <> block_stmt ind
+binder 1992:1993 <> b1:13
+binder 1995:1996 <> b2:14
+R2062:2064 LambdaCore <> pat ind
+binder 2054:2055 <> p1:15
+binder 2057:2058 <> p2:16
+R2120:2125 LambdaCore <> branch ind
+binder 2112:2113 <> b1:17
+binder 2115:2116 <> b2:18
+R2177:2178 LambdaCore <> ty ind
+binder 2169:2170 <> t1:19
+binder 2172:2173 <> t2:20
+R1945:1945 Corelib.Init.Specif <> ::type_scope:'{'_x_'}'_'+'_'{'_x_'}' not
+R1953:1957 Corelib.Init.Specif <> ::type_scope:'{'_x_'}'_'+'_'{'_x_'}' not
+R1966:1966 Corelib.Init.Specif <> ::type_scope:'{'_x_'}'_'+'_'{'_x_'}' not
+R1948:1950 Corelib.Init.Logic <> ::type_scope:x_'='_x not
+R1946:1947 LambdaCore <> e1:11 var
+R1951:1952 LambdaCore <> e2:12 var
+R1960:1963 Corelib.Init.Logic <> ::type_scope:x_'<>'_x not
+R1958:1959 LambdaCore <> e1:11 var
+R1964:1965 LambdaCore <> e2:12 var
+R2014:2014 Corelib.Init.Specif <> ::type_scope:'{'_x_'}'_'+'_'{'_x_'}' not
+R2022:2026 Corelib.Init.Specif <> ::type_scope:'{'_x_'}'_'+'_'{'_x_'}' not
+R2035:2035 Corelib.Init.Specif <> ::type_scope:'{'_x_'}'_'+'_'{'_x_'}' not
+R2017:2019 Corelib.Init.Logic <> ::type_scope:x_'='_x not
+R2015:2016 LambdaCore <> b1:13 var
+R2020:2021 LambdaCore <> b2:14 var
+R2029:2032 Corelib.Init.Logic <> ::type_scope:x_'<>'_x not
+R2027:2028 LambdaCore <> b1:13 var
+R2033:2034 LambdaCore <> b2:14 var
+R2069:2069 Corelib.Init.Specif <> ::type_scope:'{'_x_'}'_'+'_'{'_x_'}' not
+R2077:2081 Corelib.Init.Specif <> ::type_scope:'{'_x_'}'_'+'_'{'_x_'}' not
+R2090:2090 Corelib.Init.Specif <> ::type_scope:'{'_x_'}'_'+'_'{'_x_'}' not
+R2072:2074 Corelib.Init.Logic <> ::type_scope:x_'='_x not
+R2070:2071 LambdaCore <> p1:15 var
+R2075:2076 LambdaCore <> p2:16 var
+R2084:2087 Corelib.Init.Logic <> ::type_scope:x_'<>'_x not
+R2082:2083 LambdaCore <> p1:15 var
+R2088:2089 LambdaCore <> p2:16 var
+R2130:2130 Corelib.Init.Specif <> ::type_scope:'{'_x_'}'_'+'_'{'_x_'}' not
+R2138:2142 Corelib.Init.Specif <> ::type_scope:'{'_x_'}'_'+'_'{'_x_'}' not
+R2151:2151 Corelib.Init.Specif <> ::type_scope:'{'_x_'}'_'+'_'{'_x_'}' not
+R2133:2135 Corelib.Init.Logic <> ::type_scope:x_'='_x not
+R2131:2132 LambdaCore <> b1:17 var
+R2136:2137 LambdaCore <> b2:18 var
+R2145:2148 Corelib.Init.Logic <> ::type_scope:x_'<>'_x not
+R2143:2144 LambdaCore <> b1:17 var
+R2149:2150 LambdaCore <> b2:18 var
+R2183:2183 Corelib.Init.Specif <> ::type_scope:'{'_x_'}'_'+'_'{'_x_'}' not
+R2191:2195 Corelib.Init.Specif <> ::type_scope:'{'_x_'}'_'+'_'{'_x_'}' not
+R2204:2204 Corelib.Init.Specif <> ::type_scope:'{'_x_'}'_'+'_'{'_x_'}' not
+R2186:2188 Corelib.Init.Logic <> ::type_scope:x_'='_x not
+R2184:2185 LambdaCore <> t1:19 var
+R2189:2190 LambdaCore <> t2:20 var
+R2198:2201 Corelib.Init.Logic <> ::type_scope:x_'<>'_x not
+R2196:2197 LambdaCore <> t1:19 var
+R2202:2203 LambdaCore <> t2:20 var
+R2253:2271 Stdlib.Arith.PeanoNat Nat eq_dec thm
+R2274:2283 Stdlib.Strings.String <> string_dec def
+R2286:2293 Stdlib.Bool.Bool <> bool_dec thm
+R2253:2271 Stdlib.Arith.PeanoNat Nat eq_dec thm
+R2253:2271 Stdlib.Arith.PeanoNat Nat eq_dec thm
+R2253:2271 Stdlib.Arith.PeanoNat Nat eq_dec thm
+R2253:2271 Stdlib.Arith.PeanoNat Nat eq_dec thm
+R2253:2271 Stdlib.Arith.PeanoNat Nat eq_dec thm
+R2253:2271 Stdlib.Arith.PeanoNat Nat eq_dec thm
+R2253:2271 Stdlib.Arith.PeanoNat Nat eq_dec thm
+R2253:2271 Stdlib.Arith.PeanoNat Nat eq_dec thm
+R2253:2271 Stdlib.Arith.PeanoNat Nat eq_dec thm
+R2253:2271 Stdlib.Arith.PeanoNat Nat eq_dec thm
+R2253:2271 Stdlib.Arith.PeanoNat Nat eq_dec thm
+R2253:2271 Stdlib.Arith.PeanoNat Nat eq_dec thm
+R2253:2271 Stdlib.Arith.PeanoNat Nat eq_dec thm
+R2253:2271 Stdlib.Arith.PeanoNat Nat eq_dec thm
+R2253:2271 Stdlib.Arith.PeanoNat Nat eq_dec thm
+R2253:2271 Stdlib.Arith.PeanoNat Nat eq_dec thm
+R2253:2271 Stdlib.Arith.PeanoNat Nat eq_dec thm
+R2253:2271 Stdlib.Arith.PeanoNat Nat eq_dec thm
+R2253:2271 Stdlib.Arith.PeanoNat Nat eq_dec thm
+R2253:2271 Stdlib.Arith.PeanoNat Nat eq_dec thm
+R2253:2271 Stdlib.Arith.PeanoNat Nat eq_dec thm
+R2253:2271 Stdlib.Arith.PeanoNat Nat eq_dec thm
+R2274:2283 Stdlib.Strings.String <> string_dec def
+R2286:2293 Stdlib.Bool.Bool <> bool_dec thm
+R2274:2283 Stdlib.Strings.String <> string_dec def
+R2286:2293 Stdlib.Bool.Bool <> bool_dec thm
+R2274:2283 Stdlib.Strings.String <> string_dec def
+R2286:2293 Stdlib.Bool.Bool <> bool_dec thm
+R2274:2283 Stdlib.Strings.String <> string_dec def
+R2286:2293 Stdlib.Bool.Bool <> bool_dec thm
+R2274:2283 Stdlib.Strings.String <> string_dec def
+R2286:2293 Stdlib.Bool.Bool <> bool_dec thm
+R2274:2283 Stdlib.Strings.String <> string_dec def
+R2286:2293 Stdlib.Bool.Bool <> bool_dec thm
+R2274:2283 Stdlib.Strings.String <> string_dec def
+R2286:2293 Stdlib.Bool.Bool <> bool_dec thm
+R2274:2283 Stdlib.Strings.String <> string_dec def
+R2286:2293 Stdlib.Bool.Bool <> bool_dec thm
+R2274:2283 Stdlib.Strings.String <> string_dec def
+R2286:2293 Stdlib.Bool.Bool <> bool_dec thm
+R2274:2283 Stdlib.Strings.String <> string_dec def
+R2286:2293 Stdlib.Bool.Bool <> bool_dec thm
+R2274:2283 Stdlib.Strings.String <> string_dec def
+R2286:2293 Stdlib.Bool.Bool <> bool_dec thm
+R2274:2283 Stdlib.Strings.String <> string_dec def
+R2286:2293 Stdlib.Bool.Bool <> bool_dec thm
+R2274:2283 Stdlib.Strings.String <> string_dec def
+R2286:2293 Stdlib.Bool.Bool <> bool_dec thm
+R2274:2283 Stdlib.Strings.String <> string_dec def
+R2286:2293 Stdlib.Bool.Bool <> bool_dec thm
+R2274:2283 Stdlib.Strings.String <> string_dec def
+R2286:2293 Stdlib.Bool.Bool <> bool_dec thm
+R2274:2283 Stdlib.Strings.String <> string_dec def
+R2286:2293 Stdlib.Bool.Bool <> bool_dec thm
+R2274:2283 Stdlib.Strings.String <> string_dec def
+R2286:2293 Stdlib.Bool.Bool <> bool_dec thm
+R2274:2283 Stdlib.Strings.String <> string_dec def
+R2286:2293 Stdlib.Bool.Bool <> bool_dec thm
+R2274:2283 Stdlib.Strings.String <> string_dec def
+R2286:2293 Stdlib.Bool.Bool <> bool_dec thm
+R2274:2283 Stdlib.Strings.String <> string_dec def
+R2286:2293 Stdlib.Bool.Bool <> bool_dec thm
+R2274:2283 Stdlib.Strings.String <> string_dec def
+R2286:2293 Stdlib.Bool.Bool <> bool_dec thm
+R2274:2283 Stdlib.Strings.String <> string_dec def
+R2286:2293 Stdlib.Bool.Bool <> bool_dec thm
+R2310:2320 Stdlib.Lists.List <> list_eq_dec thm
+R2310:2320 Stdlib.Lists.List <> list_eq_dec thm
+R2310:2320 Stdlib.Lists.List <> list_eq_dec thm
+R2310:2320 Stdlib.Lists.List <> list_eq_dec thm
+R2310:2320 Stdlib.Lists.List <> list_eq_dec thm
+R2310:2320 Stdlib.Lists.List <> list_eq_dec thm
+R2310:2320 Stdlib.Lists.List <> list_eq_dec thm
+R2310:2320 Stdlib.Lists.List <> list_eq_dec thm
+R2425:2434 Stdlib.Strings.String <> string_dec def
+R2425:2434 Stdlib.Strings.String <> string_dec def
+R2425:2434 Stdlib.Strings.String <> string_dec def
+R2425:2434 Stdlib.Strings.String <> string_dec def
+R2425:2434 Stdlib.Strings.String <> string_dec def
+R2425:2434 Stdlib.Strings.String <> string_dec def
+R2425:2434 Stdlib.Strings.String <> string_dec def
+R2425:2434 Stdlib.Strings.String <> string_dec def
+def 2673:2674 <> fv
+def 3612:3619 <> fv_block
+def 3756:3764 <> fv_branch
+R2681:2683 LambdaCore <> exp ind
+binder 2677:2677 <> e:26
+R3627:3636 LambdaCore <> block_stmt ind
+binder 3622:3623 <> bs:27
+R3771:3776 LambdaCore <> branch ind
+binder 3767:3767 <> b:28
+R2688:2691 Corelib.Init.Datatypes <> list ind
+R2693:2698 Stdlib.Strings.String <> string ind
+R3641:3644 Corelib.Init.Datatypes <> list ind
+R3646:3651 Stdlib.Strings.String <> string ind
+R3781:3784 Corelib.Init.Datatypes <> list ind
+R3786:3791 Stdlib.Strings.String <> string ind
+R2711:2711 LambdaCore <> e:26 var
+R2722:2725 LambdaCore <> EVar constr
+R2738:2738 Stdlib.Lists.List ListNotations ::list_scope:'['_x_']' not
+R2740:2740 Stdlib.Lists.List ListNotations ::list_scope:'['_x_']' not
+R2746:2749 LambdaCore <> EAbs constr
+R2762:2772 Stdlib.Lists.List <> remove def
+R2788:2789 LambdaCore <> fv:29 def
+R2774:2783 Stdlib.Strings.String <> string_dec def
+R2799:2802 LambdaCore <> EApp constr
+R2815:2822 Stdlib.Lists.List <> app abbrev
+R2833:2834 LambdaCore <> fv:29 def
+R2825:2826 LambdaCore <> fv:29 def
+R2844:2847 LambdaCore <> ELet constr
+R2860:2867 Stdlib.Lists.List <> app abbrev
+R2878:2888 Stdlib.Lists.List <> remove def
+R2904:2905 LambdaCore <> fv:29 def
+R2890:2899 Stdlib.Strings.String <> string_dec def
+R2870:2871 LambdaCore <> fv:29 def
+R2916:2922 LambdaCore <> ELetRec constr
+R2939:2946 Stdlib.Lists.List <> app abbrev
+R2997:3007 Stdlib.Lists.List <> remove def
+R3023:3024 LambdaCore <> fv:29 def
+R3009:3018 Stdlib.Strings.String <> string_dec def
+R2949:2959 Stdlib.Lists.List <> remove def
+R2975:2976 LambdaCore <> fv:29 def
+R2961:2970 Stdlib.Strings.String <> string_dec def
+R3035:3037 LambdaCore <> EIf constr
+R3054:3061 Stdlib.Lists.List <> app abbrev
+R3072:3079 Stdlib.Lists.List <> app abbrev
+R3090:3091 LambdaCore <> fv:29 def
+R3082:3083 LambdaCore <> fv:29 def
+R3064:3065 LambdaCore <> fv:29 def
+R3102:3108 LambdaCore <> EIfUnit constr
+R3121:3128 Stdlib.Lists.List <> app abbrev
+R3139:3140 LambdaCore <> fv:29 def
+R3131:3132 LambdaCore <> fv:29 def
+R3150:3154 LambdaCore <> EUnit constr
+R3158:3162 LambdaCore <> ETrue constr
+R3166:3171 LambdaCore <> EFalse constr
+R3175:3178 LambdaCore <> ENum constr
+R3184:3187 LambdaCore <> EStr constr
+R3194:3195 Stdlib.Lists.List ListNotations ::list_scope:'['_']' not
+R3194:3195 Stdlib.Lists.List ListNotations ::list_scope:'['_']' not
+R3194:3195 Stdlib.Lists.List ListNotations ::list_scope:'['_']' not
+R3194:3195 Stdlib.Lists.List ListNotations ::list_scope:'['_']' not
+R3194:3195 Stdlib.Lists.List ListNotations ::list_scope:'['_']' not
+R3201:3206 LambdaCore <> EBinOp constr
+R3219:3226 Stdlib.Lists.List <> app abbrev
+R3237:3238 LambdaCore <> fv:29 def
+R3229:3230 LambdaCore <> fv:29 def
+R3248:3255 LambdaCore <> EUnaryOp constr
+R3266:3267 LambdaCore <> fv:29 def
+R3269:3269 LambdaCore <> e:26 var
+R3275:3278 LambdaCore <> ETup constr
+R3293:3303 Stdlib.Lists.List <> concat def
+R3306:3313 Stdlib.Lists.List <> map abbrev
+R3315:3316 LambdaCore <> fv:29 def
+R3328:3335 LambdaCore <> EAscribe constr
+R3346:3347 LambdaCore <> fv:29 def
+R3349:3349 LambdaCore <> e:26 var
+R3357:3360 LambdaCore <> EFix constr
+R3375:3376 LambdaCore <> fv:29 def
+R3378:3378 LambdaCore <> e:26 var
+R3386:3391 LambdaCore <> EBlock constr
+R3404:3414 Stdlib.Lists.List <> concat def
+R3417:3424 Stdlib.Lists.List <> map abbrev
+R3426:3433 LambdaCore <> fv_block:30 def
+R3446:3450 LambdaCore <> ECtor constr
+R3464:3474 Stdlib.Lists.List <> concat def
+R3477:3484 Stdlib.Lists.List <> map abbrev
+R3486:3487 LambdaCore <> fv:29 def
+R3499:3503 LambdaCore <> ECase constr
+R3517:3524 Stdlib.Lists.List <> app abbrev
+R3534:3544 Stdlib.Lists.List <> concat def
+R3547:3554 Stdlib.Lists.List <> map abbrev
+R3556:3564 LambdaCore <> fv_branch:31 def
+R3527:3528 LambdaCore <> fv:29 def
+R3530:3530 LambdaCore <> e:26 var
+R3577:3589 LambdaCore <> ERuntimeError constr
+R3596:3597 Stdlib.Lists.List ListNotations ::list_scope:'['_']' not
+R3664:3665 LambdaCore <> bs:27 var
+R3676:3679 LambdaCore <> BLet constr
+R3690:3700 Stdlib.Lists.List <> remove def
+R3716:3717 LambdaCore <> fv:29 def
+R3702:3711 Stdlib.Strings.String <> string_dec def
+R3726:3730 LambdaCore <> BExpr constr
+R3740:3741 LambdaCore <> fv:29 def
+R3804:3804 LambdaCore <> b:28 var
+R3815:3821 LambdaCore <> EBranch constr
+R3886:3890 LambdaCore <> PWild constr
+R3895:3896 Stdlib.Lists.List ListNotations ::list_scope:'['_']' not
+R3919:3922 LambdaCore <> PVar constr
+R3929:3929 Stdlib.Lists.List ListNotations ::list_scope:'['_x_']' not
+R3931:3931 Stdlib.Lists.List ListNotations ::list_scope:'['_x_']' not
+R3954:3957 LambdaCore <> PLit constr
+R3964:3965 Stdlib.Lists.List ListNotations ::list_scope:'['_']' not
+R3988:3992 LambdaCore <> PCtor constr
+binder 3843:3847 <> bound:36
+R4037:4050 Stdlib.Lists.List <> fold_left def
+R4106:4110 LambdaCore <> bound:36 var
+R4097:4098 LambdaCore <> fv:29 def
+binder 4057:4059 <> acc:37
+binder 4061:4061 <> x:38
+R4066:4076 Stdlib.Lists.List <> remove def
+R4091:4093 LambdaCore <> acc:37 var
+R4089:4089 LambdaCore <> x:38 var
+R4078:4087 Stdlib.Strings.String <> string_dec def
+def 4346:4350 <> subst
+def 5656:5666 <> subst_block
+def 5903:5911 <> subst_pat
+def 6135:6146 <> subst_branch
+R4357:4362 Stdlib.Strings.String <> string ind
+binder 4353:4353 <> x:39
+R4370:4372 LambdaCore <> exp ind
+binder 4366:4366 <> s:40
+R4380:4382 LambdaCore <> exp ind
+binder 4376:4376 <> e:41
+R5673:5678 Stdlib.Strings.String <> string ind
+binder 5669:5669 <> x:42
+R5686:5688 LambdaCore <> exp ind
+binder 5682:5682 <> s:43
+R5697:5706 LambdaCore <> block_stmt ind
+binder 5692:5693 <> bs:44
+R5918:5923 Stdlib.Strings.String <> string ind
+binder 5914:5914 <> x:45
+R5931:5933 LambdaCore <> exp ind
+binder 5927:5927 <> s:46
+R5941:5943 LambdaCore <> pat ind
+binder 5937:5937 <> p:47
+R6153:6158 Stdlib.Strings.String <> string ind
+binder 6149:6149 <> x:48
+R6166:6168 LambdaCore <> exp ind
+binder 6162:6162 <> s:49
+R6176:6181 LambdaCore <> branch ind
+binder 6172:6172 <> b:50
+R4398:4400 LambdaCore <> exp ind
+R5723:5732 LambdaCore <> block_stmt ind
+R5959:5961 LambdaCore <> pat ind
+R6197:6202 LambdaCore <> branch ind
+R4413:4413 LambdaCore <> e:41 var
+R4424:4427 LambdaCore <> EVar constr
+R4443:4452 Stdlib.Strings.String <> string_dec def
+R4454:4454 LambdaCore <> x:39 var
+R4470:4473 LambdaCore <> EVar constr
+R4463:4463 LambdaCore <> s:40 var
+R4481:4484 LambdaCore <> EAbs constr
+R4506:4515 Stdlib.Strings.String <> string_dec def
+R4517:4517 LambdaCore <> x:39 var
+R4547:4550 LambdaCore <> EAbs constr
+R4555:4559 LambdaCore <> subst:51 def
+R4563:4563 LambdaCore <> s:40 var
+R4561:4561 LambdaCore <> x:39 var
+R4526:4529 LambdaCore <> EAbs constr
+R4573:4576 LambdaCore <> EApp constr
+R4589:4592 LambdaCore <> EApp constr
+R4595:4599 LambdaCore <> subst:51 def
+R4603:4603 LambdaCore <> s:40 var
+R4601:4601 LambdaCore <> x:39 var
+R4610:4614 LambdaCore <> subst:51 def
+R4618:4618 LambdaCore <> s:40 var
+R4616:4616 LambdaCore <> x:39 var
+R4628:4631 LambdaCore <> ELet constr
+R4653:4662 Stdlib.Strings.String <> string_dec def
+R4664:4664 LambdaCore <> x:39 var
+R4709:4712 LambdaCore <> ELet constr
+R4717:4721 LambdaCore <> subst:51 def
+R4725:4725 LambdaCore <> s:40 var
+R4723:4723 LambdaCore <> x:39 var
+R4732:4736 LambdaCore <> subst:51 def
+R4740:4740 LambdaCore <> s:40 var
+R4738:4738 LambdaCore <> x:39 var
+R4673:4676 LambdaCore <> ELet constr
+R4681:4685 LambdaCore <> subst:51 def
+R4689:4689 LambdaCore <> s:40 var
+R4687:4687 LambdaCore <> x:39 var
+R4750:4756 LambdaCore <> ELetRec constr
+R4778:4787 Stdlib.Strings.String <> string_dec def
+R4789:4789 LambdaCore <> x:39 var
+R4837:4843 LambdaCore <> ELetRec constr
+R4848:4852 LambdaCore <> subst:51 def
+R4856:4856 LambdaCore <> s:40 var
+R4854:4854 LambdaCore <> x:39 var
+R4863:4867 LambdaCore <> subst:51 def
+R4871:4871 LambdaCore <> s:40 var
+R4869:4869 LambdaCore <> x:39 var
+R4798:4804 LambdaCore <> ELetRec constr
+R4809:4813 LambdaCore <> subst:51 def
+R4817:4817 LambdaCore <> s:40 var
+R4815:4815 LambdaCore <> x:39 var
+R4881:4883 LambdaCore <> EIf constr
+R4898:4900 LambdaCore <> EIf constr
+R4903:4907 LambdaCore <> subst:51 def
+R4911:4911 LambdaCore <> s:40 var
+R4909:4909 LambdaCore <> x:39 var
+R4918:4922 LambdaCore <> subst:51 def
+R4926:4926 LambdaCore <> s:40 var
+R4924:4924 LambdaCore <> x:39 var
+R4933:4937 LambdaCore <> subst:51 def
+R4941:4941 LambdaCore <> s:40 var
+R4939:4939 LambdaCore <> x:39 var
+R4951:4957 LambdaCore <> EIfUnit constr
+R4968:4974 LambdaCore <> EIfUnit constr
+R4977:4981 LambdaCore <> subst:51 def
+R4985:4985 LambdaCore <> s:40 var
+R4983:4983 LambdaCore <> x:39 var
+R4992:4996 LambdaCore <> subst:51 def
+R5000:5000 LambdaCore <> s:40 var
+R4998:4998 LambdaCore <> x:39 var
+R5010:5014 LambdaCore <> EUnit constr
+R5027:5031 LambdaCore <> EUnit constr
+R5037:5041 LambdaCore <> ETrue constr
+R5054:5058 LambdaCore <> ETrue constr
+R5064:5069 LambdaCore <> EFalse constr
+R5081:5086 LambdaCore <> EFalse constr
+R5092:5095 LambdaCore <> ENum constr
+R5109:5112 LambdaCore <> ENum constr
+R5120:5123 LambdaCore <> EStr constr
+R5137:5140 LambdaCore <> EStr constr
+R5150:5155 LambdaCore <> EBinOp constr
+R5169:5174 LambdaCore <> EBinOp constr
+R5180:5184 LambdaCore <> subst:51 def
+R5188:5188 LambdaCore <> s:40 var
+R5186:5186 LambdaCore <> x:39 var
+R5195:5199 LambdaCore <> subst:51 def
+R5203:5203 LambdaCore <> s:40 var
+R5201:5201 LambdaCore <> x:39 var
+R5213:5220 LambdaCore <> EUnaryOp constr
+R5231:5238 LambdaCore <> EUnaryOp constr
+R5244:5248 LambdaCore <> subst:51 def
+R5254:5254 LambdaCore <> e:41 var
+R5252:5252 LambdaCore <> s:40 var
+R5250:5250 LambdaCore <> x:39 var
+R5261:5264 LambdaCore <> ETup constr
+R5278:5281 LambdaCore <> ETup constr
+R5284:5291 Stdlib.Lists.List <> map abbrev
+R5294:5298 LambdaCore <> subst:51 def
+R5302:5302 LambdaCore <> s:40 var
+R5300:5300 LambdaCore <> x:39 var
+R5315:5322 LambdaCore <> EAscribe constr
+R5332:5339 LambdaCore <> EAscribe constr
+R5342:5346 LambdaCore <> subst:51 def
+R5352:5352 LambdaCore <> e:41 var
+R5350:5350 LambdaCore <> s:40 var
+R5348:5348 LambdaCore <> x:39 var
+R5363:5366 LambdaCore <> EFix constr
+R5380:5383 LambdaCore <> EFix constr
+R5386:5390 LambdaCore <> subst:51 def
+R5396:5396 LambdaCore <> e:41 var
+R5394:5394 LambdaCore <> s:40 var
+R5392:5392 LambdaCore <> x:39 var
+R5405:5410 LambdaCore <> EBlock constr
+R5422:5427 LambdaCore <> EBlock constr
+R5430:5437 Stdlib.Lists.List <> map abbrev
+R5440:5450 LambdaCore <> subst_block:52 def
+R5454:5454 LambdaCore <> s:40 var
+R5452:5452 LambdaCore <> x:39 var
+R5468:5472 LambdaCore <> ECtor constr
+R5485:5489 LambdaCore <> ECtor constr
+R5497:5504 Stdlib.Lists.List <> map abbrev
+R5507:5511 LambdaCore <> subst:51 def
+R5515:5515 LambdaCore <> s:40 var
+R5513:5513 LambdaCore <> x:39 var
+R5528:5532 LambdaCore <> ECase constr
+R5545:5549 LambdaCore <> ECase constr
+R5552:5556 LambdaCore <> subst:51 def
+R5562:5562 LambdaCore <> e:41 var
+R5560:5560 LambdaCore <> s:40 var
+R5558:5558 LambdaCore <> x:39 var
+R5566:5573 Stdlib.Lists.List <> map abbrev
+R5576:5587 LambdaCore <> subst_branch:54 def
+R5591:5591 LambdaCore <> s:40 var
+R5589:5589 LambdaCore <> x:39 var
+R5604:5616 LambdaCore <> ERuntimeError constr
+R5625:5637 LambdaCore <> ERuntimeError constr
+R5745:5746 LambdaCore <> bs:44 var
+R5757:5760 LambdaCore <> BLet constr
+R5784:5793 Stdlib.Strings.String <> string_dec def
+R5795:5795 LambdaCore <> x:42 var
+R5830:5833 LambdaCore <> BLet constr
+R5844:5848 LambdaCore <> subst:51 def
+R5852:5852 LambdaCore <> s:43 var
+R5850:5850 LambdaCore <> x:42 var
+R5804:5807 LambdaCore <> BLet constr
+R5861:5865 LambdaCore <> BExpr constr
+R5872:5876 LambdaCore <> BExpr constr
+R5879:5883 LambdaCore <> subst:51 def
+R5887:5887 LambdaCore <> s:43 var
+R5885:5885 LambdaCore <> x:42 var
+R5974:5974 LambdaCore <> p:47 var
+R5985:5989 LambdaCore <> PWild constr
+R5994:5998 LambdaCore <> PWild constr
+R6004:6007 LambdaCore <> PVar constr
+R6017:6026 Stdlib.Strings.String <> string_dec def
+R6028:6028 LambdaCore <> x:45 var
+R6049:6052 LambdaCore <> PVar constr
+R6037:6040 LambdaCore <> PVar constr
+R6060:6063 LambdaCore <> PLit constr
+R6070:6073 LambdaCore <> PLit constr
+R6076:6080 LambdaCore <> subst:51 def
+R6084:6084 LambdaCore <> s:46 var
+R6082:6082 LambdaCore <> x:45 var
+R6093:6097 LambdaCore <> PCtor constr
+R6110:6114 LambdaCore <> PCtor constr
+R6215:6215 LambdaCore <> b:50 var
+R6226:6232 LambdaCore <> EBranch constr
+R6297:6301 LambdaCore <> PWild constr
+R6306:6307 Stdlib.Lists.List ListNotations ::list_scope:'['_']' not
+R6330:6333 LambdaCore <> PVar constr
+R6340:6340 Stdlib.Lists.List ListNotations ::list_scope:'['_x_']' not
+R6342:6342 Stdlib.Lists.List ListNotations ::list_scope:'['_x_']' not
+R6365:6368 LambdaCore <> PLit constr
+R6375:6376 Stdlib.Lists.List ListNotations ::list_scope:'['_']' not
+R6399:6403 LambdaCore <> PCtor constr
+binder 6254:6258 <> bound:60
+R6451:6462 Stdlib.Lists.List <> existsb def
+R6514:6518 LambdaCore <> bound:60 var
+binder 6469:6469 <> y:61
+R6477:6486 Stdlib.Strings.String <> string_dec def
+R6488:6488 LambdaCore <> x:48 var
+R6490:6490 LambdaCore <> y:61 var
+R6507:6511 Corelib.Init.Datatypes <> false constr
+R6497:6500 Corelib.Init.Datatypes <> true constr
+R6579:6585 LambdaCore <> EBranch constr
+R6588:6596 LambdaCore <> subst_pat:53 def
+R6600:6600 LambdaCore <> s:49 var
+R6598:6598 LambdaCore <> x:48 var
+R6606:6610 LambdaCore <> subst:51 def
+R6614:6614 LambdaCore <> s:49 var
+R6612:6612 LambdaCore <> x:48 var
+R6534:6540 LambdaCore <> EBranch constr
+R6543:6551 LambdaCore <> subst_pat:53 def
+R6555:6555 LambdaCore <> s:49 var
+R6553:6553 LambdaCore <> x:48 var
+def 6639:6650 <> subst_blocks
+R6657:6662 Stdlib.Strings.String <> string ind
+binder 6653:6653 <> x:62
+R6670:6672 LambdaCore <> exp ind
+binder 6666:6666 <> s:63
+R6682:6685 Corelib.Init.Datatypes <> list ind
+R6687:6696 LambdaCore <> block_stmt ind
+binder 6676:6678 <> bss:64
+R6701:6704 Corelib.Init.Datatypes <> list ind
+R6706:6715 LambdaCore <> block_stmt ind
+R6728:6730 LambdaCore <> bss:64 var
+R6741:6742 Stdlib.Lists.List ListNotations ::list_scope:'['_']' not
+R6747:6748 Stdlib.Lists.List ListNotations ::list_scope:'['_']' not
+R6756:6759 Corelib.Init.Datatypes <> ::list_scope:x_'::'_x not
+R6786:6789 Corelib.Init.Datatypes <> ::list_scope:x_'::'_x not
+R6768:6778 LambdaCore <> subst_block def
+R6780:6780 LambdaCore <> x:62 var
+R6782:6782 LambdaCore <> s:63 var
+R6790:6801 LambdaCore <> subst_blocks:65 def
+R6805:6805 LambdaCore <> s:63 var
+R6803:6803 LambdaCore <> x:62 var
+def 6829:6842 <> subst_branches
+R6849:6854 Stdlib.Strings.String <> string ind
+binder 6845:6845 <> x:67
+R6862:6864 LambdaCore <> exp ind
+binder 6858:6858 <> s:68
+R6873:6876 Corelib.Init.Datatypes <> list ind
+R6878:6883 LambdaCore <> branch ind
+binder 6868:6869 <> bs:69
+R6888:6891 Corelib.Init.Datatypes <> list ind
+R6893:6898 LambdaCore <> branch ind
+R6911:6912 LambdaCore <> bs:69 var
+R6923:6924 Stdlib.Lists.List ListNotations ::list_scope:'['_']' not
+R6929:6930 Stdlib.Lists.List ListNotations ::list_scope:'['_']' not
+R6937:6940 Corelib.Init.Datatypes <> ::list_scope:x_'::'_x not
+R6967:6970 Corelib.Init.Datatypes <> ::list_scope:x_'::'_x not
+R6949:6960 LambdaCore <> subst_branch def
+R6962:6962 LambdaCore <> x:67 var
+R6964:6964 LambdaCore <> s:68 var
+R6971:6984 LambdaCore <> subst_branches:70 def
+R6988:6988 LambdaCore <> s:68 var
+R6986:6986 LambdaCore <> x:67 var
+ind 7230:7234 <> value
+constr 7257:7260 <> VAbs
+constr 7302:7306 <> VUnit
+constr 7330:7334 <> VTrue
+constr 7358:7363 <> VFalse
+constr 7387:7390 <> VNum
+constr 7428:7431 <> VStr
+constr 7470:7473 <> VTup
+constr 7539:7543 <> VCtor
+constr 7613:7625 <> VRuntimeError
+R7241:7244 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R7238:7240 LambdaCore <> exp ind
+binder 7276:7276 <> x:74
+binder 7278:7278 <> e:75
+R7281:7285 LambdaCore <> value:72 ind
+R7288:7291 LambdaCore <> EAbs constr
+R7293:7293 LambdaCore <> x:74 var
+R7295:7295 LambdaCore <> e:75 var
+R7314:7318 LambdaCore <> value:72 ind
+R7320:7324 LambdaCore <> EUnit constr
+R7342:7346 LambdaCore <> value:72 ind
+R7348:7352 LambdaCore <> ETrue constr
+R7370:7374 LambdaCore <> value:72 ind
+R7376:7381 LambdaCore <> EFalse constr
+binder 7406:7406 <> n:76
+R7409:7413 LambdaCore <> value:72 ind
+R7416:7419 LambdaCore <> ENum constr
+R7421:7421 LambdaCore <> n:76 var
+binder 7447:7447 <> s:77
+R7450:7454 LambdaCore <> value:72 ind
+R7457:7460 LambdaCore <> EStr constr
+R7462:7462 LambdaCore <> s:77 var
+binder 7489:7490 <> es:78
+R7513:7516 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R7493:7503 Stdlib.Lists.List <> Forall abbrev
+R7511:7512 LambdaCore <> es:78 var
+R7505:7509 LambdaCore <> value:72 ind
+R7517:7521 LambdaCore <> value:72 ind
+R7524:7527 LambdaCore <> ETup constr
+R7529:7530 LambdaCore <> es:78 var
+binder 7558:7558 <> s:79
+binder 7560:7561 <> es:80
+R7584:7587 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R7564:7574 Stdlib.Lists.List <> Forall abbrev
+R7582:7583 LambdaCore <> es:80 var
+R7576:7580 LambdaCore <> value:72 ind
+R7588:7592 LambdaCore <> value:72 ind
+R7595:7599 LambdaCore <> ECtor constr
+R7601:7601 LambdaCore <> s:79 var
+R7603:7604 LambdaCore <> es:80 var
+binder 7636:7636 <> s:81
+R7639:7643 LambdaCore <> value:72 ind
+R7646:7658 LambdaCore <> ERuntimeError constr
+R7660:7660 LambdaCore <> s:81 var
+scheme 7230:7234 <> value_ind
+scheme 7230:7234 <> value_sind
+def 7893:7901 <> evalBinOp
+R7909:7914 Stdlib.Strings.String <> string ind
+binder 7904:7905 <> op:82
+R7926:7928 LambdaCore <> exp ind
+binder 7918:7919 <> v1:83
+binder 7921:7922 <> v2:84
+R7933:7938 Corelib.Init.Datatypes <> option ind
+R7940:7942 LambdaCore <> exp ind
+R7963:7964 LambdaCore <> v2:84 var
+R7959:7960 LambdaCore <> v1:83 var
+R7955:7956 LambdaCore <> op:82 var
+R7980:7983 LambdaCore <> ENum constr
+R7989:7992 LambdaCore <> ENum constr
+R8000:8003 Corelib.Init.Datatypes <> Some constr
+R8006:8009 LambdaCore <> ENum constr
+R8014:8016 Corelib.Init.Peano <> ::nat_scope:x_'+'_x not
+R8031:8034 LambdaCore <> ENum constr
+R8040:8043 LambdaCore <> ENum constr
+R8051:8054 Corelib.Init.Datatypes <> Some constr
+R8057:8060 LambdaCore <> ENum constr
+R8063:8069 Stdlib.Arith.PeanoNat Nat sub def
+R8088:8091 LambdaCore <> ENum constr
+R8097:8100 LambdaCore <> ENum constr
+R8108:8111 Corelib.Init.Datatypes <> Some constr
+R8114:8117 LambdaCore <> ENum constr
+R8122:8124 Corelib.Init.Peano <> ::nat_scope:x_'*'_x not
+R8140:8143 LambdaCore <> ENum constr
+R8149:8152 LambdaCore <> ENum constr
+R8160:8163 Corelib.Init.Datatypes <> Some constr
+R8169:8178 Stdlib.Arith.PeanoNat Nat eq_dec thm
+R8202:8207 LambdaCore <> EFalse constr
+R8191:8195 LambdaCore <> ETrue constr
+R8220:8223 LambdaCore <> EStr constr
+R8229:8232 LambdaCore <> EStr constr
+R8240:8243 Corelib.Init.Datatypes <> Some constr
+R8249:8258 Stdlib.Strings.String <> string_dec def
+R8282:8287 LambdaCore <> EFalse constr
+R8271:8275 LambdaCore <> ETrue constr
+R8300:8304 LambdaCore <> ETrue constr
+R8308:8312 LambdaCore <> ETrue constr
+R8318:8321 Corelib.Init.Datatypes <> Some constr
+R8323:8327 LambdaCore <> ETrue constr
+R8339:8344 LambdaCore <> EFalse constr
+R8347:8352 LambdaCore <> EFalse constr
+R8357:8360 Corelib.Init.Datatypes <> Some constr
+R8362:8366 LambdaCore <> ETrue constr
+R8378:8382 LambdaCore <> ETrue constr
+R8386:8391 LambdaCore <> EFalse constr
+R8396:8399 Corelib.Init.Datatypes <> Some constr
+R8401:8406 LambdaCore <> EFalse constr
+R8418:8423 LambdaCore <> EFalse constr
+R8426:8430 LambdaCore <> ETrue constr
+R8436:8439 Corelib.Init.Datatypes <> Some constr
+R8441:8446 LambdaCore <> EFalse constr
+R8458:8461 LambdaCore <> ENum constr
+R8467:8470 LambdaCore <> ENum constr
+R8478:8481 Corelib.Init.Datatypes <> Some constr
+R8487:8496 Stdlib.Arith.PeanoNat Nat eq_dec thm
+R8521:8525 LambdaCore <> ETrue constr
+R8509:8514 LambdaCore <> EFalse constr
+R8538:8541 LambdaCore <> EStr constr
+R8547:8550 LambdaCore <> EStr constr
+R8558:8561 Corelib.Init.Datatypes <> Some constr
+R8567:8576 Stdlib.Strings.String <> string_dec def
+R8601:8605 LambdaCore <> ETrue constr
+R8589:8594 LambdaCore <> EFalse constr
+R8618:8622 LambdaCore <> ETrue constr
+R8626:8630 LambdaCore <> ETrue constr
+R8636:8639 Corelib.Init.Datatypes <> Some constr
+R8641:8646 LambdaCore <> EFalse constr
+R8658:8663 LambdaCore <> EFalse constr
+R8666:8671 LambdaCore <> EFalse constr
+R8676:8679 Corelib.Init.Datatypes <> Some constr
+R8681:8686 LambdaCore <> EFalse constr
+R8698:8702 LambdaCore <> ETrue constr
+R8706:8711 LambdaCore <> EFalse constr
+R8716:8719 Corelib.Init.Datatypes <> Some constr
+R8721:8725 LambdaCore <> ETrue constr
+R8737:8742 LambdaCore <> EFalse constr
+R8745:8749 LambdaCore <> ETrue constr
+R8755:8758 Corelib.Init.Datatypes <> Some constr
+R8760:8764 LambdaCore <> ETrue constr
+R8775:8778 LambdaCore <> ENum constr
+R8784:8787 LambdaCore <> ENum constr
+R8795:8798 Corelib.Init.Datatypes <> Some constr
+R8804:8810 Stdlib.Arith.PeanoNat Nat ltb def
+R8834:8839 LambdaCore <> EFalse constr
+R8823:8827 LambdaCore <> ETrue constr
+R8851:8854 LambdaCore <> ENum constr
+R8860:8863 LambdaCore <> ENum constr
+R8871:8874 Corelib.Init.Datatypes <> Some constr
+R8880:8886 Stdlib.Arith.PeanoNat Nat ltb def
+R8910:8915 LambdaCore <> EFalse constr
+R8899:8903 LambdaCore <> ETrue constr
+R8928:8932 LambdaCore <> ETrue constr
+R8935:8939 LambdaCore <> ETrue constr
+R8944:8947 Corelib.Init.Datatypes <> Some constr
+R8949:8953 LambdaCore <> ETrue constr
+R8965:8969 LambdaCore <> ETrue constr
+R8972:8977 LambdaCore <> EFalse constr
+R8987:8992 LambdaCore <> EFalse constr
+R8995:8999 LambdaCore <> ETrue constr
+R9009:9014 LambdaCore <> EFalse constr
+R9017:9022 LambdaCore <> EFalse constr
+R9031:9034 Corelib.Init.Datatypes <> Some constr
+R9036:9041 LambdaCore <> EFalse constr
+R9031:9034 Corelib.Init.Datatypes <> Some constr
+R9036:9041 LambdaCore <> EFalse constr
+R9031:9034 Corelib.Init.Datatypes <> Some constr
+R9036:9041 LambdaCore <> EFalse constr
+R9053:9057 LambdaCore <> ETrue constr
+R9073:9077 LambdaCore <> ETrue constr
+R9082:9085 Corelib.Init.Datatypes <> Some constr
+R9087:9091 LambdaCore <> ETrue constr
+R9082:9085 Corelib.Init.Datatypes <> Some constr
+R9087:9091 LambdaCore <> ETrue constr
+R9103:9108 LambdaCore <> EFalse constr
+R9111:9116 LambdaCore <> EFalse constr
+R9121:9124 Corelib.Init.Datatypes <> Some constr
+R9126:9131 LambdaCore <> EFalse constr
+R9148:9151 Corelib.Init.Datatypes <> None constr
+def 9172:9182 <> evalUnaryOp
+R9190:9195 Stdlib.Strings.String <> string ind
+binder 9185:9186 <> op:88
+R9203:9205 LambdaCore <> exp ind
+binder 9199:9199 <> v:89
+R9210:9215 Corelib.Init.Datatypes <> option ind
+R9217:9219 LambdaCore <> exp ind
+R9236:9236 LambdaCore <> v:89 var
+R9232:9233 LambdaCore <> op:88 var
+R9252:9255 LambdaCore <> ENum constr
+R9262:9265 Corelib.Init.Datatypes <> Some constr
+R9268:9271 LambdaCore <> ENum constr
+R9274:9280 Stdlib.Arith.PeanoNat Nat sub def
+R9297:9301 LambdaCore <> ETrue constr
+R9307:9310 Corelib.Init.Datatypes <> Some constr
+R9312:9317 LambdaCore <> EFalse constr
+R9328:9333 LambdaCore <> EFalse constr
+R9338:9341 Corelib.Init.Datatypes <> Some constr
+R9343:9347 LambdaCore <> ETrue constr
+R9361:9364 Corelib.Init.Datatypes <> None constr
+def 9602:9618 <> subst_val_for_let
+R9625:9630 Stdlib.Strings.String <> string ind
+binder 9621:9621 <> x:92
+R9642:9645 Corelib.Init.Datatypes <> bool ind
+binder 9634:9638 <> isRec:93
+R9653:9655 LambdaCore <> exp ind
+binder 9649:9649 <> v:94
+R9660:9662 LambdaCore <> exp ind
+R9682:9682 LambdaCore <> v:94 var
+R9675:9679 LambdaCore <> isRec:93 var
+R9693:9696 Corelib.Init.Datatypes <> true constr
+R9699:9702 LambdaCore <> EAbs constr
+R9714:9717 LambdaCore <> EFix constr
+R9720:9723 LambdaCore <> EAbs constr
+R9725:9725 LambdaCore <> x:92 var
+R9728:9731 LambdaCore <> EAbs constr
+R9754:9754 LambdaCore <> v:94 var
+ind 9774:9779 <> lit_eq
+constr 9809:9814 <> LE_num
+constr 9859:9864 <> LE_str
+constr 9909:9915 <> LE_true
+constr 9943:9950 <> LE_false
+constr 9979:9985 <> LE_unit
+R9786:9789 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R9783:9785 LambdaCore <> exp ind
+R9793:9796 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R9790:9792 LambdaCore <> exp ind
+binder 9827:9827 <> n:99
+R9830:9835 LambdaCore <> lit_eq:97 ind
+R9847:9850 LambdaCore <> ENum constr
+R9852:9852 LambdaCore <> n:99 var
+R9838:9841 LambdaCore <> ENum constr
+R9843:9843 LambdaCore <> n:99 var
+binder 9877:9877 <> s:100
+R9880:9885 LambdaCore <> lit_eq:97 ind
+R9897:9900 LambdaCore <> EStr constr
+R9902:9902 LambdaCore <> s:100 var
+R9888:9891 LambdaCore <> EStr constr
+R9893:9893 LambdaCore <> s:100 var
+R9920:9925 LambdaCore <> lit_eq:97 ind
+R9933:9937 LambdaCore <> ETrue constr
+R9927:9931 LambdaCore <> ETrue constr
+R9954:9959 LambdaCore <> lit_eq:97 ind
+R9968:9973 LambdaCore <> EFalse constr
+R9961:9966 LambdaCore <> EFalse constr
+R9990:9995 LambdaCore <> lit_eq:97 ind
+R10003:10007 LambdaCore <> EUnit constr
+R9997:10001 LambdaCore <> EUnit constr
+scheme 9774:9779 <> lit_eq_ind
+scheme 9774:9779 <> lit_eq_sind
+def 10020:10033 <> subst_bindings
+R10041:10044 Corelib.Init.Datatypes <> list ind
+R10046:10051 Stdlib.Strings.String <> string ind
+binder 10036:10037 <> xs:101
+R10060:10063 Corelib.Init.Datatypes <> list ind
+R10065:10067 LambdaCore <> exp ind
+binder 10055:10056 <> es:102
+R10078:10080 LambdaCore <> exp ind
+binder 10071:10074 <> body:103
+R10085:10087 LambdaCore <> exp ind
+R10104:10105 LambdaCore <> es:102 var
+R10100:10101 LambdaCore <> xs:101 var
+R10117:10120 Corelib.Init.Datatypes <> ::list_scope:x_'::'_x not
+R10127:10130 Corelib.Init.Datatypes <> ::list_scope:x_'::'_x not
+R10138:10151 LambdaCore <> subst_bindings:104 def
+R10162:10166 LambdaCore <> subst def
+R10172:10175 LambdaCore <> body:103 var
+R10190:10193 LambdaCore <> body:103 var
+ind 10213:10216 <> step
+constr 10259:10265 <> SAppAbs
+constr 10381:10388 <> SAppLeft
+constr 10498:10506 <> SAppRight
+constr 10638:10641 <> SLet
+constr 10749:10756 <> SLetLeft
+constr 10870:10876 <> SIfTrue
+constr 10944:10951 <> SIfFalse
+constr 11018:11024 <> SIfCond
+constr 11164:11174 <> SIfUnitTrue
+constr 11245:11256 <> SIfUnitFalse
+constr 11329:11339 <> SIfUnitCond
+constr 11478:11483 <> SBinOp
+constr 11664:11673 <> SBinOpLeft
+constr 11813:11823 <> SBinOpRight
+constr 11970:11977 <> SUnaryOp
+constr 12120:12131 <> SUnaryOpExpr
+constr 12280:12285 <> STuple
+constr 12597:12604 <> SAscribe
+constr 12683:12693 <> SBinOpError
+constr 12930:12942 <> SUnaryOpError
+constr 13193:13196 <> SFix
+constr 13333:13340 <> SFixExpr
+constr 13453:13463 <> SBlockEmpty
+constr 13548:13560 <> SBlockExprVal
+constr 13694:13707 <> SBlockExprSkip
+constr 13885:13898 <> SBlockExprStep
+constr 14083:14094 <> SBlockLetVal
+constr 14337:14349 <> SBlockLetStep
+constr 14591:14598 <> SCtorArg
+constr 14883:14891 <> SCaseExpr
+constr 15031:15039 <> SCaseWild
+constr 15194:15201 <> SCaseVar
+constr 15353:15365 <> SCaseLitMatch
+constr 15537:15548 <> SCaseLitSkip
+constr 15750:15763 <> SCaseCtorMatch
+constr 16140:16152 <> SCaseCtorSkip
+constr 16470:16481 <> SCaseNoMatch
+R10223:10226 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R10220:10222 LambdaCore <> exp ind
+R10230:10233 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R10227:10229 LambdaCore <> exp ind
+binder 10279:10279 <> x:109
+binder 10281:10282 <> e1:110
+binder 10284:10285 <> v2:111
+R10296:10316 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R10288:10292 LambdaCore <> value ind
+R10294:10295 LambdaCore <> v2:111 var
+R10317:10320 LambdaCore <> step:107 ind
+R10345:10349 LambdaCore <> subst def
+R10351:10351 LambdaCore <> x:109 var
+R10353:10354 LambdaCore <> v2:111 var
+R10356:10357 LambdaCore <> e1:110 var
+R10323:10326 LambdaCore <> EApp constr
+R10329:10332 LambdaCore <> EAbs constr
+R10334:10334 LambdaCore <> x:109 var
+R10336:10337 LambdaCore <> e1:110 var
+R10340:10341 LambdaCore <> v2:111 var
+binder 10401:10402 <> e1:112
+binder 10404:10406 <> e1':113
+binder 10408:10409 <> e2:114
+R10440:10443 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R10429:10432 LambdaCore <> step:107 ind
+R10437:10439 LambdaCore <> e1':113 var
+R10434:10435 LambdaCore <> e1:112 var
+R10444:10447 LambdaCore <> step:107 ind
+R10463:10466 LambdaCore <> EApp constr
+R10468:10470 LambdaCore <> e1':113 var
+R10472:10473 LambdaCore <> e2:114 var
+R10450:10453 LambdaCore <> EApp constr
+R10455:10456 LambdaCore <> e1:112 var
+R10458:10459 LambdaCore <> e2:114 var
+binder 10518:10519 <> v1:115
+binder 10521:10522 <> e2:116
+binder 10524:10526 <> e2':117
+R10554:10557 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R10546:10550 LambdaCore <> value ind
+R10552:10553 LambdaCore <> v1:115 var
+R10569:10589 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R10558:10561 LambdaCore <> step:107 ind
+R10566:10568 LambdaCore <> e2':117 var
+R10563:10564 LambdaCore <> e2:116 var
+R10590:10593 LambdaCore <> step:107 ind
+R10609:10612 LambdaCore <> EApp constr
+R10614:10615 LambdaCore <> v1:115 var
+R10617:10619 LambdaCore <> e2':117 var
+R10596:10599 LambdaCore <> EApp constr
+R10601:10602 LambdaCore <> v1:115 var
+R10604:10605 LambdaCore <> e2:116 var
+binder 10658:10658 <> x:118
+binder 10660:10660 <> v:119
+binder 10662:10663 <> e2:120
+R10690:10693 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R10683:10687 LambdaCore <> value ind
+R10689:10689 LambdaCore <> v:119 var
+R10694:10697 LambdaCore <> step:107 ind
+R10714:10718 LambdaCore <> subst def
+R10720:10720 LambdaCore <> x:118 var
+R10722:10722 LambdaCore <> v:119 var
+R10724:10725 LambdaCore <> e2:120 var
+R10700:10703 LambdaCore <> ELet constr
+R10705:10705 LambdaCore <> x:118 var
+R10707:10707 LambdaCore <> v:119 var
+R10709:10710 LambdaCore <> e2:120 var
+binder 10769:10769 <> x:121
+binder 10771:10772 <> e1:122
+binder 10774:10776 <> e1':123
+binder 10778:10779 <> e2:124
+R10810:10813 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R10799:10802 LambdaCore <> step:107 ind
+R10807:10809 LambdaCore <> e1':123 var
+R10804:10805 LambdaCore <> e1:122 var
+R10814:10817 LambdaCore <> step:107 ind
+R10835:10838 LambdaCore <> ELet constr
+R10840:10840 LambdaCore <> x:121 var
+R10842:10844 LambdaCore <> e1':123 var
+R10846:10847 LambdaCore <> e2:124 var
+R10820:10823 LambdaCore <> ELet constr
+R10825:10825 LambdaCore <> x:121 var
+R10827:10828 LambdaCore <> e1:122 var
+R10830:10831 LambdaCore <> e2:124 var
+binder 10890:10891 <> e2:125
+binder 10893:10894 <> e3:126
+R10897:10900 LambdaCore <> step:107 ind
+R10920:10921 LambdaCore <> e2:125 var
+R10903:10905 LambdaCore <> EIf constr
+R10907:10911 LambdaCore <> ETrue constr
+R10913:10914 LambdaCore <> e2:125 var
+R10916:10917 LambdaCore <> e3:126 var
+binder 10964:10965 <> e2:127
+binder 10967:10968 <> e3:128
+R10971:10974 LambdaCore <> step:107 ind
+R10995:10996 LambdaCore <> e3:128 var
+R10977:10979 LambdaCore <> EIf constr
+R10981:10986 LambdaCore <> EFalse constr
+R10988:10989 LambdaCore <> e2:127 var
+R10991:10992 LambdaCore <> e3:128 var
+binder 11038:11039 <> e1:129
+binder 11041:11043 <> e1':130
+binder 11045:11046 <> e2:131
+binder 11048:11049 <> e3:132
+R11080:11100 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R11069:11072 LambdaCore <> step:107 ind
+R11077:11079 LambdaCore <> e1':130 var
+R11074:11075 LambdaCore <> e1:129 var
+R11101:11104 LambdaCore <> step:107 ind
+R11122:11124 LambdaCore <> EIf constr
+R11126:11128 LambdaCore <> e1':130 var
+R11130:11131 LambdaCore <> e2:131 var
+R11133:11134 LambdaCore <> e3:132 var
+R11107:11109 LambdaCore <> EIf constr
+R11111:11112 LambdaCore <> e1:129 var
+R11114:11115 LambdaCore <> e2:131 var
+R11117:11118 LambdaCore <> e3:132 var
+binder 11186:11187 <> e2:133
+R11190:11193 LambdaCore <> step:107 ind
+R11214:11215 LambdaCore <> e2:133 var
+R11196:11202 LambdaCore <> EIfUnit constr
+R11204:11208 LambdaCore <> ETrue constr
+R11210:11211 LambdaCore <> e2:133 var
+binder 11267:11268 <> e2:134
+R11271:11274 LambdaCore <> step:107 ind
+R11296:11300 LambdaCore <> EUnit constr
+R11277:11283 LambdaCore <> EIfUnit constr
+R11285:11290 LambdaCore <> EFalse constr
+R11292:11293 LambdaCore <> e2:134 var
+binder 11351:11352 <> e1:135
+binder 11354:11356 <> e1':136
+binder 11358:11359 <> e2:137
+R11392:11414 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R11381:11384 LambdaCore <> step:107 ind
+R11389:11391 LambdaCore <> e1':136 var
+R11386:11387 LambdaCore <> e1:135 var
+R11415:11418 LambdaCore <> step:107 ind
+R11437:11443 LambdaCore <> EIfUnit constr
+R11445:11447 LambdaCore <> e1':136 var
+R11449:11450 LambdaCore <> e2:137 var
+R11421:11427 LambdaCore <> EIfUnit constr
+R11429:11430 LambdaCore <> e1:135 var
+R11432:11433 LambdaCore <> e2:137 var
+binder 11498:11499 <> op:138
+binder 11501:11502 <> v1:139
+binder 11504:11505 <> v2:140
+binder 11507:11507 <> r:141
+R11535:11538 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R11527:11531 LambdaCore <> value ind
+R11533:11534 LambdaCore <> v1:139 var
+R11547:11567 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R11539:11543 LambdaCore <> value ind
+R11545:11546 LambdaCore <> v2:140 var
+R11595:11615 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R11586:11588 Corelib.Init.Logic <> ::type_scope:x_'='_x not
+R11568:11576 LambdaCore <> evalBinOp def
+R11578:11579 LambdaCore <> op:138 var
+R11581:11582 LambdaCore <> v1:139 var
+R11584:11585 LambdaCore <> v2:140 var
+R11589:11592 Corelib.Init.Datatypes <> Some constr
+R11594:11594 LambdaCore <> r:141 var
+R11616:11619 LambdaCore <> step:107 ind
+R11639:11639 LambdaCore <> r:141 var
+R11622:11627 LambdaCore <> EBinOp constr
+R11629:11630 LambdaCore <> op:138 var
+R11632:11633 LambdaCore <> v1:139 var
+R11635:11636 LambdaCore <> v2:140 var
+binder 11684:11685 <> op:142
+binder 11687:11688 <> e1:143
+binder 11690:11692 <> e1':144
+binder 11694:11695 <> e2:145
+R11726:11746 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R11715:11718 LambdaCore <> step:107 ind
+R11723:11725 LambdaCore <> e1':144 var
+R11720:11721 LambdaCore <> e1:143 var
+R11747:11750 LambdaCore <> step:107 ind
+R11771:11776 LambdaCore <> EBinOp constr
+R11778:11779 LambdaCore <> op:142 var
+R11781:11783 LambdaCore <> e1':144 var
+R11785:11786 LambdaCore <> e2:145 var
+R11753:11758 LambdaCore <> EBinOp constr
+R11760:11761 LambdaCore <> op:142 var
+R11763:11764 LambdaCore <> e1:143 var
+R11766:11767 LambdaCore <> e2:145 var
+binder 11833:11834 <> op:146
+binder 11836:11837 <> v1:147
+binder 11839:11840 <> e2:148
+binder 11842:11844 <> e2':149
+R11872:11875 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R11864:11868 LambdaCore <> value ind
+R11870:11871 LambdaCore <> v1:147 var
+R11887:11907 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R11876:11879 LambdaCore <> step:107 ind
+R11884:11886 LambdaCore <> e2':149 var
+R11881:11882 LambdaCore <> e2:148 var
+R11908:11911 LambdaCore <> step:107 ind
+R11932:11937 LambdaCore <> EBinOp constr
+R11939:11940 LambdaCore <> op:146 var
+R11942:11943 LambdaCore <> v1:147 var
+R11945:11947 LambdaCore <> e2':149 var
+R11914:11919 LambdaCore <> EBinOp constr
+R11921:11922 LambdaCore <> op:146 var
+R11924:11925 LambdaCore <> v1:147 var
+R11927:11928 LambdaCore <> e2:148 var
+binder 11990:11991 <> op:150
+binder 11993:11993 <> v:151
+binder 11995:11995 <> r:152
+R12022:12025 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R12015:12019 LambdaCore <> value ind
+R12021:12021 LambdaCore <> v:151 var
+R12051:12071 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R12042:12044 Corelib.Init.Logic <> ::type_scope:x_'='_x not
+R12026:12036 LambdaCore <> evalUnaryOp def
+R12038:12039 LambdaCore <> op:150 var
+R12041:12041 LambdaCore <> v:151 var
+R12045:12048 Corelib.Init.Datatypes <> Some constr
+R12050:12050 LambdaCore <> r:152 var
+R12072:12075 LambdaCore <> step:107 ind
+R12093:12093 LambdaCore <> r:152 var
+R12078:12085 LambdaCore <> EUnaryOp constr
+R12087:12088 LambdaCore <> op:150 var
+R12090:12090 LambdaCore <> v:151 var
+binder 12141:12142 <> op:153
+binder 12144:12144 <> e:154
+binder 12146:12147 <> e':155
+R12177:12198 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R12168:12171 LambdaCore <> step:107 ind
+R12175:12176 LambdaCore <> e':155 var
+R12173:12173 LambdaCore <> e:154 var
+R12199:12202 LambdaCore <> step:107 ind
+R12221:12228 LambdaCore <> EUnaryOp constr
+R12230:12231 LambdaCore <> op:153 var
+R12233:12234 LambdaCore <> e':155 var
+R12205:12212 LambdaCore <> EUnaryOp constr
+R12214:12215 LambdaCore <> op:153 var
+R12217:12217 LambdaCore <> e:154 var
+binder 12300:12301 <> es:156
+binder 12303:12303 <> e:157
+binder 12305:12306 <> e':158
+binder 12308:12308 <> k:159
+R12337:12357 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R12328:12331 LambdaCore <> step:107 ind
+R12335:12336 LambdaCore <> e':158 var
+R12333:12333 LambdaCore <> e:157 var
+R12386:12406 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R12377:12379 Corelib.Init.Logic <> ::type_scope:x_'='_x not
+R12358:12371 Stdlib.Lists.List <> nth_error def
+R12376:12376 LambdaCore <> k:159 var
+R12373:12374 LambdaCore <> es:156 var
+R12380:12383 Corelib.Init.Datatypes <> Some constr
+R12385:12385 LambdaCore <> e:157 var
+R12407:12407 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R12476:12497 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+binder 12415:12415 <> j:160
+R12423:12426 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R12419:12421 Corelib.Init.Peano <> ::nat_scope:x_'<'_x not
+R12418:12418 LambdaCore <> j:160 var
+R12422:12422 LambdaCore <> k:159 var
+R12427:12433 Corelib.Init.Logic <> ::type_scope:'exists'_x_'..'_x_','_x not
+R12435:12436 Corelib.Init.Logic <> ::type_scope:'exists'_x_'..'_x_','_x not
+binder 12434:12434 <> v:161
+R12465:12468 Corelib.Init.Logic <> ::type_scope:x_'/\'_x not
+R12456:12458 Corelib.Init.Logic <> ::type_scope:x_'='_x not
+R12437:12450 Stdlib.Lists.List <> nth_error def
+R12455:12455 LambdaCore <> j:160 var
+R12452:12453 LambdaCore <> es:156 var
+R12459:12462 Corelib.Init.Datatypes <> Some constr
+R12464:12464 LambdaCore <> v:161 var
+R12469:12473 LambdaCore <> value ind
+R12475:12475 LambdaCore <> v:161 var
+R12498:12501 LambdaCore <> step:107 ind
+R12514:12517 LambdaCore <> ETup constr
+R12536:12539 Corelib.Init.Datatypes <> ::list_scope:x_'++'_x not
+R12520:12530 Stdlib.Lists.List <> firstn abbrev
+R12534:12535 LambdaCore <> es:156 var
+R12532:12532 LambdaCore <> k:159 var
+R12544:12547 Corelib.Init.Datatypes <> ::list_scope:x_'++'_x not
+R12540:12540 Stdlib.Lists.List ListNotations ::list_scope:'['_x_']' not
+R12543:12543 Stdlib.Lists.List ListNotations ::list_scope:'['_x_']' not
+R12541:12542 LambdaCore <> e':158 var
+R12548:12557 Stdlib.Lists.List <> skipn abbrev
+R12567:12568 LambdaCore <> es:156 var
+R12561:12563 Corelib.Init.Peano <> ::nat_scope:x_'+'_x not
+R12560:12560 LambdaCore <> k:159 var
+R12504:12507 LambdaCore <> ETup constr
+R12509:12510 LambdaCore <> es:156 var
+binder 12617:12617 <> e:162
+binder 12619:12619 <> t:163
+R12622:12625 LambdaCore <> step:107 ind
+R12642:12642 LambdaCore <> e:162 var
+R12628:12635 LambdaCore <> EAscribe constr
+R12637:12637 LambdaCore <> e:162 var
+R12639:12639 LambdaCore <> t:163 var
+binder 12704:12705 <> op:164
+binder 12707:12708 <> v1:165
+binder 12710:12711 <> v2:166
+R12741:12744 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R12733:12737 LambdaCore <> value ind
+R12739:12740 LambdaCore <> v1:165 var
+R12753:12775 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R12745:12749 LambdaCore <> value ind
+R12751:12752 LambdaCore <> v2:166 var
+R12801:12823 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R12794:12796 Corelib.Init.Logic <> ::type_scope:x_'='_x not
+R12776:12784 LambdaCore <> evalBinOp def
+R12786:12787 LambdaCore <> op:164 var
+R12789:12790 LambdaCore <> v1:165 var
+R12792:12793 LambdaCore <> v2:166 var
+R12797:12800 Corelib.Init.Datatypes <> None constr
+R12824:12827 LambdaCore <> step:107 ind
+R12848:12860 LambdaCore <> ERuntimeError constr
+R12879:12882 Stdlib.Strings.String <> ::string_scope:x_'++'_x not
+R12883:12884 LambdaCore <> op:164 var
+R12830:12835 LambdaCore <> EBinOp constr
+R12837:12838 LambdaCore <> op:164 var
+R12840:12841 LambdaCore <> v1:165 var
+R12843:12844 LambdaCore <> v2:166 var
+binder 12953:12954 <> op:167
+binder 12956:12956 <> v:168
+R12988:13013 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R12981:12985 LambdaCore <> value ind
+R12987:12987 LambdaCore <> v:168 var
+R13037:13062 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R13030:13032 Corelib.Init.Logic <> ::type_scope:x_'='_x not
+R13014:13024 LambdaCore <> evalUnaryOp def
+R13026:13027 LambdaCore <> op:167 var
+R13029:13029 LambdaCore <> v:168 var
+R13033:13036 Corelib.Init.Datatypes <> None constr
+R13063:13066 LambdaCore <> step:107 ind
+R13085:13097 LambdaCore <> ERuntimeError constr
+R13116:13119 Stdlib.Strings.String <> ::string_scope:x_'++'_x not
+R13120:13121 LambdaCore <> op:167 var
+R13069:13076 LambdaCore <> EUnaryOp constr
+R13078:13079 LambdaCore <> op:167 var
+R13081:13081 LambdaCore <> v:168 var
+binder 13212:13212 <> x:169
+binder 13214:13214 <> e:170
+R13235:13238 LambdaCore <> step:107 ind
+R13259:13263 LambdaCore <> subst def
+R13265:13265 LambdaCore <> x:169 var
+R13268:13271 LambdaCore <> EFix constr
+R13274:13277 LambdaCore <> EAbs constr
+R13279:13279 LambdaCore <> x:169 var
+R13281:13281 LambdaCore <> e:170 var
+R13285:13285 LambdaCore <> e:170 var
+R13241:13244 LambdaCore <> EFix constr
+R13247:13250 LambdaCore <> EAbs constr
+R13252:13252 LambdaCore <> x:169 var
+R13254:13254 LambdaCore <> e:170 var
+binder 13352:13352 <> e:171
+binder 13354:13355 <> e':172
+R13386:13389 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R13377:13380 LambdaCore <> step:107 ind
+R13384:13385 LambdaCore <> e':172 var
+R13382:13382 LambdaCore <> e:171 var
+R13390:13393 LambdaCore <> step:107 ind
+R13405:13408 LambdaCore <> EFix constr
+R13410:13411 LambdaCore <> e':172 var
+R13396:13399 LambdaCore <> EFix constr
+R13401:13401 LambdaCore <> e:171 var
+R13468:13471 LambdaCore <> step:107 ind
+R13485:13489 LambdaCore <> EUnit constr
+R13474:13479 LambdaCore <> EBlock constr
+R13481:13482 Stdlib.Lists.List ListNotations ::list_scope:'['_']' not
+binder 13571:13571 <> e:173
+R13581:13606 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R13574:13578 LambdaCore <> value ind
+R13580:13580 LambdaCore <> e:173 var
+R13607:13610 LambdaCore <> step:107 ind
+R13631:13631 LambdaCore <> e:173 var
+R13613:13618 LambdaCore <> EBlock constr
+R13620:13620 Stdlib.Lists.List ListNotations ::list_scope:'['_x_']' not
+R13628:13628 Stdlib.Lists.List ListNotations ::list_scope:'['_x_']' not
+R13621:13625 LambdaCore <> BExpr constr
+R13627:13627 LambdaCore <> e:173 var
+binder 13718:13718 <> e:174
+binder 13720:13723 <> rest:175
+R13733:13736 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R13726:13730 LambdaCore <> value ind
+R13732:13732 LambdaCore <> e:174 var
+R13747:13773 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R13741:13744 Corelib.Init.Logic <> ::type_scope:x_'<>'_x not
+R13737:13740 LambdaCore <> rest:175 var
+R13745:13746 Stdlib.Lists.List ListNotations ::list_scope:'['_']' not
+R13774:13777 LambdaCore <> step:107 ind
+R13807:13812 LambdaCore <> EBlock constr
+R13814:13817 LambdaCore <> rest:175 var
+R13780:13785 LambdaCore <> EBlock constr
+R13795:13798 Corelib.Init.Datatypes <> ::list_scope:x_'::'_x not
+R13788:13792 LambdaCore <> BExpr constr
+R13794:13794 LambdaCore <> e:174 var
+R13799:13802 LambdaCore <> rest:175 var
+binder 13909:13909 <> e:176
+binder 13911:13912 <> e':177
+binder 13914:13917 <> rest:178
+R13929:13955 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R13920:13923 LambdaCore <> step:107 ind
+R13927:13928 LambdaCore <> e':177 var
+R13925:13925 LambdaCore <> e:176 var
+R13956:13959 LambdaCore <> step:107 ind
+R13989:13994 LambdaCore <> EBlock constr
+R14005:14008 Corelib.Init.Datatypes <> ::list_scope:x_'::'_x not
+R13997:14001 LambdaCore <> BExpr constr
+R14003:14004 LambdaCore <> e':177 var
+R14009:14012 LambdaCore <> rest:178 var
+R13962:13967 LambdaCore <> EBlock constr
+R13977:13980 Corelib.Init.Datatypes <> ::list_scope:x_'::'_x not
+R13970:13974 LambdaCore <> BExpr constr
+R13976:13976 LambdaCore <> e:176 var
+R13981:13984 LambdaCore <> rest:178 var
+binder 14105:14105 <> x:179
+binder 14107:14111 <> isRec:180
+binder 14113:14113 <> v:181
+binder 14115:14118 <> rest:182
+R14128:14152 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R14121:14125 LambdaCore <> value ind
+R14127:14127 LambdaCore <> v:181 var
+R14153:14156 LambdaCore <> step:107 ind
+R14219:14224 LambdaCore <> EBlock constr
+R14227:14238 LambdaCore <> subst_blocks def
+R14240:14240 LambdaCore <> x:179 var
+R14243:14259 LambdaCore <> subst_val_for_let def
+R14261:14261 LambdaCore <> x:179 var
+R14263:14267 LambdaCore <> isRec:180 var
+R14269:14269 LambdaCore <> v:181 var
+R14272:14275 LambdaCore <> rest:182 var
+R14159:14164 LambdaCore <> EBlock constr
+R14181:14184 Corelib.Init.Datatypes <> ::list_scope:x_'::'_x not
+R14167:14170 LambdaCore <> BLet constr
+R14172:14172 LambdaCore <> x:179 var
+R14174:14178 LambdaCore <> isRec:180 var
+R14180:14180 LambdaCore <> v:181 var
+R14185:14188 LambdaCore <> rest:182 var
+binder 14360:14360 <> x:183
+binder 14362:14366 <> isRec:184
+binder 14368:14368 <> e:185
+binder 14370:14371 <> e':186
+binder 14373:14376 <> rest:187
+R14388:14413 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R14379:14382 LambdaCore <> step:107 ind
+R14386:14387 LambdaCore <> e':186 var
+R14384:14384 LambdaCore <> e:185 var
+R14414:14417 LambdaCore <> step:107 ind
+R14481:14486 LambdaCore <> EBlock constr
+R14504:14507 Corelib.Init.Datatypes <> ::list_scope:x_'::'_x not
+R14489:14492 LambdaCore <> BLet constr
+R14494:14494 LambdaCore <> x:183 var
+R14496:14500 LambdaCore <> isRec:184 var
+R14502:14503 LambdaCore <> e':186 var
+R14508:14511 LambdaCore <> rest:187 var
+R14420:14425 LambdaCore <> EBlock constr
+R14442:14445 Corelib.Init.Datatypes <> ::list_scope:x_'::'_x not
+R14428:14431 LambdaCore <> BLet constr
+R14433:14433 LambdaCore <> x:183 var
+R14435:14439 LambdaCore <> isRec:184 var
+R14441:14441 LambdaCore <> e:185 var
+R14446:14449 LambdaCore <> rest:187 var
+binder 14609:14612 <> name:188
+binder 14614:14615 <> es:189
+binder 14617:14617 <> k:190
+binder 14619:14620 <> e':191
+binder 14622:14622 <> e:192
+R14670:14690 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R14661:14663 Corelib.Init.Logic <> ::type_scope:x_'='_x not
+R14642:14655 Stdlib.Lists.List <> nth_error def
+R14660:14660 LambdaCore <> k:190 var
+R14657:14658 LambdaCore <> es:189 var
+R14664:14667 Corelib.Init.Datatypes <> Some constr
+R14669:14669 LambdaCore <> e:192 var
+R14700:14703 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R14691:14692 Corelib.Init.Logic <> ::type_scope:'~'_x not
+R14693:14697 LambdaCore <> value ind
+R14699:14699 LambdaCore <> e:192 var
+R14713:14733 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R14704:14707 LambdaCore <> step:107 ind
+R14711:14712 LambdaCore <> e':191 var
+R14709:14709 LambdaCore <> e:192 var
+R14734:14737 LambdaCore <> step:107 ind
+R14778:14782 LambdaCore <> ECtor constr
+R14784:14787 LambdaCore <> name:188 var
+R14806:14809 Corelib.Init.Datatypes <> ::list_scope:x_'++'_x not
+R14790:14800 Stdlib.Lists.List <> firstn abbrev
+R14804:14805 LambdaCore <> es:189 var
+R14802:14802 LambdaCore <> k:190 var
+R14814:14817 Corelib.Init.Datatypes <> ::list_scope:x_'++'_x not
+R14810:14810 Stdlib.Lists.List ListNotations ::list_scope:'['_x_']' not
+R14813:14813 Stdlib.Lists.List ListNotations ::list_scope:'['_x_']' not
+R14811:14812 LambdaCore <> e':191 var
+R14818:14827 Stdlib.Lists.List <> skipn abbrev
+R14837:14838 LambdaCore <> es:189 var
+R14831:14833 Corelib.Init.Peano <> ::nat_scope:x_'+'_x not
+R14830:14830 LambdaCore <> k:190 var
+R14740:14744 LambdaCore <> ECtor constr
+R14746:14749 LambdaCore <> name:188 var
+R14751:14752 LambdaCore <> es:189 var
+binder 14902:14902 <> e:193
+binder 14904:14905 <> e':194
+binder 14907:14908 <> bs:195
+R14920:14941 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R14911:14914 LambdaCore <> step:107 ind
+R14918:14919 LambdaCore <> e':194 var
+R14916:14916 LambdaCore <> e:193 var
+R14942:14945 LambdaCore <> step:107 ind
+R14961:14965 LambdaCore <> ECase constr
+R14967:14968 LambdaCore <> e':194 var
+R14970:14971 LambdaCore <> bs:195 var
+R14948:14952 LambdaCore <> ECase constr
+R14954:14954 LambdaCore <> e:193 var
+R14956:14957 LambdaCore <> bs:195 var
+binder 15050:15050 <> e:196
+binder 15052:15055 <> body:197
+binder 15057:15058 <> bs:198
+R15068:15089 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R15061:15065 LambdaCore <> value ind
+R15067:15067 LambdaCore <> e:196 var
+R15090:15093 LambdaCore <> step:107 ind
+R15132:15135 LambdaCore <> body:197 var
+R15096:15100 LambdaCore <> ECase constr
+R15102:15102 LambdaCore <> e:196 var
+R15123:15126 Corelib.Init.Datatypes <> ::list_scope:x_'::'_x not
+R15105:15111 LambdaCore <> EBranch constr
+R15113:15117 LambdaCore <> PWild constr
+R15119:15122 LambdaCore <> body:197 var
+R15127:15128 LambdaCore <> bs:198 var
+binder 15212:15212 <> e:199
+binder 15214:15214 <> x:200
+binder 15216:15219 <> body:201
+binder 15221:15222 <> bs:202
+R15232:15252 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R15225:15229 LambdaCore <> value ind
+R15231:15231 LambdaCore <> e:199 var
+R15253:15256 LambdaCore <> step:107 ind
+R15299:15303 LambdaCore <> subst def
+R15305:15305 LambdaCore <> x:200 var
+R15307:15307 LambdaCore <> e:199 var
+R15309:15312 LambdaCore <> body:201 var
+R15259:15263 LambdaCore <> ECase constr
+R15265:15265 LambdaCore <> e:199 var
+R15289:15292 Corelib.Init.Datatypes <> ::list_scope:x_'::'_x not
+R15268:15274 LambdaCore <> EBranch constr
+R15277:15280 LambdaCore <> PVar constr
+R15282:15282 LambdaCore <> x:200 var
+R15285:15288 LambdaCore <> body:201 var
+R15293:15294 LambdaCore <> bs:202 var
+binder 15376:15376 <> e:203
+binder 15378:15380 <> lit:204
+binder 15382:15385 <> body:205
+binder 15387:15388 <> bs:206
+R15398:15401 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R15391:15395 LambdaCore <> value ind
+R15397:15397 LambdaCore <> e:203 var
+R15414:15439 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R15402:15407 LambdaCore <> lit_eq ind
+R15409:15409 LambdaCore <> e:203 var
+R15411:15413 LambdaCore <> lit:204 var
+R15440:15443 LambdaCore <> step:107 ind
+R15487:15490 LambdaCore <> body:205 var
+R15446:15450 LambdaCore <> ECase constr
+R15452:15452 LambdaCore <> e:203 var
+R15478:15481 Corelib.Init.Datatypes <> ::list_scope:x_'::'_x not
+R15455:15461 LambdaCore <> EBranch constr
+R15464:15467 LambdaCore <> PLit constr
+R15469:15471 LambdaCore <> lit:204 var
+R15474:15477 LambdaCore <> body:205 var
+R15482:15483 LambdaCore <> bs:206 var
+binder 15559:15559 <> e:207
+binder 15561:15563 <> lit:208
+binder 15565:15568 <> body:209
+binder 15570:15571 <> bs:210
+R15581:15584 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R15574:15578 LambdaCore <> value ind
+R15580:15580 LambdaCore <> e:207 var
+R15599:15623 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R15585:15586 Corelib.Init.Logic <> ::type_scope:'~'_x not
+R15587:15592 LambdaCore <> lit_eq ind
+R15594:15594 LambdaCore <> e:207 var
+R15596:15598 LambdaCore <> lit:208 var
+R15624:15627 LambdaCore <> step:107 ind
+R15672:15676 LambdaCore <> ECase constr
+R15678:15678 LambdaCore <> e:207 var
+R15680:15681 LambdaCore <> bs:210 var
+R15630:15634 LambdaCore <> ECase constr
+R15636:15636 LambdaCore <> e:207 var
+R15662:15665 Corelib.Init.Datatypes <> ::list_scope:x_'::'_x not
+R15639:15645 LambdaCore <> EBranch constr
+R15648:15651 LambdaCore <> PLit constr
+R15653:15655 LambdaCore <> lit:208 var
+R15658:15661 LambdaCore <> body:209 var
+R15666:15667 LambdaCore <> bs:210 var
+binder 15774:15774 <> e:211
+binder 15776:15779 <> name:212
+binder 15781:15788 <> bindings:213
+binder 15790:15793 <> body:214
+binder 15795:15796 <> bs:215
+binder 15798:15799 <> es:216
+R15842:15868 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R15826:15828 Corelib.Init.Logic <> ::type_scope:x_'='_x not
+R15825:15825 LambdaCore <> e:211 var
+R15829:15833 LambdaCore <> ECtor constr
+R15835:15838 LambdaCore <> name:212 var
+R15840:15841 LambdaCore <> es:216 var
+R15906:15932 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R15889:15891 Corelib.Init.Logic <> ::type_scope:x_'='_x not
+R15869:15879 Stdlib.Lists.List <> length abbrev
+R15881:15888 LambdaCore <> bindings:213 var
+R15892:15902 Stdlib.Lists.List <> length abbrev
+R15904:15905 LambdaCore <> es:216 var
+R15933:15936 LambdaCore <> step:107 ind
+R16020:16033 LambdaCore <> subst_bindings def
+R16035:16042 LambdaCore <> bindings:213 var
+R16044:16045 LambdaCore <> es:216 var
+R16047:16050 LambdaCore <> body:214 var
+R15939:15943 LambdaCore <> ECase constr
+R15945:15945 LambdaCore <> e:211 var
+R15982:15985 Corelib.Init.Datatypes <> ::list_scope:x_'::'_x not
+R15948:15954 LambdaCore <> EBranch constr
+R15957:15961 LambdaCore <> PCtor constr
+R15963:15966 LambdaCore <> name:212 var
+R15968:15975 LambdaCore <> bindings:213 var
+R15978:15981 LambdaCore <> body:214 var
+R15986:15987 LambdaCore <> bs:215 var
+binder 16163:16163 <> e:217
+binder 16165:16168 <> name:218
+binder 16170:16177 <> bindings:219
+binder 16179:16182 <> body:220
+binder 16184:16185 <> bs:221
+R16217:16242 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R16210:16214 LambdaCore <> value ind
+R16216:16216 LambdaCore <> e:217 var
+R16316:16341 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R16243:16245 Corelib.Init.Logic <> ::type_scope:'~'_x not
+R16315:16315 Corelib.Init.Logic <> ::type_scope:'~'_x not
+R16246:16252 Corelib.Init.Logic <> ::type_scope:'exists'_x_'..'_x_','_x not
+R16255:16256 Corelib.Init.Logic <> ::type_scope:'exists'_x_'..'_x_','_x not
+binder 16253:16254 <> es:222
+R16274:16277 Corelib.Init.Logic <> ::type_scope:x_'/\'_x not
+R16258:16260 Corelib.Init.Logic <> ::type_scope:x_'='_x not
+R16257:16257 LambdaCore <> e:217 var
+R16261:16265 LambdaCore <> ECtor constr
+R16267:16270 LambdaCore <> name:218 var
+R16272:16273 LambdaCore <> es:222 var
+R16298:16300 Corelib.Init.Logic <> ::type_scope:x_'='_x not
+R16278:16288 Stdlib.Lists.List <> length abbrev
+R16290:16297 LambdaCore <> bindings:219 var
+R16301:16311 Stdlib.Lists.List <> length abbrev
+R16313:16314 LambdaCore <> es:222 var
+R16342:16345 LambdaCore <> step:107 ind
+R16401:16405 LambdaCore <> ECase constr
+R16407:16407 LambdaCore <> e:217 var
+R16409:16410 LambdaCore <> bs:221 var
+R16348:16352 LambdaCore <> ECase constr
+R16354:16354 LambdaCore <> e:217 var
+R16391:16394 Corelib.Init.Datatypes <> ::list_scope:x_'::'_x not
+R16357:16363 LambdaCore <> EBranch constr
+R16366:16370 LambdaCore <> PCtor constr
+R16372:16375 LambdaCore <> name:218 var
+R16377:16384 LambdaCore <> bindings:219 var
+R16387:16390 LambdaCore <> body:220 var
+R16395:16396 LambdaCore <> bs:221 var
+binder 16492:16492 <> e:223
+R16502:16526 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R16495:16499 LambdaCore <> value ind
+R16501:16501 LambdaCore <> e:223 var
+R16527:16530 LambdaCore <> step:107 ind
+R16546:16558 LambdaCore <> ERuntimeError constr
+R16533:16537 LambdaCore <> ECase constr
+R16539:16539 LambdaCore <> e:223 var
+R16541:16542 Stdlib.Lists.List ListNotations ::list_scope:'['_']' not
+scheme 10213:10216 <> step_ind
+scheme 10213:10216 <> step_sind
+ind 16813:16817 <> steps
+constr 16847:16851 <> SRefl
+constr 16880:16884 <> SStep
+R16824:16827 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R16821:16823 LambdaCore <> exp ind
+R16831:16834 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R16828:16830 LambdaCore <> exp ind
+binder 16863:16863 <> e:226
+R16866:16870 LambdaCore <> steps:224 ind
+R16874:16874 LambdaCore <> e:226 var
+R16872:16872 LambdaCore <> e:226 var
+binder 16896:16896 <> e:227
+binder 16898:16899 <> e':228
+binder 16901:16903 <> e'':229
+R16915:16918 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R16906:16909 LambdaCore <> step ind
+R16911:16911 LambdaCore <> e:227 var
+R16913:16914 LambdaCore <> e':228 var
+R16931:16934 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R16919:16923 LambdaCore <> steps:224 ind
+R16928:16930 LambdaCore <> e'':229 var
+R16925:16926 LambdaCore <> e':228 var
+R16935:16939 LambdaCore <> steps:224 ind
+R16943:16945 LambdaCore <> e'':229 var
+R16941:16941 LambdaCore <> e:227 var
+scheme 16813:16817 <> steps_ind
+scheme 16813:16817 <> steps_sind
+def 17177:17179 <> ctx
+R17184:17187 Corelib.Init.Datatypes <> list ind
+R17196:17198 Corelib.Init.Datatypes <> ::type_scope:x_'*'_x not
+R17190:17195 Stdlib.Strings.String <> string ind
+R17199:17200 LambdaCore <> ty ind
+def 17214:17219 <> lookup
+R17230:17232 LambdaCore <> ctx def
+binder 17222:17226 <> Gamma:230
+R17240:17245 Stdlib.Strings.String <> string ind
+binder 17236:17236 <> x:231
+R17250:17255 Corelib.Init.Datatypes <> option ind
+R17257:17258 LambdaCore <> ty ind
+R17271:17275 LambdaCore <> Gamma:230 var
+R17286:17287 Stdlib.Lists.List ListNotations ::list_scope:'['_']' not
+R17292:17295 Corelib.Init.Datatypes <> None constr
+R17307:17310 Corelib.Init.Datatypes <> ::list_scope:x_'::'_x not
+R17301:17301 Corelib.Init.Datatypes <> ::core_scope:'('_x_','_x_','_'..'_','_x_')' not
+R17303:17304 Corelib.Init.Datatypes <> ::core_scope:'('_x_','_x_','_'..'_','_x_')' not
+R17306:17306 Corelib.Init.Datatypes <> ::core_scope:'('_x_','_x_','_'..'_','_x_')' not
+R17326:17335 Stdlib.Strings.String <> string_dec def
+R17337:17337 LambdaCore <> x:231 var
+R17358:17363 LambdaCore <> lookup:232 def
+R17370:17370 LambdaCore <> x:231 var
+R17346:17349 Corelib.Init.Datatypes <> Some constr
+ind 17612:17615 <> prec
+constr 17643:17649 <> PDynTop
+constr 17684:17688 <> PRefl
+constr 17718:17721 <> PFun
+constr 17848:17851 <> PTup
+constr 17962:17967 <> PConst
+R17621:17624 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R17619:17620 LambdaCore <> ty ind
+R17627:17630 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R17625:17626 LambdaCore <> ty ind
+binder 17661:17661 <> t:236
+R17664:17667 LambdaCore <> prec:234 ind
+R17671:17678 LambdaCore <> TDynamic constr
+R17669:17669 LambdaCore <> t:236 var
+binder 17702:17702 <> t:237
+R17705:17708 LambdaCore <> prec:234 ind
+R17712:17712 LambdaCore <> t:237 var
+R17710:17710 LambdaCore <> t:237 var
+binder 17736:17737 <> t1:238
+binder 17739:17741 <> t1':239
+binder 17743:17744 <> t2:240
+binder 17746:17748 <> t2':241
+R17777:17780 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R17766:17769 LambdaCore <> prec:234 ind
+R17775:17776 LambdaCore <> t1:238 var
+R17771:17773 LambdaCore <> t1':239 var
+R17792:17810 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R17781:17784 LambdaCore <> prec:234 ind
+R17789:17791 LambdaCore <> t2':241 var
+R17786:17787 LambdaCore <> t2:240 var
+R17811:17814 LambdaCore <> prec:234 ind
+R17830:17833 LambdaCore <> TFun constr
+R17835:17837 LambdaCore <> t1':239 var
+R17839:17841 LambdaCore <> t2':241 var
+R17817:17820 LambdaCore <> TFun constr
+R17822:17823 LambdaCore <> t1:238 var
+R17825:17826 LambdaCore <> t2:240 var
+binder 17866:17867 <> ts:242
+binder 17869:17871 <> ts':243
+R17913:17931 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R17889:17900 Stdlib.Lists.List <> Forall2 ind
+R17910:17912 LambdaCore <> ts':243 var
+R17907:17908 LambdaCore <> ts:242 var
+R17902:17905 LambdaCore <> prec:234 ind
+R17932:17935 LambdaCore <> prec:234 ind
+R17948:17951 LambdaCore <> TTup constr
+R17953:17955 LambdaCore <> ts':243 var
+R17938:17941 LambdaCore <> TTup constr
+R17943:17944 LambdaCore <> ts:242 var
+binder 17980:17980 <> s:244
+binder 17982:17983 <> ts:245
+binder 17985:17987 <> ts':246
+R18029:18047 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R18005:18016 Stdlib.Lists.List <> Forall2 ind
+R18026:18028 LambdaCore <> ts':246 var
+R18023:18024 LambdaCore <> ts:245 var
+R18018:18021 LambdaCore <> prec:234 ind
+R18048:18051 LambdaCore <> prec:234 ind
+R18068:18073 LambdaCore <> TConst constr
+R18075:18075 LambdaCore <> s:244 var
+R18077:18079 LambdaCore <> ts':246 var
+R18054:18059 LambdaCore <> TConst constr
+R18061:18061 LambdaCore <> s:244 var
+R18063:18064 LambdaCore <> ts:245 var
+scheme 17612:17615 <> prec_ind
+scheme 17612:17615 <> prec_sind
+prf 18307:18319 <> prec_fun_inv'
+binder 18330:18330 <> t:247
+binder 18332:18333 <> t1:248
+binder 18335:18336 <> t2:249
+R18360:18365 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R18341:18344 LambdaCore <> prec ind
+R18346:18346 LambdaCore <> t:247 var
+R18349:18352 LambdaCore <> TFun constr
+R18354:18355 LambdaCore <> t1:248 var
+R18357:18358 LambdaCore <> t2:249 var
+R18366:18366 Corelib.Init.Logic <> ::type_scope:x_'\/'_x not
+R18381:18386 Corelib.Init.Logic <> ::type_scope:x_'\/'_x not
+R18449:18449 Corelib.Init.Logic <> ::type_scope:x_'\/'_x not
+R18368:18370 Corelib.Init.Logic <> ::type_scope:x_'='_x not
+R18367:18367 LambdaCore <> t:247 var
+R18371:18374 LambdaCore <> TFun constr
+R18376:18377 LambdaCore <> t1:248 var
+R18379:18380 LambdaCore <> t2:249 var
+R18387:18393 Corelib.Init.Logic <> ::type_scope:'exists'_x_'..'_x_','_x not
+R18401:18402 Corelib.Init.Logic <> ::type_scope:'exists'_x_'..'_x_','_x not
+binder 18394:18396 <> t1':250
+binder 18398:18400 <> t2':251
+R18419:18422 Corelib.Init.Logic <> ::type_scope:x_'/\'_x not
+R18404:18406 Corelib.Init.Logic <> ::type_scope:x_'='_x not
+R18403:18403 LambdaCore <> t:247 var
+R18407:18410 LambdaCore <> TFun constr
+R18412:18414 LambdaCore <> t1':250 var
+R18416:18418 LambdaCore <> t2':251 var
+R18434:18437 Corelib.Init.Logic <> ::type_scope:x_'/\'_x not
+R18423:18426 LambdaCore <> prec ind
+R18428:18429 LambdaCore <> t1:248 var
+R18431:18433 LambdaCore <> t1':250 var
+R18438:18441 LambdaCore <> prec ind
+R18443:18445 LambdaCore <> t2':251 var
+R18447:18448 LambdaCore <> t2:249 var
+prf 18597:18613 <> prec_trans_strong
+binder 18624:18625 <> t1:252
+binder 18627:18628 <> t2:253
+R18643:18648 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R18633:18636 LambdaCore <> prec ind
+R18638:18639 LambdaCore <> t1:252 var
+R18641:18642 LambdaCore <> t2:253 var
+R18649:18649 Corelib.Init.Logic <> ::type_scope:x_'/\'_x not
+R18685:18690 Corelib.Init.Logic <> ::type_scope:x_'/\'_x not
+R18726:18726 Corelib.Init.Logic <> ::type_scope:x_'/\'_x not
+binder 18657:18658 <> t3:254
+R18671:18674 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R18661:18664 LambdaCore <> prec ind
+R18666:18667 LambdaCore <> t2:253 var
+R18669:18670 LambdaCore <> t3:254 var
+R18675:18678 LambdaCore <> prec ind
+R18680:18681 LambdaCore <> t1:252 var
+R18683:18684 LambdaCore <> t3:254 var
+binder 18698:18699 <> t3:255
+R18712:18715 Corelib.Init.Logic <> ::type_scope:x_'->'_x not
+R18702:18705 LambdaCore <> prec ind
+R18707:18708 LambdaCore <> t3:255 var
+R18710:18711 LambdaCore <> t1:252 var
+R18716:18719 LambdaCore <> prec ind
+R18721:18722 LambdaCore <> t3:255 var
+R18724:18725 LambdaCore <> t2:253 var
+R18915:18921 LambdaCore <> PDynTop constr
+R18924:18928 LambdaCore <> PRefl constr
+R18951:18957 LambdaCore <> PDynTop constr
+R18915:18921 LambdaCore <> PDynTop constr
+R18915:18921 LambdaCore <> PDynTop constr
+R18924:18928 LambdaCore <> PRefl constr
+R18924:18928 LambdaCore <> PRefl constr
+R18951:18957 LambdaCore <> PDynTop constr
+R19090:19096 LambdaCore <> PDynTop constr
+R19090:19096 LambdaCore <> PDynTop constr
+R19115:19118 LambdaCore <> PFun constr
+R19115:19118 LambdaCore <> PFun constr
+R19166:19169 LambdaCore <> PFun constr
+R19166:19169 LambdaCore <> PFun constr
+R19350:19353 LambdaCore <> PFun constr
+R19350:19353 LambdaCore <> PFun constr
+R19350:19353 LambdaCore <> PFun constr
+R19400:19403 LambdaCore <> PFun constr
+R19400:19403 LambdaCore <> PFun constr
+R19519:19525 LambdaCore <> PDynTop constr
+R19519:19525 LambdaCore <> PDynTop constr
+R19544:19547 LambdaCore <> PTup constr
+R19544:19547 LambdaCore <> PTup constr
+R19579:19582 LambdaCore <> PTup constr
+R19579:19582 LambdaCore <> PTup constr

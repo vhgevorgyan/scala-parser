@@ -1,0 +1,241 @@
+﻿> Task :compileJava UP-TO-DATE
+> Task :processResources UP-TO-DATE
+> Task :classes UP-TO-DATE
+
+> Task :runBenchmarkSuite
+=== 1. PBT-Property-vs-Mutation Matrix ===
+
+For each mutation operator, classifies detection by pipeline stage
+and maps to which PBT property category would catch the mutation.
+
+Operator                      Parse     Type      RTE   Output      Esc  PBT Property                                 
+-------------------------------------------------------------------------------------------------------------------
+ReplaceLiteralType                0        0        0       35      165  preservationClosed*                          
+SwapOperator                      0        0        0        0      200  bigStepMatchesSmallStep / swapOperatorChangesOutput
+SwapIfBranches                    0        0        0        1      199  swapIfBranchesChangesOutput                  
+RemoveCaseBranch                  0        2        0        0        0  progressClosedCase / preservationClosedCase  
+SelfReference                     0      183        0       16        1  preservationClosed*                          
+UndefinedVariable                 2        0        0        0      198  undefinedVariableCausesError                 
+DivideByZero                      0        0       21        0      179  progressClosed* (RTE)                        
+BoolNegate                        0       50        0        0      150  preservationClosed*                          
+NotOnNumber                       0       24        0        0      176  preservationClosed*                          
+UndeclaredConstructor             0      200        0        0        0  preservationClosed*                          
+TypeAnnotationMismatch          200        0        0        0        0  preservationClosed*                          
+RemoveLetBinding                  0       11        0        0      189  removeLetBindingCausesError                  
+-------------------------------------------------------------------------------------------------------------------
+Property categories that detect each detection stage:
+  Parse   ? caught before property tests run (tokenizer/parser error)
+  Type    ? preservationClosedExpr/Block/Case asserts well-typedness after step
+  RTE     ? progressClosedExpr/Block/Case asserts step() doesn't throw for non-values
+  Output  ? bigStepMatchesSmallStep or coverage-guided output-comparison properties
+  Escaped ? no existing property detects this mutation
+
+# scalability: size,parseNs,tcNs,evalNs,reduceNs,steps,name,run
+2,2400,1500,2200,600,0,literal,0
+2,7700,2700,7500,1500,0,bool,0
+2,4000,1800,2600,800,0,string,0
+2,38400,7200,172300,3700,0,unit,0
+3,24700,7800,25500,1800,0,lambda,0
+4,21600,10400,73300,79500,1,add,0
+4,7600,8900,7700,18500,1,sub,0
+4,19700,9800,6900,7500,1,mul,0
+5,326000,22800,18900,8300,1,if_true,0
+5,17500,9500,9600,4100,1,if_false,0
+3,22100,4100,5200,32200,1,not_true,0
+5,26500,16500,13500,3264300,1,beta_simple,0
+4,14700,10900,101600,32800,1,succ_num,0
+4,10900,9100,45500,24700,1,pred_num,0
+4,10600,8400,15200,8000,1,iszero_true,0
+4,10100,7900,7500,6600,1,iszero_false,0
+8,17400,15900,11700,29700,3,nested_arith,0
+12,27100,23900,12500,26500,4,nested_if,0
+12,45800,33600,51100,57900,4,chained_beta,0
+17,68100,42000,25300,66700,6,nested_beta_deep,0
+16,117000,43600,27800,237500,7,complex_arith,0
+9,1024600,1142700,326200,5617200,2,tuple_beta,0
+19,50700,184900,26700,45800,7,complex_if,0
+32,100800,387900,51300,107000,15,deep_arith_chain,0
+3,43200,67800,22900,22500,1,block_simple,0
+5,20000,54900,15200,34300,2,block_arith,0
+6,16800,101200,36100,24000,3,block_nested,0
+8,35300,77600,19100,73100,3,block_beta,0
+6,41100,64000,13100,12600,2,block_if,0
+=== 3. Type Error Recovery Benchmark ===
+
+Injects type errors into well-typed programs and measures detection rate by stage.
+
+Operator                      Total    Parse     Type      RTE  Escaped
+------------------------------------------------------------------
+ReplaceLiteralType              200        0        1        0      177   11,5%
+SwapOperator                    200        0        0        0      200    0,0%
+SwapIfBranches                  200        0        0        0      198    1,0%
+RemoveCaseBranch                  3        0        3        0        0  100,0%
+SelfReference                   200        0      170        0        0  100,0%
+UndefinedVariable               200        3        0        0      197    1,5%
+DivideByZero                    200        0        0       25      175   12,5%
+BoolNegate                      200        0       68        0      132   34,0%
+NotOnNumber                     200        0       24        0      176   12,0%
+UndeclaredConstructor           200        0      200        0        0  100,0%
+TypeAnnotationMismatch          200      200        0        0        0  100,0%
+RemoveLetBinding                200        0        6        0      194    3,0%
+------------------------------------------------------------------
+AVERAGE                                                                   39,6%
+
+=== 4. AST Node Coverage ===
+
+For each AST node type, checks which components handle it.
+
+Node Type                  Eval  Reducer  Checker   Parser
+----------------------------------------------------------
+LiteralNode                   Y        Y        Y        Y
+BoolNode                      Y        Y        Y        Y
+StringLiteralNode             Y        Y        Y        Y
+UnitLiteralNode               Y        Y        Y        Y
+IdentifierNode                Y        Y        Y        Y
+LambdaNode                    Y        Y        Y        Y
+ApplicationNode               Y        Y        Y        Y
+IfNode                        Y        Y        Y        Y
+BinaryExprNode                Y        Y        Y        Y
+UnaryExprNode                 Y        Y        Y        Y
+TupleNode                     Y        Y        Y        Y
+AscriptionNode                Y        Y        Y        Y
+FixpointNode                  N        Y        Y        N
+CaseNode                      Y        Y        Y        Y
+BlockNode                     Y        Y        Y        Y
+LetStatementNode              Y        Y        Y        Y
+MutualLetNode                 Y        Y        Y        Y
+EnumDeclNode                  Y        N        Y        Y
+TypeAliasNode                 Y        N        Y        Y
+ProgramNode                   N        N        Y        Y
+
+# steps: run,steps,count
+0,0,175
+0,1,18
+0,2,3
+0,3,2
+0,4,2
+=== 6. Parser Error Recovery Quality ===
+
+Injects single-character mutations into well-typed source code
+
+and measures cascade: how many (bogus) follow-up errors result.
+
+Injector            Total  Cascade  MaxCasc ParseErr CascadeRate
+------------------------------------------------------------------
+delete-char            50       12        2       23      24,0%
+insert-!               50       38        5       31      76,0%
+replace->#             50       10        4       19      20,0%
+delete-digit           42       14        4       27      33,3%
+
+Cascade = total parser errors - 1 (bogus follow-up errors from a single injection)
+Lower cascade rate = better error recovery
+
+empirical,ReplaceLiteralType,33,33,33,33,0,67,100
+empirical,SwapOperator,0,0,0,0,0,100,100
+empirical,SwapIfBranches,0,0,0,0,0,100,100
+empirical,SelfReference,0,0,0,0,0,0,0
+empirical,BoolNegate,100,100,100,100,0,0,100
+empirical,NotOnNumber,100,100,100,100,0,0,100
+empirical,DivideByZero,87,87,87,87,0,0,87
+# breakdown: run,size,parseNs,tcNs,evalNs,reduceNs
+0,11,32700,104200,7400,6000
+0,13,38700,23200,5500,2200
+0,14,28200,136900,8600,7100
+0,11,26600,15300,3400,2100
+0,12,27600,18600,2700,1800
+0,13,510500,47100,9100,4400
+0,8,35900,9700,3200,3300
+0,13,146200,67000,4900,3400
+0,9,42200,22500,5200,2700
+0,13,31500,345200,9900,7400
+0,10,28600,7800,2200,1400
+0,15,28600,27200,3600,59100
+0,11,35800,29100,14300,3300
+0,13,41800,30200,4700,2500
+0,11,24600,17600,2800,1900
+0,17,43000,47100,5600,2200
+0,13,28600,23500,3800,1300
+0,11,33700,19000,3400,1400
+0,11,26600,18000,3500,2400
+0,10,19800,8100,3000,1000
+0,12,16500,13900,2000,1100
+0,11,26500,13200,3200,2000
+0,11,27500,14300,3400,1700
+0,11,60800,52800,5600,2900
+0,13,42800,27500,4500,2500
+0,10,21300,14800,2700,1700
+0,12,27000,17200,3700,2600
+0,11,26100,16900,2900,1600
+0,11,21200,15600,2800,2000
+0,11,24400,24500,4400,3800
+0,8,12800,12300,2400,1200
+0,12,34500,18200,4100,2100
+0,10,58800,46300,7700,3200
+0,11,23100,20800,4200,3800
+0,11,33600,18300,3100,1900
+0,11,29100,13400,4000,2000
+0,13,29900,20100,3400,2000
+0,11,22900,17500,3600,1600
+0,13,39800,30700,4200,2800
+0,11,59300,37100,7500,5600
+0,13,34900,20600,3800,2000
+0,11,17700,12700,2800,1400
+0,10,22000,13400,2600,1200
+0,9,15200,10500,2600,1300
+0,12,32000,20800,2600,1500
+0,12,24600,160700,8100,5600
+0,10,21800,17800,3900,5200
+0,13,24900,24400,4400,8600
+0,12,58000,35200,6200,2900
+0,11,20000,17200,3200,1900
+0,10,16000,13200,2200,1300
+0,11,18500,17500,2700,1500
+0,10,15200,13300,3200,1600
+0,11,18000,15700,2300,1600
+0,12,27500,18200,3000,1700
+0,10,15800,13900,3300,1400
+0,14,21600,26100,4100,2000
+0,11,22100,23000,4200,2600
+0,12,30900,17000,2900,1300
+0,10,16600,13500,2500,1200
+0,11,26800,17300,3000,2200
+0,14,28200,21300,4000,1800
+0,10,49000,34000,8300,4800
+0,14,23400,24100,4100,4900
+0,16,29100,52900,7300,3100
+0,11,55500,30800,5700,2800
+0,12,27700,16800,5000,2800
+0,14,26000,31800,3400,2000
+0,14,31500,34400,5300,2000
+0,17,33000,49700,3900,2000
+0,13,48200,27600,3500,1700
+0,11,18800,18000,3000,3000
+0,10,15600,15300,2900,2400
+0,12,36200,23900,4900,2100
+0,11,27100,12400,2800,1700
+0,10,13700,12400,2000,1400
+0,14,22800,28800,4200,1700
+0,11,16500,15700,3200,1600
+0,8,11500,7400,2800,1800
+0,11,31000,29700,6400,2300
+0,11,22400,18800,2500,1600
+0,13,15000,23100,3300,1800
+0,13,18500,22500,3200,1700
+0,10,7200,8600,1700,1100
+0,10,12700,15900,2400,1800
+0,14,12000,18700,6500,9300
+0,13,32700,70400,8300,3300
+0,11,11600,23400,2900,1500
+0,10,10000,13000,2400,1200
+0,10,14000,6700,2700,1100
+0,10,10500,12700,2900,1200
+0,13,7100,8000,1700,800
+0,13,6800,8300,1500,800
+0,12,6600,6800,1300,700
+0,9,8500,7700,1800,800
+0,10,8900,10200,2000,1000
+0,12,11100,19800,2800,900
+
+BUILD SUCCESSFUL in 12s
+3 actionable tasks: 1 executed, 2 up-to-date
+Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.2.1/userguide/configuration_cache_enabling.html

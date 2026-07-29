@@ -304,4 +304,28 @@ class TypeCheckerTests {
         EvaluationResult r = analyze("val a = true\nval b = false\nval c = a && b || !a");
         assertTrue(r.parserResult().errors.isEmpty());
     }
+
+    @Test
+    void charLiteralType() {
+        EvaluationResult r = analyze("val c: Char = 'a'");
+        assertTrue(r.parserResult().errors.isEmpty());
+    }
+
+    @Test
+    void charTypeMismatch() {
+        EvaluationResult r = analyze("val c: Int = 'a'");
+        assertFalse(r.parserResult().errors.isEmpty());
+    }
+
+    @Test
+    void whileConditionMustBeBool() {
+        EvaluationResult r = analyze("while (1) {}");
+        assertFalse(r.parserResult().errors.isEmpty());
+    }
+
+    @Test
+    void whileConditionBool() {
+        EvaluationResult r = analyze("while (false) {}");
+        assertTrue(r.parserResult().errors.isEmpty());
+    }
 }

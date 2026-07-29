@@ -16,13 +16,17 @@ Basis (reiner λ-Kalkül)
   → Let-Bindings (val/def)
   → If/Unit (Bedingungen)
   → ADTs (enum, pattern matching)
-  → Literale + Operatoren (Int, Bool, arithmetic, comparison)
+  → Literale + Operatoren (Int, Bool, Char, arithmetic, comparison)
   → Tupel (Paare, Produkte)
   → Typ-Ascription + Type Aliases
   → Listen (syntactic sugar über ADTs)
   → Range-Literale (syntactic sugar)
   → Unicode-Operatoren (syntactic sugar)
   → Infix-Constructor :: (syntactic sugar)
+  → While-Schleife
+  → Multi-Param-Lambda + Multi-Param-Listen (Desugaring)
+  → Multi-Arg-Application (Desugaring)
+  → Package/Import/Annotation/Sealed (Syntax-Kompatibilität, ignoriert)
 ```
 
 ## Mapping-Tabelle
@@ -59,6 +63,16 @@ Basis (reiner λ-Kalkül)
 | 28 | `case 0 =>` (Literal-Pattern) | Literal-Pattern | `CaseBranch(literalPattern=LiteralNode("0"))` | `x match { case 0 => "zero" }` |
 | 29 | `case Cons(h, t) =>` | Constructor-Pattern | `CaseBranch(constructor="Cons", bindings=[h,t])` | `xs match { case Cons(h, t) => h }` |
 | 30 | `case x :: xs =>` | Infix-Constructor-Pattern | Desugared → `::(x, xs)` | `xs match { case x :: xs => x }` |
+| 31 | `while (c) body` | While-Loop | `WhileNode(cond, body)` | `while (i > 0) { i = i - 1 }` |
+| 32 | `'a'` | Char-Literal | `CharLiteralNode` + `TypeChar` | `'A'` |
+| 33 | `Char` | Char-Typ | `TypeChar` | `val c: Char = 'A'` |
+| 34 | `(x: T, y: U) => e` | Multi-Param-Lambda | Desugared → `(x: T) => (y: U) => e` | `(x: Int, y: Int) => x + y` |
+| 35 | `def f(x: T)(y: U): V = e` | Multi-Param-Listen | Desugared → `def f = (x: T) => (y: U) => e` | `def f(x: Int)(y: Int): Int = x * y` |
+| 36 | `f(x, y)` | Multi-Arg-Application | Desugared → `f(x)(y)` | `add(3, 4)` |
+| 37 | `package p` | Package-Deklaration | **Ignoriert** (Syntax-Kompatibilität) | `package com.example` |
+| 38 | `import p.X` | Import | **Ignoriert** (Syntax-Kompatibilität) | `import scala.io.StdIn` |
+| 39 | `sealed trait T` | Sealed-Trait | **Ignoriert** (Syntax-Kompatibilität) | `sealed trait Option[T]` |
+| 40 | `@ann def f` | Annotation | **Ignoriert** (Syntax-Kompatibilität) | `@Override def toString = ...` |
 
 ## Testabdeckung
 
@@ -67,4 +81,4 @@ Die Tests verwenden den `CompilerPipeline`-Ansatz: tokenisieren → parsen → t
 
 ## Metrik
 
-Aktuell abgedeckte Konstrukte: **30 von 30** (100 %)
+Aktuell abgedeckte Konstrukte: **40 von 40** (100 %)

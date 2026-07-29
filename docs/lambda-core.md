@@ -174,6 +174,61 @@ if false then e₂  →  ()
 
 ---
 
+## 4a. Erweiterung: While-Schleife
+
+### Syntax
+
+```
+e  ::=  ... aus If/Unit
+      |  while e₁ do e₂              (While-Schleife)
+
+v  ::=  ... aus If/Unit
+      |  ()                           (While → Unit)
+
+τ  ::=  ... aus If/Unit
+      |  Unit                         (While-Typ)
+```
+
+### Operationale Semantik (Small-Step)
+
+```
+While-True:
+e₁ → e₁′
+─────────────────────────────────────
+while e₁ do e₂  →  while e₁′ do e₂
+
+While-Body:
+while true do e₂  →  e₂ ; while true do e₂
+
+While-False:
+while false do e₂  →  ()
+```
+
+Dabei ist `e₂ ; while true do e₂` als Sequenz zu verstehen: der Rumpf wird
+ausgewertet, dann die Schleife wiederholt.
+
+### Big-Step-Semantik
+
+```
+(WhileTrue)  e₁ ⇓ true    e₂ ⇓ ()    while true do e₂ ⇓ ()
+             ─────────────────────────────────────────────
+                        while e₁ do e₂ ⇓ ()
+
+(WhileFalse) e₁ ⇓ false
+             ──────────────────
+             while e₁ do e₂ ⇓ ()
+```
+
+### Typregeln
+
+```
+(While)  Γ ⊢ e₁ : Bool    Γ ⊢ e₂ : Unit
+         ───────────────────────────────
+         Γ ⊢ while e₁ do e₂ : Unit
+```
+
+---
+
 ## 5. Erweiterung: ADTs (Enums) + Pattern Matching
 
 ### Syntax
@@ -253,6 +308,7 @@ e₁ match { case P ⇒ e }*  →  e₁′ match { case P ⇒ e }*
 e  ::=  ... aus ADTs
       |  n                     (Number-Literal)
       |  b                     (Boolean-Literal)
+      |  c                     (Char-Literal)
       |  s                     (String-Literal)
       |  e₁ ⊕ e₂               (Binäroperator: +, -, *, /, ==, ...)
       |  ⊖ e                   (Unäroperator: !, -)
@@ -260,10 +316,11 @@ e  ::=  ... aus ADTs
 v  ::=  ... aus ADTs
       |  n                     (Number)
       |  b                     (Boolean)
+      |  c                     (Char)
       |  s                     (String)
 
 τ  ::=  ... aus ADTs
-      |  Int | Boolean | String
+      |  Int | Boolean | Char | String
 ```
 
 ### Operationale Semantik
@@ -297,6 +354,8 @@ e → e′
 (Lit-Int)    Γ ⊢ n : Int
 
 (Lit-Bool)   Γ ⊢ b : Bool
+
+(Lit-Char)   Γ ⊢ c : Char
 
 (Lit-Str)    Γ ⊢ s : String
 
@@ -646,7 +705,12 @@ dann \( \Gamma \vdash [x \mapsto v]e : \tau \).
   \( \Gamma, \bar y : \bar\tau_i \vdash [x \mapsto v]e_K : \tau \).
   Mit Match: \( \Gamma \vdash [x \mapsto v]e_0 \text{ match } \{\text{case } K(\bar y) \Rightarrow [x \mapsto v]e_K\} : \tau \). ✓
 
-- **Fälle \( e = n, b, s, () \):** Keine Variable, Substitution trivial. ✓
+- **Fall \( e = \text{while } e_1 \text{ do } e_2 \):**
+  Nach Regel While: \( \Gamma, x : \tau' \vdash e_1 : \text{Bool} \), \( \Gamma, x : \tau' \vdash e_2 : \text{Unit} \).
+  Nach IV: \( \Gamma \vdash [x \mapsto v]e_1 : \text{Bool} \), \( \Gamma \vdash [x \mapsto v]e_2 : \text{Unit} \).
+  Mit While: \( \Gamma \vdash \text{while } [x \mapsto v]e_1 \text{ do } [x \mapsto v]e_2 : \text{Unit} \). ✓
+
+- **Fälle \( e = n, b, c, s, () \):** Keine Variable, Substitution trivial. ✓
 
 - **Fall \( e = e_1 \oplus e_2 \):**
   Nach Regel BinOp: \( \Gamma, x : \tau' \vdash e_i : \tau_i \).
@@ -669,16 +733,18 @@ Sei \( v \) ein Wert mit \( \Gamma \vdash v : \tau \). Dann:
 1. Ist \( \tau = \tau_1 \to \tau_2 \), so ist \( v = \lambda x. e \) für ein \( e \).
 2. Ist \( \tau = \text{Int} \), so ist \( v = n \) für ein \( n \in \mathbb Z \).
 3. Ist \( \tau = \text{Bool} \), so ist \( v = b \) für \( b \in \{\text{true}, \text{false}\} \).
-4. Ist \( \tau = \text{String} \), so ist \( v = s \).
-5. Ist \( \tau = \text{Unit} \), so ist \( v = () \).
-6. Ist \( \tau = C\bar\tau \) (Typkonstruktor), so ist \( v = K(v_1, ..., v_n) \)
+4. Ist \( \tau = \text{Char} \), so ist \( v = c \) für ein Zeichen \( c \).
+5. Ist \( \tau = \text{String} \), so ist \( v = s \).
+6. Ist \( \tau = \text{Unit} \), so ist \( v = () \).
+7. Ist \( \tau = C\bar\tau \) (Typkonstruktor), so ist \( v = K(v_1, ..., v_n) \)
    für einen Konstruktor \( K \) von \( C \).
-7. Ist \( \tau = (\tau_1, ..., \tau_n) \), so ist \( v = (v_1, ..., v_n) \).
+8. Ist \( \tau = (\tau_1, ..., \tau_n) \), so ist \( v = (v_1, ..., v_n) \).
 
 *Beweis.* Durch Inspektion der Werte-Definition und der Typregeln. Jeder Wert hat genau eine syntaktische Form:
 - Lambda: einziger Wert mit Pfeiltyp
 - Zahlenliteral: einziger Wert mit Int
 - Boolesches Literal: einziger Wert mit Bool
+- Char-Literal: einziger Wert mit Char
 - Stringliteral: einziger Wert mit String
 - Unit-Literal: einziger Wert mit Unit
 - Constructor-Wert: einziger Wert mit Typkonstruktor C
@@ -740,11 +806,17 @@ Wir betrachten den letzten Schritt der Ableitung (die äußerste Regel).
 
 - **Fall (Ascribe):** \( e = (e_0 : \tau) \). Ascription-Regel: \( e \to e_0 \). ✓
 
+- **Fall (While):** \( e = \text{while } e_1 \text{ do } e_2 \).
+  - \( e_1 \) kein Wert: While-True (Cond-Reduktion). ✓
+  - \( e_1 \) Wert: Nach Lemma 2 ist \( e_1 \) ein Bool.
+    - true: While-Body-Reduktion. ✓
+    - false: While-False-Reduktion. ✓
+
 - **Fall (Let):** \( e = \text{let } x = e_1 \text{ in } e_2 \).
   - \( e_1 \) kein Wert: Let-Links. ✓
   - \( e_1 \) Wert: Let-Regel: \( \text{let } x = v \text{ in } e_2 \to [x \mapsto v] e_2 \). ✓
 
-- **Fall (Lit-Int, Lit-Bool, Lit-Str, Unit):** Werte. Kein Schritt nötig. ✓
+- **Fall (Lit-Int, Lit-Bool, Lit-Char, Lit-Str, Unit):** Werte. Kein Schritt nötig. ✓
 
 In allen Fällen existiert entweder ein Reduktionsschritt oder der
 Term ist bereits ein Wert. Somit gilt Progress für alle
@@ -786,6 +858,18 @@ Wir betrachten jeden Fall der Reduktionsrelation.
   - Mit If: \( \Gamma \vdash \text{if } e_1' \text{ then } e_2 \text{ else } e_3 : \tau \). ✓
 
 - **Fall (If-NoElse-True/False):** Analog mit If-Unit-Regel. ✓
+
+- **Fall (While-True):** \( e = \text{while } e_1 \text{ do } e_2 \to \text{while } e_1' \text{ do } e_2 = e' \).
+  - Aus While-Regel: \( \Gamma \vdash e_1 : \text{Bool} \), \( \Gamma \vdash e_2 : \text{Unit} \).
+  - Nach IV: \( \Gamma \vdash e_1' : \text{Bool} \).
+  - Mit While: \( \Gamma \vdash \text{while } e_1' \text{ do } e_2 : \text{Unit} \). ✓
+
+- **Fall (While-Body):** \( e = \text{while true do } e_2 \to e_2 ; \text{while true do } e_2 = e' \).
+  - Aus While-Regel: \( \Gamma \vdash e_2 : \text{Unit} \).
+  - \( e' = e_2 ; \text{while true do } e_2 \) hat Typ Unit (Sequenz). ✓
+
+- **Fall (While-False):** \( e = \text{while false do } e_2 \to () = e' \).
+  - Aus While-Regel: Ergebnis ist Unit. \( \Gamma \vdash () : \text{Unit} \). ✓
 
 - **Fall (Match-Constructor):**
   \( e = K(\bar v) \text{ match } \{ \text{case } K(\bar x) \Rightarrow e_K; \text{rest} \} \to [\bar x \mapsto \bar v] e_K = e' \).
@@ -899,6 +983,13 @@ Der Parser/Compiler weicht in folgenden Punkten vom formalen Kalkül ab:
 | Unicode | — | `≥`, `≤`, `≠`, `→` als Sugar |
 | List-Literal | — | `[1,2,3]` desugared zu `Cons(1, Cons(2, Cons(3, Nil)))` |
 | Range | — | `a..b` als Sugar für Tupel |
+| While-Schleife | — | `while (c) body` als `WhileNode` |
+| Char-Literal | — | `'a'` als `CharLiteralNode` mit Typ `Char` |
+| Multi-Param-Lambda | — | `(x:T, y:U) => e` desugared zu `(x:T) => (y:U) => e` |
+| Multi-Param-Listen | — | `def f(x:T)(y:U): V = e` desugared zu curried lambdas |
+| Multi-Arg-App | — | `f(x, y)` desugared zu `f(x)(y)` |
+| Package/Import | — | Ignoriert (Syntax-Kompatibilität) |
+| Sealed/Annotation | — | Ignoriert (Syntax-Kompatibilität) |
 
 Trotz dieser syntaktischen Unterschiede ist die **Kernsemantik identisch**:
 Die Desugarisierung übersetzt alle Scala-Konstrukte in das λ-Core-Modell,

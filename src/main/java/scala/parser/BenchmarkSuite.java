@@ -838,7 +838,9 @@ public class BenchmarkSuite {
 
         var nodeTypes = List.of(
             "LiteralNode", "BoolNode", "StringLiteralNode", "UnitLiteralNode",
+            "CharLiteralNode",
             "IdentifierNode", "LambdaNode", "ApplicationNode", "IfNode",
+            "WhileNode",
             "BinaryExprNode", "UnaryExprNode", "TupleNode", "AscriptionNode",
             "FixpointNode", "CaseNode", "BlockNode", "LetStatementNode",
             "MutualLetNode", "EnumDeclNode", "TypeAliasNode", "ProgramNode"

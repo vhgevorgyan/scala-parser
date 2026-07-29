@@ -342,4 +342,117 @@ class ParserTests {
         assertTrue(r.errors.isEmpty());
         assertEquals(2, r.ast.statements.size());
     }
+
+    @Test
+    void whileLoop() {
+        ParserResult r = parse("while (x > 0) x - 1");
+        assertTrue(r.errors.isEmpty());
+        WhileNode w = (WhileNode) r.ast.statements.get(0);
+        assertInstanceOf(BinaryExprNode.class, w.condition);
+        assertInstanceOf(BinaryExprNode.class, w.body);
+    }
+
+    @Test
+    void charLiteral() {
+        ParserResult r = parse("'a'");
+        assertTrue(r.errors.isEmpty());
+        CharLiteralNode c = (CharLiteralNode) r.ast.statements.get(0);
+        assertEquals('a', c.value);
+    }
+
+    @Test
+    void charLiteralEscape() {
+        ParserResult r = parse("'\\n'");
+        assertTrue(r.errors.isEmpty());
+        CharLiteralNode c = (CharLiteralNode) r.ast.statements.get(0);
+        assertEquals('\n', c.value);
+    }
+
+    @Test
+    void multiParamLambda() {
+        ParserResult r = parse("(x: Int, y: Int) => x + y");
+        assertTrue(r.errors.isEmpty());
+        LambdaNode lam = (LambdaNode) r.ast.statements.get(0);
+        assertEquals("x", lam.param);
+        assertInstanceOf(LambdaNode.class, lam.body);
+        LambdaNode inner = (LambdaNode) lam.body;
+        assertEquals("y", inner.param);
+    }
+
+    @Test
+    void multiParamLambdaNoTypes() {
+        ParserResult r = parse("(x, y) => x + y");
+        assertTrue(r.errors.isEmpty());
+        LambdaNode lam = (LambdaNode) r.ast.statements.get(0);
+        assertEquals("x", lam.param);
+        assertInstanceOf(LambdaNode.class, lam.body);
+    }
+
+    @Test
+    void multiArgApplication() {
+        // f(x, y) desugars to f(x)(y)
+        ParserResult r = parse("f(x, y)");
+        assertTrue(r.errors.isEmpty());
+        ApplicationNode outer = (ApplicationNode) r.ast.statements.get(0);
+        // outer: (f(x))(y)
+        assertInstanceOf(ApplicationNode.class, outer.function);
+        assertEquals("y", ((IdentifierNode) outer.argument).name);
+        ApplicationNode inner = (ApplicationNode) outer.function;
+        assertInstanceOf(IdentifierNode.class, inner.function);
+        assertEquals("f", ((IdentifierNode) inner.function).name);
+        assertEquals("x", ((IdentifierNode) inner.argument).name);
+    }
+
+    @Test
+    void defWithMultipleParamLists() {
+        ParserResult r = parse("def f(x: Int)(y: Int): Int = x + y");
+        assertTrue(r.errors.isEmpty());
+        LetStatementNode let = (LetStatementNode) r.ast.statements.get(0);
+        assertTrue(let.isRec);
+        assertInstanceOf(LambdaNode.class, let.value);
+        LambdaNode outer = (LambdaNode) let.value;
+        assertEquals("x", outer.param);
+        assertInstanceOf(LambdaNode.class, outer.body);
+    }
+
+    @Test
+    void defWithEmptyParens() {
+        ParserResult r = parse("def run(): Int = 42");
+        assertTrue(r.errors.isEmpty());
+        LetStatementNode let = (LetStatementNode) r.ast.statements.get(0);
+        assertTrue(let.isRec);
+        assertNotNull(let.declaredType);
+        assertInstanceOf(LiteralNode.class, let.value);
+        assertEquals("42", ((LiteralNode) let.value).value);
+    }
+
+    @Test
+    void packageIgnored() {
+        ParserResult r = parse("package com.example; val x = 1");
+        assertEquals(1, r.ast.statements.size());
+        assertInstanceOf(LetStatementNode.class, r.ast.statements.get(0));
+    }
+
+    @Test
+    void importIgnored() {
+        ParserResult r = parse("import scala.collection._; val x = 1");
+        assertEquals(1, r.ast.statements.size());
+        assertInstanceOf(LetStatementNode.class, r.ast.statements.get(0));
+    }
+
+    @Test
+    void annotationIgnored() {
+        ParserResult r = parse("@main val x = 1");
+        assertTrue(r.errors.isEmpty());
+        LetStatementNode let = (LetStatementNode) r.ast.statements.get(0);
+        assertEquals("x", let.name);
+    }
+
+    @Test
+    void sealedIgnored() {
+        ParserResult r = parse("sealed enum Color { case Red }");
+        assertTrue(r.errors.isEmpty());
+        EnumDeclNode en = (EnumDeclNode) r.ast.statements.get(0);
+        assertEquals("Color", en.name);
+    }
 }

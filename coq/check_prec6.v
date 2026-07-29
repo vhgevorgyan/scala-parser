@@ -1,0 +1,1 @@
+﻿Check prec_rect.

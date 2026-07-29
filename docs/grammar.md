@@ -19,9 +19,14 @@ Repetition  = { ... }     (zero or more)
 ```
 <program>     ::= { <statement> }
 
-<statement>   ::= "type" <ident> "=" <type>                  (type alias)
+<statement>   ::= "package" <ident> { "." <ident> }           (ignored)
+               | "import" <ident> { "." <ident> } [ "." "*" ]  (ignored)
+               | { "@" <ident> }                               (annotations, ignored)
+               | "sealed" <statement>                          (sealed modifier, ignored)
+               | "type" <ident> "=" <type>                     (type alias)
                | "val" <ident> [ ":" <type> ] "=" <expression>
                | "def" <ident> [ "(" <param-def> { "," <param-def> } ")" [ ":" <type> ] ] "=" <expression>
+               | "def" <ident> "(" <param-def> ")" "(" <param-def> ")" [ ":" <type> ] "=" <expression>  (multi-param lists)
                | <enum-decl>
                | <expression>
 
@@ -31,7 +36,10 @@ Repetition  = { ... }     (zero or more)
 ## Expressions
 
 ```
-<expression>         ::= <if-match-expr> [ ".." <if-match-expr> ] [ ":" <type> ]
+<expression>         ::= <while-expr> [ ".." <while-expr> ] [ ":" <type> ]
+
+<while-expr>         ::= "while" "(" <expression> ")" <expression>
+                       | <if-match-expr>
 
 <if-match-expr>     ::= "if" "(" <expression> ")" <expression> [ "else" <expression> ]
                        | <or-expr> [ "match" "{" <match-body> "}" ]
@@ -56,12 +64,13 @@ Repetition  = { ... }     (zero or more)
 <apply-expr>         ::= <primary> { "(" <expression> ")" | "{" <program> "}" }    (left-associative)
 
 <primary>            ::= <number>
+                       | <char>
                        | <bool>
                        | <string>
                        | <ident>
                        | "(" ")"                                                   (unit literal)
                        | "(" <expression> "," <expression> { "," <expression> } ")" (tuple)
-                       | "(" <ident> [ ":" <type> ] ")" "=>" <expression>         (lambda)
+                       | "(" <param-def> { "," <param-def> } ")" "=>" <expression>  (lambda, multi-param)
                        | "(" <expression> ")"                                      (parenthesized expr)
                        | "[" [ <expression> { "," <expression> } ] "]"            (list literal)
                        | "{" <program> "}"                                         (block)
@@ -85,6 +94,7 @@ Repetition  = { ... }     (zero or more)
 
 <type-atomic>        ::= "Int"
                        | "Boolean"
+                       | "Char"
                        | "String"
                        | "Unit"
                        | <ident>                                (ADT with params)
@@ -112,9 +122,10 @@ Repetition  = { ... }     (zero or more)
 
 ```
 <number>             ::= <digit> { <digit> }
+<char>               ::= "'" ( <any-char> | <escape> ) "'"
 <bool>               ::= "true" | "false"
 <string>             ::= "\"" { <char> | <escape> } "\""
-<escape>             ::= "\\n" | "\\t" | "\\\\" | "\\\"" | "\\0"
+<escape>             ::= "\\n" | "\\t" | "\\\\" | "\\\"" | "\\'" | "\\0"
 ```
 
 ## Terminals
@@ -133,8 +144,13 @@ Repetition  = { ... }     (zero or more)
 | `"false"`     | Boolean literal               |
 | `"Int"`       | Integer type                  |
 | `"Boolean"`   | Boolean type                  |
+| `"Char"`      | Character type                |
 | `"String"`    | String type                   |
 | `"Unit"`      | Unit type                     |
+| `"package"`   | Package declaration (ignored) |
+| `"import"`    | Import (ignored)              |
+| `"sealed"`    | Sealed modifier (ignored)     |
+| `"while"`     | While loop                    |
 | `"=>"`        | Arrow (lambda, match, type)   |
 | `"("`         | Left paren                    |
 | `")"`         | Right paren                   |
@@ -145,6 +161,8 @@ Repetition  = { ... }     (zero or more)
 | `"_"`         | Wildcard pattern              |
 | `"::"`        | Infix cons (List constructor) |
 | `".."`        | Range operator                |
+| `"'"`         | Single quote (char literal)   |
+| `"@"`         | Annotation (ignored)          |
 | `"="`         | Assignment                    |
 | `";"`         | Statement separator           |
 | `":"`         | Type annotation               |
@@ -188,6 +206,10 @@ Repetition  = { ... }     (zero or more)
 | `1..10` | range value as `(1, 10)` tuple |
 | `(a, b)` (expr) | Tuple of two elements |
 | `(Int, String)` (type) | Tuple type (product) |
+| `(x: T, y: U) => e` | `(x: T) => (y: U) => e` (curried) |
+| `def f(x: T)(y: U): V = e` | `def f = (x: T) => (y: U) => e` |
+| `f(x, y)` | `f(x)(y)` (curried application) |
+| `'a'` | `CharLiteralNode('a')` |
 
 ## Precedence (lowest to highest)
 

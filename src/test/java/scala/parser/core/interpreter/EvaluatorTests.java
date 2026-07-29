@@ -437,4 +437,18 @@ class EvaluatorTests {
         assertThrows(RuntimeException.class, () -> e.evalProgram(r.parserResult().ast),
             "Deep mutual recursion must hit depth limit");
     }
+
+    @Test
+    void charLiteral() {
+        Value v = eval("'a'");
+        assertInstanceOf(CharValue.class, v);
+        assertEquals('a', ((CharValue) v).value);
+    }
+
+    @Test
+    void whileLoopCountdown() {
+        Value v = eval(
+            "def loop(n: Int): Unit = if (n > 0) { print(n); loop(n - 1) }; loop(3)");
+        assertInstanceOf(UnitValue.class, v);
+    }
 }

@@ -12,16 +12,18 @@ Die Syntax orientiert sich an **Scala 3**: `val`/`def` für Definitionen, `match
 
 | Feature | Beispiel |
 |---|---|---|
-| Zahlen, Booleans, Strings | `42`, `true`, `"hello"` |
+| Zahlen, Booleans, Strings, Chars | `42`, `true`, `"hello"`, `'A'` |
 | Arithmetik | `+`, `-`, `*`, `/` |
 | Unäres Minus | `-x` |
 | Vergleiche | `==`, `!=`, `<`, `>`, `<=`, `>=` |
 | Logik | `&&`, `\|\|`, `!` |
 | If-then-else (else optional) | `if (x > 0) x else 0` / `if (cond) print(1)` |
-| Lambda | `(x: Int) => x + 1` |
-| Applikation | `f(x)` |
+| While-Schleife | `while (i > 0) { i = i - 1 }` |
+| Lambda (multi-param) | `(x: Int, y: Int) => x + y` |
+| Applikation (multi-arg) | `f(x, y)` → `f(x)(y)` |
+| Multi-Param-Listen | `def f(x: Int)(y: Int): Int = x * y` |
 | Val-Bindung | `val x = 42` |
-| Def-Rekursion, multi-param | `def add(x: Int, y: Int): Int = x + y` |
+| Def-Rekursion | `def add(x: Int, y: Int): Int = x + y` |
 | Typannotation | `val x: Int = 42` |
 | Type Ascription | `(x + 1: Int)` |
 | Gradual Typing (dynamischer Typ `?`) | `val x: ? = 42; (x: Int)` |
@@ -32,6 +34,8 @@ Die Syntax orientiert sich an **Scala 3**: `val`/`def` für Definitionen, `match
 | Wildcard-Pattern `_` | `case _ => 0` |
 | Literal-Patterns | `case 0 => "zero"`, `case true => "yes"` |
 | Builtins | `succ`, `pred`, `iszero`, `print` |
+| Package/Import (ignoriert) | `package com.example; import scala.io.*` |
+| Sealed/Annotation (ignoriert) | `sealed trait Opt[A]`, `@Override` |
 
 ---
 
@@ -70,8 +74,8 @@ Source Code (.sp)
 ### 3.1 Lexer (Tokenizer)
 
 Zeichenweiser Scanner, produziert `Token(type, text, line, column)`-Liste. Erkennt:
-- Identifier, Keywords (`val`, `def`, `enum`, `match`, `case`, `if`, `else`, `true`, `false`)
-- Zahlen, Strings (mit Escapes), Operatoren (`=>`, `==`, `!=`, `<=`, `>=`, `&&`, `||`)
+- Identifier, Keywords (`val`, `def`, `enum`, `match`, `case`, `if`, `else`, `true`, `false`, `while`, `package`, `import`, `sealed`)
+- Zahlen, Char-Literale (`'a'`, `'\n'`), Strings (mit Escapes), Operatoren (`=>`, `==`, `!=`, `<=`, `>=`, `&&`, `||`)
 - Kommentare `//` und `/* */`
 - Unbekannte Zeichen werden übersprungen (fehlertolerant)
 
@@ -79,11 +83,16 @@ Zeichenweiser Scanner, produziert `Token(type, text, line, column)`-Liste. Erken
 
 Recursive-Descent-Parser mit Operator-Präzedenz (14 Stufen). Baut `ProgramNode`-AST. Features:
 - Fehlererkennung und -synchronisation (Parser Recovery)
-- `parseValDef()`: `val x = expr` / `val x: Type = expr` / `def f(x: Type): RetType = body`
+- `parseValDef()`: `val x = expr` / `val x: Type = expr` / `def f(x: Type): RetType = body` / `def f(x:T)(y:U): V = body`
 - `parseMatchBody()`: `{ case P => body; ... }`
 - `isLambdaStart()`: Lookahead erkennt `(x: Type) =>` vor Klammerausdruck
 - `parseBlock()`: `{ stmts }` als Block-Ausdruck
 - Application stoppt an Zeilengrenzen (neue Anweisung auf neuer Zeile)
+- `while (c) body` als `WhileNode(cond, body)`
+- `f(x, y)` desugared zu `f(x)(y)` (multi-arg application)
+- `(x: T, y: U) => e` desugared zu `(x: T) => (y: U) => e` (curried)
+- `package`/`import`/`sealed`/`@ann` werden ignoriert (Syntax-Kompatibilität)
+- `.scala`-Dateien werden ebenso unterstützt wie `.sp` (VS Code Extension)
 
 ### 3.3 Type Checker (Hindley-Milner / Algorithmus W)
 
@@ -308,3 +317,14 @@ Gesamterkennungsrate: **37,2%** (mit Output-Vergleich). Schwachstellen sind sema
     - **SemanticTokenProvider**: Emittiert Variable-Token für `asName`, traversiert `guard`+`literalPattern`
     - **AstFinder**: Durchsucht `guard`+`literalPattern` für Node-at-Position
     - **Alle 413 Tests grün** (vorher 408+)
+
+35. ✅ **While-Schleife + Char-Literale + `.scala`-Support**:
+    - `WhileNode` + `CharLiteralNode` + `TypeChar` + `CharValue`
+    - Parser/TypeChecker/Evaluator/SemanticTokens/Hover/AstFinder für while/char
+    - Char-Literale mit Escapes (`'\n'`, `'\t'`, `'\\'`, `'\''`)
+    - Multi-Param-Lambda `(x: T, y: U) => e` desugared zu nested `LambdaNode`s
+    - Multi-Param-Listen `def f(x:T)(y:U): V = e` desugared zu nested Lambdas
+    - Multi-Arg-App `f(x, y)` desugared zu `f(x)(y)`
+    - Package/Import/Sealed/Annotation werden ignoriert (Syntax-Kompatibilität)
+    - `.scala`-Datei-Endung in VS Code Extension registriert
+    - ScalaMapTest um 10 Einträge erweitert (40/40)

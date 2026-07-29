@@ -21,11 +21,12 @@ class EvaluatorPBT {
     // ── Generators ───────────────────────────────────────────────
 
     private static ExpressionNode genClosed(Random rand) {
-        return switch (rand.nextInt(4)) {
+        return switch (rand.nextInt(5)) {
             case 0 -> new LiteralNode(String.valueOf(rand.nextInt(1000)), 0, 0);
             case 1 -> new BoolNode(0, 0, rand.nextBoolean());
-            case 2 -> new UnitLiteralNode(0, 0);
-            case 3 -> {
+            case 2 -> new CharLiteralNode((char) (32 + rand.nextInt(95)), 0, 0);
+            case 3 -> new UnitLiteralNode(0, 0);
+            case 4 -> {
                 String x = "x" + rand.nextInt(100);
                 yield new LambdaNode(x, genClosed(rand), null, 0, 0);
             }
@@ -48,7 +49,7 @@ class EvaluatorPBT {
     // Generates a random expression with a chance of blocks/lets
     private static ExpressionNode genRichExpr(Random rand, int depth) {
         if (depth <= 0) return genClosed(rand);
-        return switch (rand.nextInt(7)) {
+        return switch (rand.nextInt(8)) {
             case 0, 1 -> genClosed(rand);
             case 2 -> {
                 String x = "x" + rand.nextInt(100);
@@ -87,6 +88,11 @@ class EvaluatorPBT {
                 yield new BinaryExprNode(
                     genRichExpr(rand, depth - 1), op,
                     genRichExpr(rand, depth - 1), 0, 0);
+            }
+            case 7 -> {
+                yield new WhileNode(
+                    new BoolNode(0, 0, false),
+                    new UnitLiteralNode(0, 0), 0, 0);
             }
             default -> genClosed(rand);
         };
@@ -127,6 +133,8 @@ class EvaluatorPBT {
             return true;
         if (v instanceof StringValue sv && n instanceof StringLiteralNode sn)
             return sv.value.equals(sn.value);
+        if (v instanceof CharValue cv && n instanceof CharLiteralNode cn)
+            return cv.value == cn.value;
         if (v instanceof TupleValue tv && n instanceof TupleNode tn) {
             if (tv.values.size() != tn.elements.size()) return false;
             for (int i = 0; i < tv.values.size(); i++) {

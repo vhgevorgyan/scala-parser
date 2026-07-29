@@ -4,11 +4,12 @@
    literals+operators, tuples, ascription.
 *)
 
-Require Import String.
-Require Import List.
-Require Import Bool.
-Require Import Arith.
+From Stdlib Require Import String.
+From Stdlib Require Import List.
+From Stdlib Require Import Bool.
+From Stdlib Require Import Arith.
 Import ListNotations.
+Open Scope string_scope.
 
 (* ================================================================= *)
 (* 1. Syntax — Core λ-Calculus                                      *)
@@ -56,7 +57,17 @@ with ty : Type :=
    | TConst    : string -> list ty -> ty
    | TDynamic  : ty.
 
-Scheme Equality for exp, block_stmt, pat, branch.
+Fixpoint exp_eq_dec (e1 e2 : exp) : {e1 = e2} + {e1 <> e2}
+with block_stmt_eq_dec (b1 b2 : block_stmt) : {b1 = b2} + {b1 <> b2}
+with pat_eq_dec (p1 p2 : pat) : {p1 = p2} + {p1 <> p2}
+with branch_eq_dec (b1 b2 : branch) : {b1 = b2} + {b1 <> b2}
+with ty_eq_dec (t1 t2 : ty) : {t1 = t2} + {t1 <> t2}.
+Proof.
+  all: decide equality; eauto 15 using PeanoNat.Nat.eq_dec, string_dec, bool_dec.
+  all: eapply list_eq_dec.
+  all: eauto using exp_eq_dec, block_stmt_eq_dec, pat_eq_dec,
+              branch_eq_dec, ty_eq_dec, string_dec.
+Defined.
 
 (* ================================================================= *)
 (* 2. Free Variables                                                 *)
@@ -79,21 +90,15 @@ Fixpoint fv (e : exp) : list string :=
   | ETup es        => List.concat (List.map fv es)
     | EAscribe e _   => fv e
     | EFix e         => fv e
-    | EBlock bss     => fv_blocks bss
+    | EBlock bss     => List.concat (List.map fv_block bss)
     | ECtor _ es     => List.concat (List.map fv es)
-    | ECase e bs     => List.app (fv e) (fv_branches bs)
+    | ECase e bs     => List.app (fv e) (List.concat (List.map fv_branch bs))
     | ERuntimeError _ => []
-    end.
-
-Fixpoint fv_block (bs : block_stmt) : list string :=
+    end
+with fv_block (bs : block_stmt) : list string :=
   match bs with
   | BLet x _ e => List.remove string_dec x (fv e)
   | BExpr e    => fv e
-  end
-with fv_blocks (bss : list block_stmt) : list string :=
-  match bss with
-  | [] => []
-  | bs :: rest => List.app (fv_block bs) (fv_blocks rest)
   end
 with fv_branch (b : branch) : list string :=
   match b with
@@ -105,18 +110,13 @@ with fv_branch (b : branch) : list string :=
                    | PCtor _ xs => xs
                    end
       in List.fold_left (fun acc x => List.remove string_dec x acc) (fv body) bound
-  end
-with fv_branches (bs : list branch) : list string :=
-  match bs with
-  | [] => []
-  | b :: rest => List.app (fv_branch b) (fv_branches rest)
   end.
 
 (* ================================================================= *)
 (* 3. Substitution                                                   *)
 (* ================================================================= *)
 
-Fixpoint subst (x : string) (s : exp) (e : exp) : exp :=
+Fixpoint subst (x : string) (s : exp) (e : exp) {struct e} : exp :=
   match e with
   | EVar y       => if string_dec x y then s else EVar y
   | EAbs y e'    =>
@@ -141,32 +141,26 @@ Fixpoint subst (x : string) (s : exp) (e : exp) : exp :=
   | ETup es       => ETup (List.map (subst x s) es)
     | EAscribe e t  => EAscribe (subst x s e) t
     | EFix e        => EFix (subst x s e)
-    | EBlock bss    => EBlock (subst_blocks x s bss)
+    | EBlock bss    => EBlock (List.map (subst_block x s) bss)
     | ECtor name es => ECtor name (List.map (subst x s) es)
-    | ECase e bs    => ECase (subst x s e) (subst_branches x s bs)
+    | ECase e bs    => ECase (subst x s e) (List.map (subst_branch x s) bs)
     | ERuntimeError msg => ERuntimeError msg
-    end.
-
-Fixpoint subst_block (x : string) (s : exp) (bs : block_stmt) : block_stmt :=
+    end
+with subst_block (x : string) (s : exp) (bs : block_stmt) {struct bs} : block_stmt :=
   match bs with
   | BLet y isRec e =>
       if string_dec x y then BLet y isRec e
       else BLet y isRec (subst x s e)
   | BExpr e => BExpr (subst x s e)
   end
-with subst_blocks (x : string) (s : exp) (bss : list block_stmt) : list block_stmt :=
-  match bss with
-  | [] => []
-  | bs :: rest => subst_block x s bs :: subst_blocks x s rest
-  end
-with subst_pat (x : string) (s : exp) (p : pat) : pat :=
+with subst_pat (x : string) (s : exp) (p : pat) {struct p} : pat :=
   match p with
   | PWild => PWild
   | PVar y => if string_dec x y then PVar y else PVar y
   | PLit e => PLit (subst x s e)
   | PCtor name ys => PCtor name ys
   end
-with subst_branch (x : string) (s : exp) (b : branch) : branch :=
+with subst_branch (x : string) (s : exp) (b : branch) {struct b} : branch :=
   match b with
   | EBranch p body =>
       let bound := match p with
@@ -175,11 +169,18 @@ with subst_branch (x : string) (s : exp) (b : branch) : branch :=
                    | PLit _ => []
                    | PCtor _ ys => ys
                    end
-      in if List.existsb (fun y => string_dec x y) bound
+      in if List.existsb (fun y => if string_dec x y then true else false) bound
          then EBranch (subst_pat x s p) body
          else EBranch (subst_pat x s p) (subst x s body)
-  end
-with subst_branches (x : string) (s : exp) (bs : list branch) : list branch :=
+  end.
+
+Fixpoint subst_blocks (x : string) (s : exp) (bss : list block_stmt) : list block_stmt :=
+  match bss with
+  | [] => []
+  | bs :: rest => subst_block x s bs :: subst_blocks x s rest
+  end.
+
+Fixpoint subst_branches (x : string) (s : exp) (bs : list branch) : list branch :=
   match bs with
   | [] => []
   | b :: rest => subst_branch x s b :: subst_branches x s rest
@@ -339,7 +340,7 @@ Inductive step : exp -> exp -> Prop :=
                   step (EFix (EAbs x e)) (subst x (EFix (EAbs x e)) e)
     (* Fixpoint-Expr: step the body *)
     | SFixExpr  : forall e e',
-                   step e e' -> step (EFix e) (EFix e').
+                   step e e' -> step (EFix e) (EFix e')
     (* Block: empty → EUnit *)
     | SBlockEmpty  : step (EBlock []) EUnit
     (* Block: expression statement, value, last *)
@@ -393,7 +394,7 @@ Inductive step : exp -> exp -> Prop :=
                       step (ECase e (EBranch (PCtor name bindings) body :: bs)) (ECase e bs)
     (* Case: no branches left — runtime error *)
     | SCaseNoMatch : forall e, value e ->
-                     step (ECase e []) (ERuntimeError "non-exhaustive match")
+                     step (ECase e []) (ERuntimeError "non-exhaustive match").
 
 (* ================================================================= *)
 (* 7. Multi-Step Reduction                                           *)
@@ -415,6 +416,145 @@ Fixpoint lookup (Gamma : ctx) (x : string) : option ty :=
   | (y, t) :: rest =>
     if string_dec x y then Some t else lookup rest x
   end.
+(* ================================================================= *)
+(* 10. Prec: precision ordering (t ⊑ t'  ≡  t is more precise than t') *)
+(* ================================================================= *)
+
+Inductive prec : ty -> ty -> Prop :=
+  | PDynTop  : forall t, prec t TDynamic
+  | PRefl    : forall t, prec t t
+  | PFun     : forall t1 t1' t2 t2',
+               prec t1' t1 -> prec t2 t2' ->
+               prec (TFun t1 t2) (TFun t1' t2')
+  | PTup     : forall ts ts',
+               List.Forall2 prec ts ts' ->
+               prec (TTup ts) (TTup ts')
+  | PConst   : forall s ts ts',
+               List.Forall2 prec ts ts' ->
+               prec (TConst s ts) (TConst s ts').
+
+(* ================================================================= *)
+(* 11. Prec helper lemmas                                            *)
+(* ================================================================= *)
+
+Lemma prec_fun_inv' : forall t t1 t2,
+  prec t (TFun t1 t2) ->
+  (t = TFun t1 t2) \/ (exists t1' t2', t = TFun t1' t2' /\ prec t1 t1' /\ prec t2' t2).
+Proof.
+  intros t t1 t2 H.
+  inversion H; subst; [left; reflexivity | right; eexists; eexists; split; [reflexivity|]; split; eauto].
+Qed.
+
+Lemma prec_trans_strong : forall t1 t2,
+  prec t1 t2 ->
+  (forall t3, prec t2 t3 -> prec t1 t3) /\ (forall t3, prec t3 t1 -> prec t3 t2).
+Proof.
+  induction 1 as [t | t | A A' B B' Hprec1 [IH1a IH1b] Hprec2 [IH2a IH2b] | ts ts' Hfora IHfora | s ts ts' Hfora IHfora].
+  - split; [intros t3 H; inversion H; subst; eauto using PDynTop, PRefl | intros t3 H; apply PDynTop].
+  - split; auto.
+  - split.
+    + intros t3 H23.
+      inversion H23 as [| | A1 A1' B1 B1' Hsub1 Hsub2| |]; subst.
+      { apply PDynTop. }
+      { apply PFun; [exact Hprec1|exact Hprec2]. }
+      { apply PFun; [eapply IH1b, Hsub1|eapply IH2a, Hsub2]. }
+      all: discriminate.
+    + intros t3 H13.
+      inversion H13 as [| | A1 A1' B1 B1' Hsub1 Hsub2| |]; try solve [discriminate|apply PFun; [exact Hprec1|exact Hprec2]].
+      { apply PFun; [eapply IH1a, Hsub1|eapply IH2b, Hsub2]. }
+  - split.
+    + intros t3 H.
+      inversion H; subst.
+      { apply PDynTop. }
+      { apply PTup; exact Hfora. }
+      { apply PTup.
+        revert Hfora IHfora.
+        induction H1 as [|y z ys zs Hyz Hrest IHrest]; intros Hfora IHfora.
+        { inversion Hfora; subst; constructor. }
+        { inversion Hfora as [|x y' xs ys' Hxy' Hrest']; subst.
+          inversion IHfora as [|x' y'' xs' ys'' Hpair IHfora_tail]; subst.
+          constructor.
+          - destruct Hpair as [_ Hback]; eapply Hback; exact Hyz.
+          - eapply IHrest; eassumption. } }
+      all: discriminate.
+    + intros t3 H.
+      inversion H; subst.
+      { discriminate. }
+      { apply PTup; exact Hfora. }
+      { apply PTup.
+        revert Hfora IHfora.
+        induction H1 as [|y z ys zs Hyz Hrest IHrest]; intros Hfora IHfora.
+        { inversion Hfora; subst; constructor. }
+        { inversion Hfora as [|x y' xs ys' Hxy' Hrest']; subst.
+          inversion IHfora as [|x' y'' xs' ys'' Hpair IHfora_tail]; subst.
+          constructor.
+          - destruct Hpair as [Hfw _]; eapply Hfw; exact Hyz.
+          - eapply IHrest; eassumption. } }
+      all: discriminate.
+  - split.
+    + intros t3 H.
+      inversion H; subst.
+      { apply PDynTop. }
+      { apply PConst; [exact Hfora|auto]. }
+      { apply PConst; [|auto].
+        revert Hfora IHfora.
+        induction H1 as [|y z ys zs Hyz Hrest IHrest]; intros Hfora IHfora.
+        { inversion Hfora; subst; constructor. }
+        { inversion Hfora as [|x y' xs ys' Hxy' Hrest']; subst.
+          inversion IHfora as [|x' y'' xs' ys'' Hpair IHfora_tail]; subst.
+          constructor.
+          - destruct Hpair as [_ Hback]; eapply Hback; exact Hyz.
+          - eapply IHrest; eassumption. } }
+      all: discriminate.
+    + intros t3 H.
+      inversion H; subst.
+      { discriminate. }
+      { apply PConst; [exact Hfora|auto]. }
+      { apply PConst; [|auto].
+        revert Hfora IHfora.
+        induction H1 as [|y z ys zs Hyz Hrest IHrest]; intros Hfora IHfora.
+        { inversion Hfora; subst; constructor. }
+        { inversion Hfora as [|x y' xs ys' Hxy' Hrest']; subst.
+          inversion IHfora as [|x' y'' xs' ys'' Hpair IHfora_tail]; subst.
+          constructor.
+          - destruct Hpair as [Hfw _]; eapply Hfw; exact Hyz.
+          - eapply IHrest; eassumption. } }
+      all: discriminate.
+Qed.
+
+Lemma prec_trans : forall t1 t2 t3,
+  prec t1 t2 -> prec t2 t3 -> prec t1 t3.
+Proof.
+  intros t1 t2 t3 H12 H23.
+  destruct (prec_trans_strong t1 t2 H12) as [Hfw _].
+  eauto.
+Qed.
+
+Lemma prec_bool_inv : forall t, prec t TBool -> t = TBool.
+Proof.
+  intros t H. inversion H; subst; auto.
+Qed.
+
+Lemma prec_int_inv : forall t, prec t TInt -> t = TInt.
+Proof.
+  intros t H. inversion H; subst; auto.
+Qed.
+
+Lemma prec_string_inv : forall t, prec t TString -> t = TString.
+Proof.
+  intros t H. inversion H; subst; auto.
+Qed.
+
+Lemma prec_unit_inv : forall t, prec t TUnit -> t = TUnit.
+Proof.
+  intros t H. inversion H; subst; auto.
+Qed.
+
+Lemma prec_tup_inv : forall t ts, prec t (TTup ts) -> exists ts', t = TTup ts'.
+Proof.
+  intros t ts H. inversion H; subst; eauto.
+Qed.
+
 
 (* ================================================================= *)
 (* 9. Type System (Simply Typed)                                     *)
@@ -524,89 +664,6 @@ Inductive type_branch : ctx -> branch -> ty -> ty -> Prop :=
               type_pat Gamma pat t_scrut bindings ->
               has_type (List.app bindings Gamma) body t_res ->
               type_branch Gamma (EBranch pat body) t_scrut t_res.
-
-(* ================================================================= *)
-(* 10. Prec: precision ordering (t ⊑ t'  ≡  t is more precise than t') *)
-(* ================================================================= *)
-
-Inductive prec : ty -> ty -> Prop :=
-  | PDynTop  : forall t, prec t TDynamic
-  | PRefl    : forall t, prec t t
-  | PFun     : forall t1 t1' t2 t2',
-               prec t1' t1 -> prec t2 t2' ->
-               prec (TFun t1 t2) (TFun t1' t2')
-  | PTup     : forall ts ts',
-               List.Forall2 prec ts ts' ->
-               prec (TTup ts) (TTup ts')
-  | PConst   : forall s ts ts',
-               List.Forall2 prec ts ts' ->
-               prec (TConst s ts) (TConst s ts').
-
-(* ================================================================= *)
-(* 11. Prec helper lemmas                                            *)
-(* ================================================================= *)
-
-Lemma prec_fun_inv' : forall t t1 t2,
-  prec t (TFun t1 t2) ->
-  (t = TFun t1 t2) \/ (exists t1' t2', t = TFun t1' t2' /\ prec t1 t1' /\ prec t2' t2).
-Proof.
-  intros t t1 t2 H.
-  inversion H; subst.
-  - right; eexists; eexists; split; [reflexivity|]; split; [apply PRefl|]; apply PRefl.
-  - left; reflexivity.
-  - right; eexists; eexists; split; [reflexivity|]; split; eauto.
-Qed.
-
-Lemma prec_trans : forall t1 t2 t3,
-  prec t1 t2 -> prec t2 t3 -> prec t1 t3.
-Proof.
-  intros t1 t2 t3 H12 H23.
-  induction H12; try (apply PDynTop).
-  - exact H23.
-  - inversion H23; subst.
-    + apply PDynTop.
-    + apply PFun; auto.
-    + apply PFun; eauto.
-  - inversion H23; subst.
-    + apply PDynTop.
-    + apply PTup.
-      eapply List.Forall2_impl_In; [|exact H1].
-      intros x y _ _ Hxy. eapply Hxy; eauto.
-    + apply PTup.
-      eapply List.Forall2_impl_In; [|exact H1].
-      intros x y _ _ Hxy. eapply Hxy; eauto.
-  - inversion H23; subst.
-    + apply PDynTop.
-    + apply PConst; auto.
-    + apply PConst; auto.
-      eapply List.Forall2_impl_In; [|exact H1].
-      intros x y _ _ Hxy. eapply Hxy; eauto.
-Qed.
-
-Lemma prec_bool_inv : forall t, prec t TBool -> t = TBool.
-Proof.
-  intros t H. inversion H; subst; auto.
-Qed.
-
-Lemma prec_int_inv : forall t, prec t TInt -> t = TInt.
-Proof.
-  intros t H. inversion H; subst; auto.
-Qed.
-
-Lemma prec_string_inv : forall t, prec t TString -> t = TString.
-Proof.
-  intros t H. inversion H; subst; auto.
-Qed.
-
-Lemma prec_unit_inv : forall t, prec t TUnit -> t = TUnit.
-Proof.
-  intros t H. inversion H; subst; auto.
-Qed.
-
-Lemma prec_tup_inv : forall t ts, prec t (TTup ts) -> exists ts', t = TTup ts'.
-Proof.
-  intros t ts H. inversion H; subst; eauto.
-Qed.
 
 (* ================================================================= *)
 (* 12. Helper: find leftmost non-value in a list                     *)
