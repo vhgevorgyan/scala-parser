@@ -73,6 +73,12 @@ public class Substitution {
                 fp.line, fp.column);
         }
 
+        if (expr instanceof AssignNode assign) {
+            return new AssignNode(assign.name,
+                subst(var, replacement, assign.value),
+                assign.line, assign.column);
+        }
+
         if (expr instanceof BlockNode block) {
             var newStmts = block.statements.stream()
                 .map(s -> substInBlockStatement(var, replacement, s))
@@ -90,6 +96,13 @@ public class Substitution {
             return new CaseNode(subst(var, replacement, c.expr), newBranches, c.line, c.column);
         }
 
+        if (expr instanceof WhileNode w) {
+            return new WhileNode(
+                subst(var, replacement, w.condition),
+                subst(var, replacement, w.body),
+                w.line, w.column);
+        }
+
         return expr;
     }
 
@@ -101,13 +114,13 @@ public class Substitution {
         if (node instanceof ExpressionNode e) return subst(var, replacement, e);
         if (node instanceof LetStatementNode l) {
             ExpressionNode newBody = subst(var, replacement, l.value);
-            return new LetStatementNode(l.name, newBody, l.isRec, l.declaredType, l.line, l.column);
+            return new LetStatementNode(l.name, newBody, l.isRec, l.isMutable, l.declaredType, l.line, l.column);
         }
         if (node instanceof MutualLetNode m) {
             List<LetStatementNode> newDefs = new ArrayList<>();
             for (LetStatementNode def : m.defs) {
                 ExpressionNode newBody = subst(var, replacement, def.value);
-                newDefs.add(new LetStatementNode(def.name, newBody, def.isRec, def.declaredType, def.line, def.column));
+                newDefs.add(new LetStatementNode(def.name, newBody, def.isRec, def.isMutable, def.declaredType, def.line, def.column));
             }
             return new MutualLetNode(newDefs, m.line, m.column);
         }
@@ -184,6 +197,15 @@ public class Substitution {
                     for (var b : br.bindings()) bound.remove(b.name());
                 }
             }
+            return;
+        }
+        if (expr instanceof WhileNode w) {
+            collectFree(w.condition, fv, bound);
+            collectFree(w.body, fv, bound);
+            return;
+        }
+        if (expr instanceof AssignNode assign) {
+            collectFree(assign.value, fv, bound);
             return;
         }
     }

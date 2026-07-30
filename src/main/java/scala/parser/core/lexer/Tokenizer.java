@@ -267,6 +267,7 @@ public class Tokenizer {
 
         return switch (text) {
             case "val" -> new Token(TokenType.VAL, text, line, startCol);
+            case "var" -> new Token(TokenType.VAR, text, line, startCol);
             case "def" -> new Token(TokenType.DEF, text, line, startCol);
             case "type" -> new Token(TokenType.TYPE, text, line, startCol);
             case "enum" -> new Token(TokenType.ENUM, text, line, startCol);

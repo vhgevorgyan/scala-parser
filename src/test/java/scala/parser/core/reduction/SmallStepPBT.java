@@ -222,6 +222,10 @@ class SmallStepPBT {
                 new BoolNode(0, 0, false),
                 new UnitLiteralNode(0, 0), 0, 0);
         }
+        if (choice == 12) {
+            String name = bound.isEmpty() ? "x" : bound.get(rand.nextInt(bound.size()));
+            return new AssignNode(name, genClosedExpr(rand, depth - 1, bound), 0, 0);
+        }
         return genClosedLeaf(rand, bound);
     }
 
@@ -249,7 +253,7 @@ class SmallStepPBT {
                 fb.add(param);
                 stmts.add(new LetStatementNode(fname,
                     new LambdaNode(param, genClosedExpr(rand, depth - 1, fb), null, 0, 0),
-                    true, null, 0, 0));
+                    true, false, null, 0, 0));
                 bound.add(fname);
             } else if (r < 0.60 && bound.size() < 5) {
                 int numDefs = 2 + rand.nextInt(2);
@@ -266,7 +270,7 @@ class SmallStepPBT {
                     bodyBound.add(param);
                     defs.add(new LetStatementNode(mutualNames.get(j),
                         new LambdaNode(param, genClosedExpr(rand, depth - 1, bodyBound), null, 0, 0),
-                        true, null, 0, 0));
+                        true, false, null, 0, 0));
                 }
                 stmts.add(new MutualLetNode(defs, 0, 0));
                 bound.addAll(mutualNames);
@@ -274,7 +278,7 @@ class SmallStepPBT {
                 String bname = freshName("b", bound);
                 ExpressionNode val = genClosedExpr(rand, depth - 1, bound);
                 bound.add(bname);
-                stmts.add(new LetStatementNode(bname, val, false, null, 0, 0));
+                stmts.add(new LetStatementNode(bname, val, false, rand.nextDouble() < 0.3, null, 0, 0));
             }
         }
         stmts.add(genClosedExpr(rand, depth - 1, bound));
@@ -712,6 +716,7 @@ class SmallStepPBT {
         if (a instanceof AscriptionNode aa && b instanceof AscriptionNode ab) return exprEquals(aa.expr, ab.expr) && aa.declaredType.toString().equals(ab.declaredType.toString());
         if (a instanceof FixpointNode fa && b instanceof FixpointNode fb) return exprEquals(fa.body, fb.body);
         if (a instanceof WhileNode wa && b instanceof WhileNode wb) return exprEquals(wa.condition, wb.condition) && exprEquals(wa.body, wb.body);
+        if (a instanceof AssignNode aa && b instanceof AssignNode ab) return aa.name.equals(ab.name) && exprEquals(aa.value, ab.value);
         if (a instanceof CaseNode ca && b instanceof CaseNode cb) {
             if (!exprEquals(ca.expr, cb.expr)) return false;
             if (ca.branches.size() != cb.branches.size()) return false;
@@ -737,7 +742,7 @@ class SmallStepPBT {
     private static boolean stmtEquals(ASTNode a, ASTNode b) {
         if (a.getClass() != b.getClass()) return false;
         if (a instanceof LetStatementNode la && b instanceof LetStatementNode lb) {
-            return la.name.equals(lb.name) && la.isRec == lb.isRec && exprEquals(la.value, lb.value);
+            return la.name.equals(lb.name) && la.isRec == lb.isRec && la.isMutable == lb.isMutable && exprEquals(la.value, lb.value);
         }
         if (a instanceof MutualLetNode ma && b instanceof MutualLetNode mb) {
             if (ma.defs.size() != mb.defs.size()) return false;
@@ -833,7 +838,7 @@ class SmallStepPBT {
                 stmts.add(new LetStatementNode(name,
                     new LambdaNode("x" + i, new IdentifierNode("x" + i, 0, 0),
                         null, 0, 0),
-                    false, null, 0, 0));
+                    false, rand.nextDouble() < 0.3, null, 0, 0));
             } else {
                 String name = "n" + depth + "_" + i;
                 monoNames.add(name);
@@ -841,7 +846,7 @@ class SmallStepPBT {
                     rand.nextBoolean()
                         ? new LiteralNode(String.valueOf(rand.nextInt(100)), 0, 0)
                         : new BoolNode(0, 0, rand.nextBoolean()),
-                    false, null, 0, 0));
+                    false, rand.nextDouble() < 0.3, null, 0, 0));
             }
         }
 
@@ -885,7 +890,7 @@ class SmallStepPBT {
 
     private static ExpressionNode genExpr(Random rand, int depth) {
         if (depth <= 0) return genLeaf(rand);
-        return switch (rand.nextInt(15)) {
+        return switch (rand.nextInt(16)) {
             case 0, 1 -> genLeaf(rand);
             case 2 -> new LiteralNode(String.valueOf(rand.nextInt(1000)), 0, 0);
             case 3 -> new BoolNode(0, 0, rand.nextBoolean());
@@ -928,6 +933,9 @@ class SmallStepPBT {
                     new BoolNode(0, 0, false),
                     new UnitLiteralNode(0, 0), 0, 0);
             }
+            case 14 -> new AssignNode(
+                IDENTS.get(rand.nextInt(IDENTS.size())),
+                genExpr(rand, depth - 1), 0, 0);
             default -> genLeaf(rand);
         };
     }
@@ -948,7 +956,7 @@ class SmallStepPBT {
                 String name = IDENTS.get(rand.nextInt(IDENTS.size())) + "_" + i;
                 stmts.add(new LetStatementNode(name,
                     genExpr(rand, depth - 1), rand.nextBoolean(),
-                    null, 0, 0));
+                    rand.nextDouble() < 0.3, null, 0, 0));
             } else {
                 stmts.add(genExpr(rand, depth - 1));
             }
@@ -981,7 +989,7 @@ class SmallStepPBT {
             } else if (r < 0.65) {
                 String name = "b" + depth + "_" + i + "_" + rand.nextInt(10000);
                 stmts.add(new LetStatementNode(name,
-                    genClosedLeaf(rand), false, null, 0, 0));
+                    genClosedLeaf(rand), false, rand.nextDouble() < 0.3, null, 0, 0));
             } else {
                 stmts.add(genClosedLeaf(rand));
             }

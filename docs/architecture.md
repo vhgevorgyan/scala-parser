@@ -25,11 +25,12 @@ flowchart TB
         RED["SmallStepReducer<br/>step-by-step reduction<br/>FixpointNode / MutualRecursion<br/>Builtins (succ/pred/iszero/print)"]
     end
 
-    subgraph AST["Abstract Syntax Tree (21 types)"]
-        LIT["LiteralNode / BoolNode / StringLiteralNode / UnitLiteralNode"]
+    subgraph AST["Abstract Syntax Tree (23 types)"]
+        LIT["LiteralNode / BoolNode / CharLiteralNode / StringLiteralNode / UnitLiteralNode"]
         ID["IdentifierNode"]
         BIN["BinaryExprNode / UnaryExprNode"]
         IF["IfNode"]
+        WHILE["WhileNode"]
         LAM["LambdaNode"]
         APP["ApplicationNode"]
         LET["LetStatementNode / MutualLetNode"]
@@ -41,9 +42,10 @@ flowchart TB
         FIX["FixpointNode"]
     end
 
-    subgraph TYPES["Type System (9 types)"]
+    subgraph TYPES["Type System (10 types)"]
         TNUM["TypeNumber"]
         TBOOL["TypeBool"]
+        TCHAR["TypeChar"]
         TSTR["TypeString"]
         TUNIT["TypeUnit"]
         TFUN["TypeFun (A => B)"]
@@ -57,6 +59,7 @@ flowchart TB
     subgraph VALUES["Runtime Values"]
         VNUM["NumberValue"]
         VBOOL["BoolValue"]
+        VCHAR["CharValue"]
         VSTR["StringValue"]
         VUNIT["UnitValue"]
         VCLOSURE["ClosureValue"]
@@ -186,11 +189,11 @@ scala.parser
 ├── core
 │   ├── ParserError.java                -- Error record (message, line, col, length)
 │   ├── ParserResult.java               -- AST + error list container
-│   ├── ast/                            -- 21 AST node types (incl. FixpointNode, TupleNode, MutualLetNode)
-│   ├── lexer/                          -- Tokenizer + Token + TokenType (QUESTION for `?`, AT for `@`)
-│   ├── parser/                         -- Recursive-descent Parser
-│   ├── types/                          -- 9 type kinds + HM TypeChecker + TypeErrorException (incl. TypeDynamic)
-│   ├── interpreter/                    -- Evaluator + 9 Value types + Env (incl. TupleValue)
+│   ├── ast/                            -- 23 AST node types (incl. WhileNode, CharLiteralNode, FixpointNode, TupleNode, MutualLetNode)
+│   ├── lexer/                          -- Tokenizer + Token + TokenType (WHILE, CHAR, PACKAGE, IMPORT, SEALED, DOT, AT)
+│   ├── parser/                         -- Recursive-descent Parser (while, char, multi-param, package/import/sealed/annotation ignoring)
+│   ├── types/                          -- 10 type kinds + HM TypeChecker + TypeErrorException (incl. TypeChar, TypeDynamic)
+│   ├── interpreter/                    -- Evaluator + 10 Value types + Env (incl. CharValue, TupleValue)
 │   ├── reduction/                      -- SmallStepReducer + Substitution (step, reduce, beta-reduction, let-substitution)
 │   ├── semantic/                       -- ScopeAnalyzer + SemanticTokenProvider
 │   └── hover/                          -- HoverProvider

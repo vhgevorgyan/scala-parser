@@ -2,7 +2,7 @@ package scala.parser.core.lexer;
 
 public enum TokenType {
     // Keywords
-    VAL, DEF,
+    VAL, VAR, DEF,
     ENUM, CASE, MATCH,
     TYPE, WHILE, PACKAGE, IMPORT, SEALED,
     // Identifiers & literals

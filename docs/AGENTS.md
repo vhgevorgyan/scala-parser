@@ -57,7 +57,7 @@
 
 ## Wichtige Constraints
 
-- **408+ Tests** müssen grün bleiben (JUnit 5 + jqwik PBT)
+- **442 Tests** müssen grün bleiben (JUnit 5 + jqwik PBT)
 - Alle Änderungen müssen `gradle test` grün halten
 - Keine ungefragten Commits
 - Coq-Code als `.v`-Datei (Installation nicht auf dev-Maschine verfügbar)

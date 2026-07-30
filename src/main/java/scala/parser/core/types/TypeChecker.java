@@ -25,6 +25,7 @@ public class TypeChecker {
     private final Map<ASTNode, Type> inferredTypes = new HashMap<>();
     private final Map<String, EnumDeclNode> enumTypes = new HashMap<>();
     private final Map<String, Type> typeAliases = new HashMap<>();
+    private final Set<String> mutableVars = new HashSet<>();
 
     public TypeChecker(List<ParserError> errors) {
         this.errors = errors;
@@ -278,6 +279,7 @@ public class TypeChecker {
             targetEnv.put(let.name, scheme);
             inferredTypes.put(let.value, type);
             inferredTypes.put(let, scheme.body());
+            if (let.isMutable) mutableVars.add(let.name);
             return true;
         }
     }
@@ -681,6 +683,29 @@ public class TypeChecker {
         if (expr instanceof FixpointNode fp) {
             // fix(λx. body) has the same type as λx. body (delegates to LambdaNode handling)
             return inferExpr(env, fp.body);
+        }
+
+        if (expr instanceof AssignNode assign) {
+            if (!mutableVars.contains(assign.name)) {
+                reportError("Cannot assign to immutable variable '" + assign.name + "'", assign);
+                return new InferResult(new Substitution(), new TypeVar("?"));
+            }
+            TypeScheme scheme = env.get(assign.name);
+            if (scheme == null) {
+                reportError("Unknown variable '" + assign.name + "'", assign);
+                return new InferResult(new Substitution(), new TypeVar("?"));
+            }
+            InferResult value = inferExpr(env, assign.value);
+            Substitution s1 = value.sub;
+            Type valueType = apply(s1, value.type);
+            Type varType = apply(s1, scheme.body());
+            Substitution s2;
+            try { s2 = unify(valueType, varType); }
+            catch (TypeErrorException e) {
+                reportTypeError("Assignment type mismatch", assign.value, varType, valueType);
+                return new InferResult(new Substitution(), new TypeVar("?"));
+            }
+            return new InferResult(compose(s2, s1), new TypeUnit());
         }
 
         reportError("Unknown expression: " + expr.getClass().getSimpleName(), expr);

@@ -17,7 +17,7 @@ public class Desugarer {
             } else if (stmt instanceof LetStatementNode let) {
                 ExpressionNode newValue = desugarExpr(let.value);
                 if (newValue != let.value) {
-                    newStmts.add(new LetStatementNode(let.name, newValue, let.isRec, let.declaredType, let.line, let.column));
+                    newStmts.add(new LetStatementNode(let.name, newValue, let.isRec, let.isMutable, let.declaredType, let.line, let.column));
                 } else {
                     newStmts.add(let);
                 }
@@ -109,7 +109,7 @@ public class Desugarer {
                 } else if (stmt instanceof LetStatementNode let) {
                     ExpressionNode newValue = desugarExpr(let.value);
                     if (newValue != let.value) {
-                        newStmts.add(new LetStatementNode(let.name, newValue, let.isRec, let.declaredType, let.line, let.column));
+                        newStmts.add(new LetStatementNode(let.name, newValue, let.isRec, let.isMutable, let.declaredType, let.line, let.column));
                         changed = true;
                     } else {
                         newStmts.add(let);

@@ -88,6 +88,11 @@ public class AstFinder {
                 if (body != null) return body;
             }
 
+            if (node instanceof AssignNode assign) {
+                ASTNode val = findRecursive(assign.value, line, column);
+                if (val != null) return val;
+            }
+
             if (node instanceof AscriptionNode asc) {
                 ASTNode inner = findRecursive(asc.expr, line, column);
                 if (inner != null) return inner;

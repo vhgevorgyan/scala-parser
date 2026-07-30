@@ -229,7 +229,8 @@ public class BenchmarkSuite {
                 String paramAnn = lam.declaredType != null ? ": " + lam.declaredType : "";
                 return "def " + l.name + "(" + lam.param + paramAnn + ")" + ann + " = " + stringify(lam.body);
             }
-            return "val " + l.name + ann + " = " + stringify(l.value);
+            String kw = l.isMutable ? "var" : "val";
+            return kw + " " + l.name + ann + " = " + stringify(l.value);
         }
         if (node instanceof EnumDeclNode d) {
             var sb = new StringBuilder("enum ").append(d.name);
@@ -330,6 +331,15 @@ public class BenchmarkSuite {
             sb.append(" }");
             return sb.toString();
         }
+        if (node instanceof AssignNode a) {
+            return a.name + " = " + stringify(a.value);
+        }
+        if (node instanceof WhileNode w) {
+            return "while (" + stringify(w.condition) + ") " + stringify(w.body);
+        }
+        if (node instanceof CharLiteralNode c) {
+            return "'" + escapeChar(c.value) + "'";
+        }
         return "0";
     }
 
@@ -352,6 +362,16 @@ public class BenchmarkSuite {
     private static String escapeStr(String s) {
         return s.replace("\\", "\\\\").replace("\"", "\\\"")
                 .replace("\n", "\\n").replace("\t", "\\t").replace("\r", "\\r");
+    }
+
+    private static String escapeChar(char c) {
+        return switch (c) {
+            case '\n' -> "\\n";
+            case '\t' -> "\\t";
+            case '\'' -> "\\'";
+            case '\\' -> "\\\\";
+            default -> String.valueOf(c);
+        };
     }
 
     // ── Shared mutation operators (subset of MutationAnalysis) ───────
@@ -404,7 +424,7 @@ public class BenchmarkSuite {
         }
         private ASTNode swapIf(ASTNode n) {
             if (n instanceof IfNode i) return new IfNode(i.condition, i.elseBranch, i.thenBranch);
-            if (n instanceof LetStatementNode l) return new LetStatementNode(l.name, (ExpressionNode)swapIf(l.value), l.isRec, l.declaredType, 0, 0);
+            if (n instanceof LetStatementNode l) return new LetStatementNode(l.name, (ExpressionNode)swapIf(l.value), l.isRec, l.isMutable, l.declaredType, 0, 0);
             return n;
         }
     }

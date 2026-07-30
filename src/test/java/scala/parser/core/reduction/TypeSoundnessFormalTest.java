@@ -706,11 +706,11 @@ public class TypeSoundnessFormalTest {
         // and MutualLetNode, leaving free variables after reduction.
         //   { val g0 = 42; { val y = g0; y } }
         var innerBlock = new BlockNode(List.of(
-            new LetStatementNode("y", new IdentifierNode("g0", 0, 0), false, null, 0, 0),
+            new LetStatementNode("y", new IdentifierNode("g0", 0, 0), false, false, null, 0, 0),
             new IdentifierNode("y", 0, 0)
         ), 0, 0);
         var outerBlock = new BlockNode(List.of(
-            new LetStatementNode("g0", new LiteralNode("42", 0, 0), false, null, 0, 0),
+            new LetStatementNode("g0", new LiteralNode("42", 0, 0), false, false, null, 0, 0),
             innerBlock
         ), 0, 0);
         var program = new ProgramNode(List.of(outerBlock));

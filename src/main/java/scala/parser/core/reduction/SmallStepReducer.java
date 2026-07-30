@@ -186,6 +186,14 @@ public class SmallStepReducer {
             return reduceMatch(c.expr, c.branches, c.line, c.column);
         }
 
+        // Assignment: x = e
+        if (expr instanceof AssignNode assign) {
+            if (!isValue(assign.value)) {
+                return new AssignNode(assign.name, step(assign.value), assign.line, assign.column);
+            }
+            return new UnitLiteralNode(assign.line, assign.column);
+        }
+
         throw new RuntimeException("Stuck term: " + expr.getClass().getSimpleName() + " = " + expr);
     }
 
@@ -211,7 +219,7 @@ public class SmallStepReducer {
                 if (!isValue(val)) {
                     // Step the let's value
                     List<ASTNode> newStmts = new ArrayList<>(stmts);
-                    newStmts.set(i, new LetStatementNode(let.name, step(val), let.isRec, let.declaredType, let.line, let.column));
+                    newStmts.set(i, new LetStatementNode(let.name, step(val), let.isRec, let.isMutable, let.declaredType, let.line, let.column));
                     return new BlockNode(newStmts, block.line, block.column);
                 }
                 // Let has a value — substitute in all subsequent statements
@@ -226,14 +234,15 @@ public class SmallStepReducer {
                         new LambdaNode(let.name, val, let.line, let.column),
                         let.line, let.column);
                 }
+                List<ASTNode> preceding = stmts.subList(0, i);
                 List<ASTNode> rest = stmts.subList(i + 1, stmts.size());
-                List<ASTNode> substituted = new ArrayList<>();
+                List<ASTNode> newStmts = new ArrayList<>(preceding);
                 for (ASTNode s : rest) {
-                    substituted.add(substInNode(let.name, substVal, s));
+                    newStmts.add(substInNode(let.name, substVal, s));
                 }
                 // If there was a declared type, we checked it during typecheck;
                 // substitution replaces the name with the literal type
-                return new BlockNode(substituted, block.line, block.column);
+                return new BlockNode(newStmts, block.line, block.column);
             }
             if (stmts.get(i) instanceof MutualLetNode mutual) {
                 // Step the first non-value body, or substitute all when all are values
@@ -244,7 +253,7 @@ public class SmallStepReducer {
                     if (!isValue(val)) {
                         List<LetStatementNode> newDefs = new ArrayList<>(defs);
                         LetStatementNode old = defs.get(j);
-                        newDefs.set(j, new LetStatementNode(old.name, step(val), old.isRec, old.declaredType, old.line, old.column));
+                        newDefs.set(j, new LetStatementNode(old.name, step(val), old.isRec, old.isMutable, old.declaredType, old.line, old.column));
                         List<ASTNode> newStmts = new ArrayList<>(stmts);
                         newStmts.set(i, new MutualLetNode(newDefs, mutual.line, mutual.column));
                         return new BlockNode(newStmts, block.line, block.column);
@@ -283,15 +292,16 @@ public class SmallStepReducer {
                         finalWraps.put(def.name, def.value);
                     }
                 }
+                List<ASTNode> preceding = stmts.subList(0, i);
                 List<ASTNode> rest = stmts.subList(i + 1, stmts.size());
-                List<ASTNode> substituted = new ArrayList<>();
+                List<ASTNode> newStmts = new ArrayList<>(preceding);
                 for (ASTNode s : rest) {
                     for (LetStatementNode def : defs) {
                         s = substInNode(def.name, finalWraps.get(def.name), s);
                     }
-                    substituted.add(s);
+                    newStmts.add(s);
                 }
-                return new BlockNode(substituted, block.line, block.column);
+                return new BlockNode(newStmts, block.line, block.column);
             }
             // Expression statement
             if (stmts.get(i) instanceof ExpressionNode e) {

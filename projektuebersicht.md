@@ -22,7 +22,8 @@ Die Syntax orientiert sich an **Scala 3**: `val`/`def` für Definitionen, `match
 | Lambda (multi-param) | `(x: Int, y: Int) => x + y` |
 | Applikation (multi-arg) | `f(x, y)` → `f(x)(y)` |
 | Multi-Param-Listen | `def f(x: Int)(y: Int): Int = x * y` |
-| Val-Bindung | `val x = 42` |
+| Val/Var-Bindung | `val x = 42`, `var i = 0` |
+| Zuweisung | `i = i + 1` (nur an `var`-gebundene Namen) |
 | Def-Rekursion | `def add(x: Int, y: Int): Int = x + y` |
 | Typannotation | `val x: Int = 42` |
 | Type Ascription | `(x + 1: Int)` |
@@ -74,7 +75,7 @@ Source Code (.sp)
 ### 3.1 Lexer (Tokenizer)
 
 Zeichenweiser Scanner, produziert `Token(type, text, line, column)`-Liste. Erkennt:
-- Identifier, Keywords (`val`, `def`, `enum`, `match`, `case`, `if`, `else`, `true`, `false`, `while`, `package`, `import`, `sealed`)
+- Identifier, Keywords (`val`, `var`, `def`, `enum`, `match`, `case`, `if`, `else`, `true`, `false`, `while`, `package`, `import`, `sealed`)
 - Zahlen, Char-Literale (`'a'`, `'\n'`), Strings (mit Escapes), Operatoren (`=>`, `==`, `!=`, `<=`, `>=`, `&&`, `||`)
 - Kommentare `//` und `/* */`
 - Unbekannte Zeichen werden übersprungen (fehlertolerant)
@@ -83,7 +84,7 @@ Zeichenweiser Scanner, produziert `Token(type, text, line, column)`-Liste. Erken
 
 Recursive-Descent-Parser mit Operator-Präzedenz (14 Stufen). Baut `ProgramNode`-AST. Features:
 - Fehlererkennung und -synchronisation (Parser Recovery)
-- `parseValDef()`: `val x = expr` / `val x: Type = expr` / `def f(x: Type): RetType = body` / `def f(x:T)(y:U): V = body`
+- `parseValDef()`: `val x = expr` / `var x = expr` / `val x: Type = expr` / `var x: Type = expr` / `def f(x: Type): RetType = body` / `def f(x:T)(y:U): V = body`
 - `parseMatchBody()`: `{ case P => body; ... }`
 - `isLambdaStart()`: Lookahead erkennt `(x: Type) =>` vor Klammerausdruck
 - `parseBlock()`: `{ stmts }` als Block-Ausdruck
@@ -180,7 +181,7 @@ Aufruf: `gradlew runTestParser --args="<file.sp>"`
 
 ## 4. Testing
 
-### 4.1 Unit Tests (JUnit 5) – 413 Tests
+### 4.1 Unit Tests (JUnit 5) – 442 Tests
 
 | Testklasse | Tests | Abdeckung |
 |---|---|---|
@@ -316,7 +317,7 @@ Gesamterkennungsrate: **37,2%** (mit Output-Vergleich). Schwachstellen sind sema
     - **ScopeAnalyzer**: `asName` wird als Definition registriert, `guard`+`literalPattern` in `walkDefinitions`/`walkReferences` traversiert
     - **SemanticTokenProvider**: Emittiert Variable-Token für `asName`, traversiert `guard`+`literalPattern`
     - **AstFinder**: Durchsucht `guard`+`literalPattern` für Node-at-Position
-    - **Alle 413 Tests grün** (vorher 408+)
+    - **Alle 442 Tests grün** (vorher 408+)
 
 35. ✅ **While-Schleife + Char-Literale + `.scala`-Support**:
     - `WhileNode` + `CharLiteralNode` + `TypeChar` + `CharValue`

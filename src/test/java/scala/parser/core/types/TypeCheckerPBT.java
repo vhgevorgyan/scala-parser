@@ -35,7 +35,7 @@ class TypeCheckerPBT {
 
     private static ExpressionNode genExpr(Random rand, int depth) {
         if (depth <= 0) return genClosedLeaf(rand);
-        return switch (rand.nextInt(13)) {
+        return switch (rand.nextInt(14)) {
             case 0, 1 -> genClosedLeaf(rand);
             case 2 -> {
                 String x = IDENTS.get(rand.nextInt(IDENTS.size()));
@@ -71,7 +71,7 @@ class TypeCheckerPBT {
                     if (rand.nextBoolean()) {
                         stmts.add(new LetStatementNode(
                             "v" + rand.nextInt(1000),
-                            genExpr(rand, depth - 1), false, null, 0, 0));
+                            genExpr(rand, depth - 1), false, rand.nextDouble() < 0.3, null, 0, 0));
                     } else {
                         stmts.add(genExpr(rand, depth - 1));
                     }
@@ -82,6 +82,9 @@ class TypeCheckerPBT {
             case 10 -> new WhileNode(
                 new BoolNode(0, 0, false),
                 new UnitLiteralNode(0, 0), 0, 0);
+            case 11 -> new AssignNode(
+                IDENTS.get(rand.nextInt(IDENTS.size())),
+                genExpr(rand, depth - 1), 0, 0);
             default -> genClosedLeaf(rand);
         };
     }

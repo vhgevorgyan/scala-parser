@@ -67,10 +67,17 @@ public class SemanticTokenProvider {
         }
 
         if (node instanceof LetStatementNode let) {
-            out.add(new SemanticToken(let.line, let.column, 3, "keyword"));
-            int nameCol = let.column + 4;
+            int kwLen = let.isMutable ? 3 : 3;
+            out.add(new SemanticToken(let.line, let.column, kwLen, "keyword"));
+            int nameCol = let.column + kwLen + 1;
             out.add(new SemanticToken(let.line, nameCol, let.name.length(), "variable"));
             walk(let.value, out); return;
+        }
+
+        if (node instanceof AssignNode assign) {
+            out.add(new SemanticToken(assign.line, assign.column, assign.name.length(), "variable"));
+            out.add(new SemanticToken(assign.line, assign.column + assign.name.length(), 1, "operator"));
+            walk(assign.value, out); return;
         }
 
         if (node instanceof MutualLetNode mutual) {

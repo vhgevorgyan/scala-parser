@@ -24,8 +24,9 @@ Repetition  = { ... }     (zero or more)
                | { "@" <ident> }                               (annotations, ignored)
                | "sealed" <statement>                          (sealed modifier, ignored)
                | "type" <ident> "=" <type>                     (type alias)
-               | "val" <ident> [ ":" <type> ] "=" <expression>
-               | "def" <ident> [ "(" <param-def> { "," <param-def> } ")" [ ":" <type> ] ] "=" <expression>
+                | "val" <ident> [ ":" <type> ] "=" <expression>
+                | "var" <ident> [ ":" <type> ] "=" <expression>
+                | "def" <ident> [ "(" <param-def> { "," <param-def> } ")" [ ":" <type> ] ] "=" <expression>
                | "def" <ident> "(" <param-def> ")" "(" <param-def> ")" [ ":" <type> ] "=" <expression>  (multi-param lists)
                | <enum-decl>
                | <expression>
@@ -36,7 +37,10 @@ Repetition  = { ... }     (zero or more)
 ## Expressions
 
 ```
-<expression>         ::= <while-expr> [ ".." <while-expr> ] [ ":" <type> ]
+<expression>         ::= <assign-expr> [ ".." <assign-expr> ] [ ":" <type> ]
+
+<assign-expr>        ::= <ident> "=" <expression>
+                       | <while-expr>
 
 <while-expr>         ::= "while" "(" <expression> ")" <expression>
                        | <if-match-expr>
@@ -133,6 +137,7 @@ Repetition  = { ... }     (zero or more)
 | Terminal      | Meaning                       |
 |---------------|-------------------------------|
 | `"val"`       | Immutable binding             |
+| `"var"`       | Mutable binding               |
 | `"def"`       | Recursive definition          |
 | `"enum"`      | Algebraic data type (Scala 3) |
 | `"type"`      | Type alias                    |
@@ -201,6 +206,8 @@ Repetition  = { ... }     (zero or more)
 
 | Sugar | Desugars to |
 |-------|------------|
+| `var x = e` | `val x = e` (with `isMutable=true` flag — type-checker enforces assignment target is `var`) |
+| `x = e` | `AssignNode(x, e)` (expression, type `Unit`) |
 | `[1, 2, 3]` | `Cons(1, Cons(2, Cons(3, Nil)))` |
 | `x :: xs` (pattern) | `::(x, xs)` (infix cons pattern) |
 | `1..10` | range value as `(1, 10)` tuple |
@@ -215,6 +222,7 @@ Repetition  = { ... }     (zero or more)
 
 | Level | Assoc | Operators        |
 |-------|-------|------------------|
+| 0     | right | `=` (assignment) |
 | 1     | left  | `match`          |
 | 2     | left  | `..`             |
 | 3     | left  | `||`             |
@@ -232,6 +240,15 @@ Repetition  = { ... }     (zero or more)
 // Factorial with multi-param syntax
 def fact(n: Int): Int = if (n == 0) 1 else n * fact(n - 1)
 fact(5)
+```
+
+```scala
+// While loop with mutable variable
+var i = 10
+while (i > 0) {
+  print(i);
+  i = i - 1
+}
 ```
 
 ```scala
@@ -352,7 +369,11 @@ val check = x ≥ 3 && x ≠ 0  // uses ≥ and ≠
            Γ ⊢ s match { case _ => b } : τ
 
 (Data)    enum C[A*] { case K₁(x: τ₁); ...; case Kₙ(x: τₙ) }
-          ⇒ Γ ⊢ Kᵢ : ∀ᾱ. τᵢ* => C ᾱ*
+           ⇒ Γ ⊢ Kᵢ : ∀ᾱ. τᵢ* => C ᾱ*
+
+(Assign)  x : τ ∈ Γ    Γ ⊢ e : τ    x is var (mutable)
+           ------------------------------------------
+           Γ ⊢ x = e : Unit
 ```
 
 ## Blocks

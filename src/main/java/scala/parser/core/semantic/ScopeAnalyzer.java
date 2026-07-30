@@ -49,6 +49,14 @@ public class ScopeAnalyzer {
             return;
         }
 
+        if (node instanceof MutualLetNode mutual) {
+            for (LetStatementNode def : mutual.defs) {
+                out.add(new Definition(def.name, def.line, def.column));
+                walkDefinitions(def.value, out);
+            }
+            return;
+        }
+
         if (node instanceof EnumDeclNode data) {
             for (EnumDeclNode.ConstructorDef ctor : data.constructors) {
                 out.add(new Definition(ctor.name(), data.line, data.column));
@@ -94,6 +102,12 @@ public class ScopeAnalyzer {
 
         if (node instanceof LetStatementNode let) {
             if (!let.name.equals(targetName)) walkReferences(let.value, targetName, out);
+            return;
+        }
+
+        if (node instanceof AssignNode assign) {
+            if (assign.name.equals(targetName)) out.add(new Reference(assign.line, assign.column, assign.name.length()));
+            walkReferences(assign.value, targetName, out);
             return;
         }
 
@@ -145,6 +159,19 @@ public class ScopeAnalyzer {
 
         if (node instanceof BlockNode block) {
             for (ASTNode s : block.statements) walkReferences(s, targetName, out);
+            return;
+        }
+
+        if (node instanceof MutualLetNode mutual) {
+            for (LetStatementNode def : mutual.defs) {
+                if (!def.name.equals(targetName)) walkReferences(def.value, targetName, out);
+            }
+            return;
+        }
+
+        if (node instanceof WhileNode w) {
+            walkReferences(w.condition, targetName, out);
+            walkReferences(w.body, targetName, out);
             return;
         }
     }

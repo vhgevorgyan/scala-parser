@@ -86,6 +86,10 @@ public class HoverProvider {
                 .collect(java.util.stream.Collectors.joining(", "));
         }
 
+        if (node instanceof AssignNode assign) {
+            return "Assignment: " + assign.name + " = ...";
+        }
+
         return null;
     }
 

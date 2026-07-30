@@ -98,9 +98,15 @@ public class TestParser {
             return sb.toString();
         }
         if (node instanceof LetStatementNode l) {
-            return pad + (l.isRec ? "Def " : "Val ") + l.name
+            String kw = l.isRec ? "Def" : l.isMutable ? "Var" : "Val";
+            return pad + kw + " " + l.name
                 + (l.declaredType != null ? " : " + l.declaredType : "")
                 + "\n" + astToString(l.value, indent + 1);
+        }
+
+        if (node instanceof AssignNode a) {
+            return pad + "Assign " + a.name
+                + "\n" + astToString(a.value, indent + 1);
         }
         if (node instanceof EnumDeclNode d) {
             return pad + "EnumDecl " + d.name + "(" + String.join(" ", d.params) + ")"

@@ -69,7 +69,7 @@ class TypeSoundnessTests {
         new TypeChecker(errors).check(program);
         if (!errors.isEmpty()) return;
         var extended = new ProgramNode(Stream.concat(
-            Stream.of(new LetStatementNode("_unused", new LiteralNode("0", 0, 0), 0, 0)),
+            Stream.of(new LetStatementNode("_unused", new LiteralNode("0", 0, 0), false, false, null, 0, 0)),
             program.statements.stream()
         ).toList());
         var errors2 = new ArrayList<ParserError>();
@@ -148,7 +148,7 @@ class TypeSoundnessTests {
     @Property(tries = 500)
     void noDirectSelfRecursion(@ForAll("program") ProgramNode program) {
         var recProg = new ProgramNode(Stream.concat(program.statements.stream(),
-            Stream.of(new LetStatementNode("f", new IdentifierNode("f", 0, 0), true, null, 0, 0))
+            Stream.of(new LetStatementNode("f", new IdentifierNode("f", 0, 0), true, false, null, 0, 0))
         ).toList());
         var errors = new ArrayList<ParserError>();
         new TypeChecker(errors).check(recProg);
@@ -260,7 +260,8 @@ class TypeSoundnessTests {
             for (int i = stmts.size(); i < n; i++) {
                 if (random.nextDouble() < 0.4 && i < n - 1) {
                     stmts.add(new LetStatementNode(
-                        IDENTS.get(random.nextInt(IDENTS.size())), genExpr(random, 3, tpl), 0, 0));
+                        IDENTS.get(random.nextInt(IDENTS.size())), genExpr(random, 3, tpl),
+                        false, false, null, 0, 0));
                 } else {
                     stmts.add(genExpr(random, 3, tpl));
                 }
@@ -359,7 +360,8 @@ class TypeSoundnessTests {
                 String paramAnn = lam.declaredType != null ? ": " + lam.declaredType : "";
                 return "def " + l.name + "(" + lam.param + paramAnn + ")" + ann + " = " + stringify(lam.body);
             }
-            return "val " + l.name + ann + " = " + stringify(l.value);
+            String kw = l.isMutable ? "var" : "val";
+            return kw + " " + l.name + ann + " = " + stringify(l.value);
         }
         if (node instanceof EnumDeclNode d) {
             var sb = new StringBuilder("enum ").append(d.name);
@@ -465,6 +467,15 @@ class TypeSoundnessTests {
             sb.append(" }");
             return sb.toString();
         }
+        if (node instanceof AssignNode a) {
+            return a.name + " = " + stringify(a.value);
+        }
+        if (node instanceof WhileNode w) {
+            return "while (" + stringify(w.condition) + ") " + stringify(w.body);
+        }
+        if (node instanceof CharLiteralNode c) {
+            return "'" + escapeChar(c.value) + "'";
+        }
         return "0";
     }
 
@@ -489,6 +500,16 @@ class TypeSoundnessTests {
                 .replace("\n", "\\n").replace("\t", "\\t").replace("\r", "\\r");
     }
 
+    private static String escapeChar(char c) {
+        return switch (c) {
+            case '\n' -> "\\n";
+            case '\t' -> "\\t";
+            case '\'' -> "\\'";
+            case '\\' -> "\\\\";
+            default -> String.valueOf(c);
+        };
+    }
+
     // ---------------------------------------------------------------
     // Structural AST equality (ignoring line/column)
     // ---------------------------------------------------------------
@@ -506,7 +527,7 @@ class TypeSoundnessTests {
         }
         if (a instanceof LetStatementNode l1) {
             var l2 = (LetStatementNode) b;
-            return l1.name.equals(l2.name) && l1.isRec == l2.isRec
+            return l1.name.equals(l2.name) && l1.isRec == l2.isRec && l1.isMutable == l2.isMutable
                 && (l1.declaredType == l2.declaredType
                     || (l1.declaredType != null && l1.declaredType.equals(l2.declaredType)))
                 && astEquals(l1.value, l2.value);
@@ -568,6 +589,17 @@ class TypeSoundnessTests {
             for (int i = 0; i < bl1.statements.size(); i++)
                 if (!astEquals(bl1.statements.get(i), bl2.statements.get(i))) return false;
             return true;
+        }
+        if (a instanceof AssignNode a1) {
+            var a2 = (AssignNode) b;
+            return a1.name.equals(a2.name) && astEquals(a1.value, a2.value);
+        }
+        if (a instanceof WhileNode w1) {
+            var w2 = (WhileNode) b;
+            return astEquals(w1.condition, w2.condition) && astEquals(w1.body, w2.body);
+        }
+        if (a instanceof CharLiteralNode c1) {
+            return c1.value == ((CharLiteralNode) b).value;
         }
         return false;
     }

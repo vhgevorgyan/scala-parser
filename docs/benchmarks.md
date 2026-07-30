@@ -128,20 +128,20 @@ ordnet die passende PBT-Property-Kategorie zu.
 
 ### 2. Scalability (Hand-Crafted Programs)
 
-Laufzeit + Reduktionsschritte für 29 geschlossene Programme (2–32 AST-Knoten):
+Laufzeit + Reduktionsschritte für 29 geschlossene Programme (2–32 AST-Knoten, inkl. while, char, block):
 
 | Größe | parseNs | tcNs | evalNs | reduceNs | steps | Beispiel |
-|---|---|---|---|---|---|---|
-| 2 | 8.800 | 4.000 | 2.500 | 1.100 | 0 | `42` |
-| 4 | 19.700 | 17.500 | 92.700 | 51.100 | 1 | `succ(5)` |
-| 5 | 20.600 | 11.300 | 16.900 | 4.900 | 1 | `if (false) 1 else 2` |
-| 8 | 38.900 | 31.400 | 15.100 | 41.200 | 3 | `(1 + 2) * (3 + 4)` |
-| 12 | 31.600 | 26.900 | 14.000 | 25.800 | 4 | nested if |
-| 16 | 62.700 | 54.300 | 26.000 | 339.600 | 7 | complex arith |
-| 17 | 581.000 | 115.200 | 45.100 | 79.200 | 6 | nested beta deep |
-| 19 | 56.300 | 175.800 | 33.900 | 54.100 | 7 | complex if |
-| 32 | 248.700 | 314.600 | 43.100 | 143.200 | 15 | deep arith chain |
-| *block* | ~20–45k | ~56–107k | ~10–20k | ~10–63k | 1–3 | block with val/if/beta |
+|---|---|---|---|---|---|---|---|
+| 2 | 3.100 | 2.200 | 4.200 | 500 | 0 | `42` |
+| 4 | 5.600 | 8.900 | 6.900 | 6.900 | 1 | `succ(5)` |
+| 5 | 23.800 | 14.700 | 7.900 | 3.300 | 1 | `if (false) 1 else 2` |
+| 8 | 8.300 | 7.900 | 6.600 | 15.600 | 3 | `(1 + 2) * (3 + 4)` |
+| 12 | 13.500 | 11.600 | 8.400 | 14.900 | 4 | nested if |
+| 16 | 20.200 | 15.800 | 8.900 | 149.100 | 7 | complex arith |
+| 17 | 27.900 | 21.200 | 9.900 | 28.300 | 6 | nested beta deep |
+| 19 | 44.800 | 113.600 | 379.200 | 23.700 | 7 | complex if |
+| 32 | 36.100 | 107.200 | 19.800 | 48.600 | 15 | deep arith chain |
+| *block* | ~12–20k | ~25–62k | ~5–16k | ~7–53k | 1–3 | block with val/if/beta |
 
 **Beobachtung:** Typecheck-Zeit wächst mit Programmgröße (O(n) für unabhängige Ausdrücke,
 O(n²) für let-Ketten). Reduktionsschritte korrelieren linear mit AST-Tiefe.
@@ -159,18 +159,26 @@ Durchschnittliche Erkennung: **39,6%** (vergleichbar mit MutationAnalysis).
 Abdeckungsmatrix: Welche Komponente handhabt welchen AST-Knotentyp (per `instanceof`/`new`-Scan):
 
 | Node Type | Eval | Reducer | Checker | Parser |
-|---|---|---|---|---|
+|---|---|---|---|---|---|
 | LiteralNode | Y | Y | Y | Y |
 | BoolNode | Y | Y | Y | Y |
+| StringLiteralNode | Y | Y | Y | Y |
+| UnitLiteralNode | Y | Y | Y | Y |
+| CharLiteralNode | Y | Y | Y | Y |
 | IdentifierNode | Y | Y | Y | Y |
 | LambdaNode | Y | Y | Y | Y |
 | ApplicationNode | Y | Y | Y | Y |
 | IfNode | Y | Y | Y | Y |
+| WhileNode | Y | Y | Y | Y |
 | BinaryExprNode | Y | Y | Y | Y |
+| UnaryExprNode | Y | Y | Y | Y |
+| TupleNode | Y | Y | Y | Y |
+| AscriptionNode | Y | Y | Y | Y |
 | FixpointNode | N | Y | Y | N |
 | CaseNode | Y | Y | Y | Y |
 | BlockNode | Y | Y | Y | Y |
 | LetStatementNode | Y | Y | Y | Y |
+| MutualLetNode | Y | Y | Y | Y |
 | EnumDeclNode | Y | N | Y | Y |
 | TypeAliasNode | Y | N | Y | Y |
 | ProgramNode | N | N | Y | Y |
@@ -179,6 +187,7 @@ Abdeckungsmatrix: Welche Komponente handhabt welchen AST-Knotentyp (per `instanc
 - `FixpointNode` nur in Reducer/Checker (in Evaluator durch Fixpoint-Semantik inline ersetzt)
 - `EnumDeclNode`/`TypeAliasNode` fehlen im Reducer (werden beim TypeCheck verarbeitet, nicht zur Laufzeit)
 - `ProgramNode` nur in Checker/Parser (Evaluator hat separate `evalProgram`-Methode ohne `instanceof`)
+- **22 von 22 Node-Typen** vollständig in Eval/Checker/Parser; Reducer deckt 20/22 (EnumDeclNode, TypeAliasNode, ProgramNode entfallen)
 
 Aufruf: `gradlew runBenchmarkSuite` (alle 8) oder `gradlew runBenchmarkSuite --args="scalability steps"` (einzeln).
 
@@ -245,13 +254,13 @@ bigStepMatchesSmallStep, valueIsIrreducible.
 
 ### 8. Runtime Breakdown
 
-Measures pipeline stage times (ns) for 97 random well-typed programs (rejection-sampled from 2000 attempts).
+Measures pipeline stage times (ns) for 97 random well-typed programs (rejection-sampled from 2000 attempts; inkl. WhileNode- und CharLiteralNode-Programme).
 
 | Metric | Tokenize | Parse | TypeCheck | Evaluate | Reduce |
-|---|---|---|---|---|---|
-| Min (ns) | 8,400 | 2,700 | 1,500 | 500 | 500 |
-| Max (ns) | 285,000 | 245,600 | 46,600 | 46,600 | 11,000 |
-| Typical | 15–30k | 10–20k | 2–5k | 2–5k | 500–2k |
+|---|---|---|---|---|---|---|
+| Min (ns) | 6,500 | 3,700 | 900 | 500 | 500 |
+| Max (ns) | 41,400 | 25,100 | 33,800 | 28,600 | 15,700 |
+| Typical | 7–22k | 5–15k | 1–3k | 1–3k | 600–2k |
 
 **Pipeline bottleneck:** `TypeCheck` dominates for complex programs (up to 245µs at size 11–17).
 **Reduction** is consistently fast (< 2µs typical) because most expressions are already values (0 steps).

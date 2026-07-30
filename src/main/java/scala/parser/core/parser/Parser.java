@@ -81,7 +81,7 @@ public class Parser {
     private void synchronize() {
         while (!isAtEnd()) {
             TokenType t = peek().type;
-            if (t == TokenType.VAL || t == TokenType.DEF || t == TokenType.ENUM || t == TokenType.TYPE || t == TokenType.IF || t == TokenType.WHILE) return;
+            if (t == TokenType.VAL || t == TokenType.VAR || t == TokenType.DEF || t == TokenType.ENUM || t == TokenType.TYPE || t == TokenType.IF || t == TokenType.WHILE) return;
             advance();
         }
     }
@@ -129,12 +129,17 @@ public class Parser {
 
         if (match(TokenType.VAL)) {
             requireFeature(LanguageFeature.LET, previous());
-            return parseValDef(false);
+            return parseValDef(false, false);
+        }
+
+        if (match(TokenType.VAR)) {
+            requireFeature(LanguageFeature.LET, previous());
+            return parseValDef(false, true);
         }
 
         if (match(TokenType.DEF)) {
             requireFeature(LanguageFeature.LET, previous());
-            return parseValDef(true);
+            return parseValDef(true, false);
         }
 
         return parseExpression();
@@ -240,8 +245,8 @@ public class Parser {
         return new EnumDeclNode(name.text, params, constructors, name.line, name.column);
     }
 
-    private ASTNode parseValDef(boolean isDef) {
-        Token name = expect(TokenType.IDENT, "Expected identifier after '" + (isDef ? "def" : "val") + "'");
+    private ASTNode parseValDef(boolean isDef, boolean isMutable) {
+        Token name = expect(TokenType.IDENT, "Expected identifier after '" + (isDef ? "def" : isMutable ? "var" : "val") + "'");
         if (name.type != TokenType.IDENT) { synchronize(); return new LiteralNode("0", name.line, name.column); }
 
         ExpressionNode body = null;
@@ -293,7 +298,7 @@ public class Parser {
                     body = new LambdaNode(names.get(i), body, types.get(i), paramLine, paramCol);
                 }
             }
-            return new LetStatementNode(name.text, body, true, retType, name.line, name.column);
+            return new LetStatementNode(name.text, body, true, isMutable, retType, name.line, name.column);
         }
 
         // val x = expr  or  def x = expr (no params)
@@ -306,7 +311,7 @@ public class Parser {
 
         ExpressionNode value = parseExpression();
 
-        return new LetStatementNode(name.text, value, isDef, declaredType, name.line, name.column);
+        return new LetStatementNode(name.text, value, isDef, isMutable, declaredType, name.line, name.column);
     }
 
     // ---------------------------------------------------------
@@ -394,6 +399,12 @@ public class Parser {
             requireFeature(LanguageFeature.ASCRIPTION, previous());
             Type t = parseType();
             return new AscriptionNode(expr, t, expr.line, expr.column);
+        }
+
+        // Assignment: x = e
+        if (expr instanceof IdentifierNode id && match(TokenType.EQUAL)) {
+            ExpressionNode value = parseExpression();
+            return new AssignNode(id.name, value, id.line, id.column);
         }
 
         return expr;

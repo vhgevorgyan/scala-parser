@@ -49,7 +49,7 @@ class EvaluatorPBT {
     // Generates a random expression with a chance of blocks/lets
     private static ExpressionNode genRichExpr(Random rand, int depth) {
         if (depth <= 0) return genClosed(rand);
-        return switch (rand.nextInt(8)) {
+        return switch (rand.nextInt(9)) {
             case 0, 1 -> genClosed(rand);
             case 2 -> {
                 String x = "x" + rand.nextInt(100);
@@ -71,7 +71,7 @@ class EvaluatorPBT {
                         stmts.add(new LetStatementNode(
                             "v" + rand.nextInt(1000),
                             genRichExpr(rand, depth - 1),
-                            false, null, 0, 0));
+                            false, rand.nextDouble() < 0.3, null, 0, 0));
                     } else {
                         stmts.add(genRichExpr(rand, depth - 1));
                     }
@@ -94,6 +94,9 @@ class EvaluatorPBT {
                     new BoolNode(0, 0, false),
                     new UnitLiteralNode(0, 0), 0, 0);
             }
+            case 8 -> new AssignNode(
+                "v" + rand.nextInt(1000),
+                genRichExpr(rand, depth - 1), 0, 0);
             default -> genClosed(rand);
         };
     }
@@ -191,7 +194,7 @@ class EvaluatorPBT {
             for (int i = 0; i < n - 1; i++) {
                 String name = "x" + rand.nextInt(100);
                 stmts.add(new LetStatementNode(name,
-                    genClosed(rand), false, null, 0, 0));
+                    genClosed(rand), false, rand.nextDouble() < 0.3, null, 0, 0));
             }
             stmts.add(genClosed(rand));
             return new BlockNode(stmts, 0, 0);

@@ -271,6 +271,12 @@ public class Evaluator {
             return v;
         }
 
+        if (node instanceof AssignNode assign) {
+            Value v = evalExpr(assign.value, env);
+            env.assign(assign.name, v);
+            return new UnitValue();
+        }
+
         if (node instanceof LambdaNode lam) {
             return new ClosureValue(lam.param, lam.body, env);
         }

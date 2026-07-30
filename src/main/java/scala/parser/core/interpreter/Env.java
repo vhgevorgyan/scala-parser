@@ -29,6 +29,16 @@ public final class Env {
         throw new RuntimeException("Unbound variable: " + name);
     }
 
+    public void assign(String name, Value value) {
+        if (values.containsKey(name)) {
+            values.put(name, value);
+        } else if (parent != null) {
+            parent.assign(name, value);
+        } else {
+            throw new RuntimeException("Unbound variable: " + name);
+        }
+    }
+
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
