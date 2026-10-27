@@ -8,6 +8,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
+import scala.parser.core.ParserError;
+
 import org.eclipse.lsp4j.CodeAction;
 import org.eclipse.lsp4j.CodeActionParams;
 import org.eclipse.lsp4j.CompletionItem;
@@ -103,18 +105,22 @@ public class MyTextDocumentService implements TextDocumentService {
 
     private void publishDiagnostics(String uri, String text) {
         var result = compiler.analyze(text);
-        var diagnostics = result.parserResult().errors.stream().map(err -> {
-            Diagnostic diag = new Diagnostic();
-            diag.setMessage(err.message);
-            diag.setSeverity(DiagnosticSeverity.Error);
-            int length = Math.max(err.length, 1);
-            diag.setRange(new Range(
-                    new Position(err.line, err.column),
-                    new Position(err.line, err.column + length)
-            ));
-            return diag;
-        }).toList();
+        var diagnostics = result.parserResult().errors.stream()
+                .map(this::createDiagnostic)
+                .toList();
         client.publishDiagnostics(new PublishDiagnosticsParams(uri, diagnostics));
+    }
+
+    private Diagnostic createDiagnostic(ParserError err) {
+        Diagnostic diag = new Diagnostic();
+        diag.setMessage(err.message);
+        diag.setSeverity(DiagnosticSeverity.Error);
+        int length = Math.max(err.length, 1);
+        diag.setRange(new Range(
+                new Position(err.line, err.column),
+                new Position(err.line, err.column + length)
+        ));
+        return diag;
     }
 
     // ---------------------------------------------------------

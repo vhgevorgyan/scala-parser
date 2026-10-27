@@ -145,17 +145,21 @@ public class Parser {
         return parseExpression();
     }
 
+    private void skipBalanced(TokenType open, TokenType close) {
+        int depth = 1;
+        while (!isAtEnd() && depth > 0) {
+            if (peek().type == open) depth++;
+            else if (peek().type == close) depth--;
+            if (depth > 0) advance();
+        }
+        if (peek().type == close) advance();
+    }
+
     private void skipAnnotation() {
         advance(); // consume @
         Token name = advance(); // consume annotation name
         if (match(TokenType.LPAREN)) {
-            int depth = 1;
-            while (!isAtEnd() && depth > 0) {
-                if (peek().type == TokenType.LPAREN) depth++;
-                else if (peek().type == TokenType.RPAREN) depth--;
-                if (depth > 0) advance();
-            }
-            if (peek().type == TokenType.RPAREN) advance();
+            skipBalanced(TokenType.LPAREN, TokenType.RPAREN);
         }
     }
 
@@ -166,18 +170,11 @@ public class Parser {
             else break;
         }
         if (match(TokenType.LBRACE)) {
-            int depth = 1;
-            while (!isAtEnd() && depth > 0) {
-                if (peek().type == TokenType.LBRACE) depth++;
-                else if (peek().type == TokenType.RBRACE) depth--;
-                if (depth > 0) advance();
-            }
-            if (peek().type == TokenType.RBRACE) advance();
+            skipBalanced(TokenType.LBRACE, TokenType.RBRACE);
         }
     }
 
     private void skipImport() {
-        boolean first = true;
         while (!isAtEnd() && peek().type == TokenType.IDENT) {
             advance();
             if (peek().type == TokenType.DOT) {
